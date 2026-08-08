@@ -258,13 +258,14 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { height: 48px !important; border-radius: 10px !important; padding: 0px 28px !important; font-size: 1.02rem !important; font-weight: 600 !important; color: #6b635b !important; border: none !important; transition: all 0.25s ease !important; }
     .stTabs [aria-selected="true"] { background-color: #ffffff !important; color: #b8543f !important; box-shadow: 0 3px 8px rgba(44, 40, 37, 0.1) !important; transform: translateY(-1px); }
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { background-color: #faf8f5 !important; border-color: #d8cfc4 !important; border-radius: 10px !important; color: #2c2825 !important; }
+iframe[title="app.interactive_math_editor"] {
+        min-height: 200px !important;
+        width: 100% !important;
+        border-radius: 12px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
-iframe[title="app.interactive_math_editor"] {
-    min-height: 200px !important;
-    width: 100% !important;
-    border-radius: 12px !important;
-}
+
 # PARSER THÔNG MINH
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
     if not raw_text or not raw_text.strip(): return []
