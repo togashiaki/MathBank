@@ -80,9 +80,9 @@ def load_all_questions_from_cloud() -> list[Question]:
                 tf_statements=tf_statements,
                 answer=str(r.get('answer', '')),
                 solution=str(r.get('solution', '')),
-                image_path=str(r.get('image_path', '')).strip() or None
+                image_path=str(r.get('image_path', '')).strip() or None,
+                solution_image_path=str(r.get('solution_image_path', '')).strip() or None
             )
-            setattr(q, 'solution_image_path', str(r.get('solution_image_path', '')).strip() or None)
             
             # Chỉ lấy những câu có nội dung đề bài
             if q.content.strip():
@@ -93,7 +93,6 @@ def load_all_questions_from_cloud() -> list[Question]:
             continue
             
     return questions
-
 def save_questions_to_cloud(questions: list[Question]):
     """Cập nhật hoặc thêm mới danh sách câu hỏi vào Google Sheet"""
     all_rows = sheet.get_all_records()
