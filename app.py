@@ -559,73 +559,186 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN CHÍNH
+# CSS GIAO DIỆN CHÍNH (ĐÃ TINH CHỈNH HOÀN CHỈNH)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
-    html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif !important; color: #2c2825 !important; }
-    .stApp { background-color: #f7f4ed !important; }
-    section[data-testid="stSidebar"] { background-color: #f0ebe1 !important; border-right: 1px solid #e2dbd0 !important; }
-    .question-card { background-color: #faf8f5; border: 1px solid #e2dbd0; border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(44, 40, 37, 0.03); transition: all 0.25s ease; }
-    .card-badge { background-color: #b8543f; color: #ffffff; padding: 4px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; font-family: 'JetBrains Mono', monospace; margin-bottom: 12px; display: inline-block; }
-    .badge-fmt { background-color: #5e7a4e; color: #ffffff; padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 600; margin-right: 8px; display: inline-block; }
-    .stat-box { background-color: #faf8f5; border: 1px solid #e2dbd0; border-radius: 12px; padding: 18px; margin-top: 18px; }
-    .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px dashed #e5dfd5; font-size: 0.9rem; color: #57524e; }
-    .stat-number { font-weight: 700; color: #b8543f; font-family: 'JetBrains Mono', monospace; }
-    .answer-box { background-color: #f7ece8; border: 1px solid #e8c4b8; color: #a8412c; padding: 8px 16px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; display: inline-block; margin-top: 12px; }
-    .header-info-bar { background-color: #faf8f5; border: 1px solid #e2dbd0; border-radius: 14px; padding: 16px 24px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 6px rgba(44, 40, 37, 0.02); }
-    .edit-q-box { background-color: #f0ebe1; border: 1px solid #dbd3c7; border-radius: 12px; padding: 16px 20px; margin-bottom: 18px; color: #2c2825; }
-    .stButton>button { border-radius: 10px !important; border: 1px solid #d8cfc4 !important; background-color: #faf8f5 !important; color: #2c2825 !important; font-weight: 600 !important; padding: 8px 16px !important; transition: all 0.25s ease !important; }
-    .stButton>button:hover { border-color: #b8543f !important; color: #b8543f !important; background-color: #f7ece8 !important; }
-    .stButton>button[kind="primary"] { background-color: #b8543f !important; color: #ffffff !important; border: 1px solid #a34834 !important; }
-    .stButton>button[kind="primary"]:hover { background-color: #a34834 !important; color: #ffffff !important; border-color: #8f3a2b !important; box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25) !important; }
-    .stTabs [data-baseweb="tab-list"] { display: flex !important; justify-content: center !important; align-items: center !important; gap: 12px !important; background-color: #e8e3d8 !important; padding: 8px 12px !important; border-radius: 16px !important; border: 1px solid #d8cfc4 !important; max-width: 820px !important; margin: 0 auto 28px auto !important; box-shadow: 0 4px 12px rgba(44, 40, 37, 0.04) !important; }
-    .stTabs [data-baseweb="tab"] { height: 48px !important; border-radius: 10px !important; padding: 0px 28px !important; font-size: 1.02rem !important; font-weight: 600 !important; color: #6b635b !important; border: none !important; transition: all 0.25s ease !important; }
-    .stTabs [aria-selected="true"] { background-color: #ffffff !important; color: #b8543f !important; box-shadow: 0 3px 8px rgba(44, 40, 37, 0.1) !important; transform: translateY(-1px); }
-    div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { background-color: #faf8f5 !important; border-color: #d8cfc4 !important; border-radius: 10px !important; color: #2c2825 !important; }
-    iframe[title*="interactive_math_editor"] {
-        width: 100% !important;
-        border-radius: 12px !important;
-        transition: height 0.15s ease !important;
+    
+    /* PHÔNG CHỮ & MÀU NỀN TỔNG THỂ */
+    html, body, [class*="css"] { 
+        font-family: 'Plus Jakarta Sans', sans-serif !important; 
+        color: #2c2825 !important; 
     }
-    /* GIAO DIỆN THANH TAB CAO CẤP */
-.stTabs [data-baseweb="tab-list"] {
-    display: flex !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    background-color: #eae5da !important;
-    padding: 6px !important;
-    border-radius: 14px !important;
-    border: 1px solid #d8cfc4 !important;
-    max-width: 680px !important;
-    margin: 0 auto 28px auto !important;
-}
+    .stApp { 
+        background-color: #f7f4ed !important; 
+    }
+    section[data-testid="stSidebar"] { 
+        background-color: #f0ebe1 !important; 
+        border-right: 1px solid #e2dbd0 !important; 
+    }
 
-.stTabs [data-baseweb="tab"] {
-    height: 40px !important;
-    border-radius: 10px !important;
-    padding: 0px 22px !important;
-    font-size: 0.92rem !important;
-    font-weight: 600 !important;
-    color: #6b635b !important;
-    border: none !important;
-    background-color: transparent !important;
-}
+    /* CARD CÂU HỎI & BADGE */
+    .question-card { 
+        background-color: #faf8f5; 
+        border: 1px solid #e2dbd0; 
+        border-radius: 14px; 
+        padding: 22px; 
+        margin-bottom: 20px; 
+        box-shadow: 0 2px 8px rgba(44, 40, 37, 0.03); 
+        transition: all 0.25s ease; 
+    }
+    .card-badge { 
+        background-color: #b8543f; 
+        color: #ffffff; 
+        padding: 4px 12px; 
+        border-radius: 8px; 
+        font-size: 0.82rem; 
+        font-weight: 600; 
+        font-family: 'JetBrains Mono', monospace; 
+        margin-bottom: 12px; 
+        display: inline-block; 
+    }
+    .badge-fmt { 
+        background-color: #5e7a4e; 
+        color: #ffffff; 
+        padding: 4px 10px; 
+        border-radius: 8px; 
+        font-size: 0.76rem; 
+        font-weight: 600; 
+        margin-right: 8px; 
+        display: inline-block; 
+    }
 
-.stTabs [aria-selected="true"] {
-    background-color: #ffffff !important;
-    color: #b8543f !important;
-    box-shadow: 0 2px 8px rgba(44, 40, 37, 0.08) !important;
-}
+    /* BẢNG THỐNG KÊ & KHUNG THÔNG TIN */
+    .stat-box { 
+        background-color: #faf8f5; 
+        border: 1px solid #e2dbd0; 
+        border-radius: 12px; 
+        padding: 18px; 
+        margin-top: 18px; 
+    }
+    .stat-item { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        padding: 9px 0; 
+        border-bottom: 1px dashed #e5dfd5; 
+        font-size: 0.9rem; 
+        color: #57524e; 
+    }
+    .stat-number { 
+        font-weight: 700; 
+        color: #b8543f; 
+        font-family: 'JetBrains Mono', monospace; 
+    }
+    .answer-box { 
+        background-color: #f7ece8; 
+        border: 1px solid #e8c4b8; 
+        color: #a8412c; 
+        padding: 8px 16px; 
+        border-radius: 10px; 
+        font-weight: 600; 
+        font-size: 0.9rem; 
+        display: inline-block; 
+        margin-top: 12px; 
+    }
+    .header-info-bar { 
+        background-color: #faf8f5; 
+        border: 1px solid #e2dbd0; 
+        border-radius: 14px; 
+        padding: 16px 24px; 
+        margin-bottom: 22px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        box-shadow: 0 2px 6px rgba(44, 40, 37, 0.02); 
+    }
+    .edit-q-box { 
+        background-color: #f0ebe1; 
+        border: 1px solid #dbd3c7; 
+        border-radius: 12px; 
+        padding: 16px 20px; 
+        margin-bottom: 18px; 
+        color: #2c2825; 
+    }
 
-/* XÓA VIỀN GẠCH CHÂN DƯ THỪA CỦA STREAMLIT */
-div[data-baseweb="tab-highlight-title"], 
-div[data-baseweb="tab-border"] {
-    display: none !important;
-}
+    /* NÚT BẤM (BUTTONS) */
+    .stButton>button { 
+        border-radius: 10px !important; 
+        border: 1px solid #d8cfc4 !important; 
+        background-color: #faf8f5 !important; 
+        color: #2c2825 !important; 
+        font-weight: 600 !important; 
+        padding: 8px 16px !important; 
+        transition: all 0.25s ease !important; 
+    }
+    .stButton>button:hover { 
+        border-color: #b8543f !important; 
+        color: #b8543f !important; 
+        background-color: #f7ece8 !important; 
+    }
+    .stButton>button[kind="primary"] { 
+        background-color: #b8543f !important; 
+        color: #ffffff !important; 
+        border: 1px solid #a34834 !important; 
+    }
+    .stButton>button[kind="primary"]:hover { 
+        background-color: #a34834 !important; 
+        color: #ffffff !important; 
+        border-color: #8f3a2b !important; 
+        box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25) !important; 
+    }
+
+    /* THANH TAB TRÊN CÙNG (XÓA VIỀN GẠCH CHÂN ĐỎ THÔ XẤU) */
+    .stTabs [data-baseweb="tab-list"] { 
+        display: flex !important; 
+        justify-content: center !important; 
+        align-items: center !important; 
+        gap: 8px !important; 
+        background-color: #eae5da !important; 
+        padding: 6px !important; 
+        border-radius: 14px !important; 
+        border: 1px solid #d8cfc4 !important; 
+        max-width: 680px !important; 
+        margin: 0 auto 24px auto !important; 
+        box-shadow: 0 4px 12px rgba(44, 40, 37, 0.04) !important; 
+    }
+    .stTabs [data-baseweb="tab"] { 
+        height: 42px !important; 
+        border-radius: 10px !important; 
+        padding: 0px 22px !important; 
+        font-size: 0.92rem !important; 
+        font-weight: 600 !important; 
+        color: #6b635b !important; 
+        border: none !important; 
+        background-color: transparent !important; 
+    }
+    .stTabs [aria-selected="true"] { 
+        background-color: #ffffff !important; 
+        color: #b8543f !important; 
+        box-shadow: 0 2px 8px rgba(44, 40, 37, 0.08) !important; 
+    }
+    div[data-baseweb="tab-highlight-title"], 
+    div[data-baseweb="tab-border"] { 
+        display: none !important; 
+    }
+
+    /* INPUTS & IFRAME MATHLIVE */
+    div[data-baseweb="input"], 
+    div[data-baseweb="select"], 
+    div[data-baseweb="textarea"] { 
+        background-color: #faf8f5 !important; 
+        border-color: #d8cfc4 !important; 
+        border-radius: 10px !important; 
+        color: #2c2825 !important; 
+    }
+    iframe[title*="interactive_math_editor"] { 
+        width: 100% !important; 
+        border-radius: 12px !important; 
+        transition: height 0.15s ease !important; 
+    }
 </style>
 """, unsafe_allow_html=True)
-
 # PARSER THÔNG MINH
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
     if not raw_text or not raw_text.strip(): return []
