@@ -45,7 +45,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. TẠO COMPONENT MATHLIVE
+# 2. TẠO COMPONENT MATHLIVE VỚI MODAL SỬA CÔNG THỨC VÀ FIX LỖI TOGGLE KEYBOARD
 COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
 os.makedirs(COMPONENT_DIR, exist_ok=True)
 INDEX_HTML_PATH = os.path.join(COMPONENT_DIR, "index.html")
@@ -56,7 +56,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
     <meta charset="utf-8">
     <script src="https://unpkg.com/mathlive"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
         html, body { margin: 0; padding: 4px; background-color: transparent; color: #2c2825; font-family: 'Plus Jakarta Sans', sans-serif; }
         .editor-container { 
             background-color: #faf8f5; 
@@ -64,11 +64,12 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             border-radius: 12px; 
             padding: 10px 14px; 
             min-height: 120px; 
-            line-height: 1.6; 
+            line-height: 1.8; 
             box-shadow: 0 1px 4px rgba(44,40,37,0.03); 
             outline: none; 
         }
         .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.88rem; white-space: pre-wrap; }
+        
         math-field.inline-math-chip { 
             display: inline-block; 
             vertical-align: middle; 
@@ -76,25 +77,96 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             border: 1px solid #e8c4b8 !important; 
             color: #a8412c !important; 
             border-radius: 6px !important; 
-            padding: 1px 5px !important; 
+            padding: 1px 6px !important; 
             margin: 1px 3px !important; 
             font-size: 0.92rem !important; 
             outline: none !important; 
             box-shadow: 0 1px 2px rgba(184, 84, 63, 0.08); 
             cursor: pointer; 
         }
-        math-field.inline-math-chip:focus-within { 
-            border-color: #b8543f !important; 
-            background-color: #ffffff !important; 
-            box-shadow: 0 0 0 2px rgba(184, 84, 63, 0.2) !important; 
+        math-field.inline-math-chip:hover { border-color: #b8543f !important; }
+
+        /* MODAL POPUP SỬA CÔNG THỨC */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 99999; justify-content: center; align-items: center;
         }
+        .modal-content {
+            background: #ffffff; width: 92%; max-width: 640px; border-radius: 16px; padding: 20px 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); font-family: 'Plus Jakarta Sans', sans-serif;
+            position: relative; animation: fadeIn 0.2s ease-in-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .modal-title { font-size: 1.15rem; font-weight: 700; color: #1a1a1a; }
+        .close-btn { background: #f0f0f0; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-weight: bold; color: #666; }
+        .close-btn:hover { background: #e0e0e0; color: #000; }
+        
+        .form-group { margin-bottom: 14px; }
+        .form-label { font-size: 0.78rem; font-weight: 700; color: #008080; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .inline-check { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; margin-bottom: 10px; font-size: 0.88rem; color: #333; }
+        
+        math-field.modal-mf { width: 100%; min-height: 50px; font-size: 1.1rem; border: 2px solid #20b2aa; border-radius: 12px; padding: 8px 12px; background: #ffffff; outline: none; }
+        
+        textarea.latex-area { width: 100%; height: 60px; border: 1px solid #b2ecd8; border-radius: 10px; padding: 8px; font-family: monospace; font-size: 0.88rem; background: #f4fbf8; color: #2c2825; box-sizing: border-box; resize: vertical; }
+        
+        .preview-box { border: 1px dashed #20b2aa; background: #f9fdfc; border-radius: 10px; padding: 12px; text-align: center; min-height: 45px; font-size: 1.1rem; }
+        
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+        .btn-cancel { background: #f0f0f0; color: #333; border: none; border-radius: 8px; padding: 8px 18px; font-weight: 600; cursor: pointer; }
+        .btn-save { background: #00a884; color: #ffffff; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; cursor: pointer; }
+        .btn-save:hover { background: #008f70; }
+        .btn-kb-toggle { background: #e6f7f3; color: #008080; border: none; border-radius: 16px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="editor" class="editor-container" contenteditable="true"></div>
+
+    <!-- MODAL SỬA CÔNG THỨC POPUP -->
+    <div id="mathModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Sửa công thức</div>
+                <button class="close-btn" onclick="closeMathModal()">✕</button>
+            </div>
+            
+            <div class="inline-check">
+                <span>Hiển thị cùng dòng</span>
+                <input type="checkbox" id="chkInline" checked>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-label">
+                    <span>NHẬP TRỰC QUAN BẰNG MATHLIVE</span>
+                    <button class="btn-kb-toggle" onclick="toggleModalKb()">Mở bàn phím Toán</button>
+                </div>
+                <math-field id="modalMathField" class="modal-mf"></math-field>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-label">LATEX TỰ ĐỘNG</div>
+                <textarea id="txtLatex" class="latex-area"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-label">XEM TRƯỚC MATHJAX</div>
+                <div class="preview-box">
+                    <math-field id="previewMathField" read-only style="border:none; background:transparent; display:inline-block;"></math-field>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeMathModal()">Huỷ</button>
+                <button class="btn-save" onclick="saveMathModal()">Lưu công thức</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentText = "";
         let isUserEditing = false;
+        let activeTargetMf = null;
 
         function sendToStreamlit(type, data) { 
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*"); 
@@ -104,40 +176,86 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             const container = document.getElementById('editor');
             let fullText = "";
             container.childNodes.forEach(node => {
-                if (node.nodeName && node.nodeName.toLowerCase() === 'math-field') { fullText += '$' + node.value + '$'; }
+                if (node.nodeName && node.nodeName.toLowerCase() === 'math-field') { 
+                    fullText += '$' + node.value + '$'; 
+                }
                 else if (node.nodeType === Node.ELEMENT_NODE) { fullText += node.innerText; }
                 else if (node.nodeType === Node.TEXT_NODE) { fullText += node.textContent; }
             });
             return fullText;
         }
 
-        // TÍNH TOÁN VÀ ÉP CHIỀU CAO IFRAME KHI BÀN PHÍM BẬT
-        function updateHeight() {
-            let isKbVisible = false;
-            if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible) {
-                isKbVisible = true;
-            }
-            
+        // TÍNH TOÁN CHIỀU CAO IFRAME CHỈ GỬI CHIỀU CAO, KHÔNG RERUN STREAMLIT
+        function syncHeightOnly() {
+            let isKbVisible = (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible);
+            let isModalOpen = document.getElementById('mathModal').style.display === 'flex';
             let baseHeight = document.getElementById('editor').offsetHeight || 140;
-            // Nếu bàn phím ảo mở, dãn rộng khung lên 520px để chứa bàn phím
-            let targetHeight = isKbVisible ? Math.max(baseHeight + 360, 520) : Math.max(baseHeight + 30, 160);
             
+            let targetHeight = baseHeight + 30;
+            if (isKbVisible) targetHeight = Math.max(targetHeight + 320, 500);
+            if (isModalOpen) targetHeight = Math.max(targetHeight, 480);
+
             sendToStreamlit("streamlit:setFrameHeight", { height: targetHeight });
         }
 
         function syncWithStreamlit() { 
             currentText = getFullText(); 
             sendToStreamlit("streamlit:setComponentValue", { value: currentText }); 
-            updateHeight(); 
+            syncHeightOnly(); 
         }
 
-        // KẾT NỐI SỰ KIỆN BẬT TẮT BÀN PHÍM
+        // KẾT NỐI SỰ KIỆN BẬT TẮT BÀN PHÍM CỦA MATHLIVE (CHỈ ĐỔI CHIỀU CAO, KHÔNG RERUN STREAMLIT)
         window.addEventListener('DOMContentLoaded', () => {
             if (window.mathVirtualKeyboard) {
-                window.mathVirtualKeyboard.container = document.body;
-                window.mathVirtualKeyboard.addEventListener("geometrychange", updateHeight);
-                window.mathVirtualKeyboard.addEventListener("visibilitychange", updateHeight);
+                window.mathVirtualKeyboard.addEventListener("geometrychange", syncHeightOnly);
+                window.mathVirtualKeyboard.addEventListener("visibilitychange", syncHeightOnly);
             }
+        });
+
+        // XỬ LÝ MODAL POPUP SỬA CÔNG THỨC
+        const modal = document.getElementById('mathModal');
+        const modalMf = document.getElementById('modalMathField');
+        const txtLatex = document.getElementById('txtLatex');
+        const prevMf = document.getElementById('previewMathField');
+
+        function openMathModal(mf) {
+            activeTargetMf = mf;
+            modalMf.value = mf.value;
+            txtLatex.value = mf.value;
+            prevMf.value = mf.value;
+            modal.style.display = 'flex';
+            syncHeightOnly();
+            setTimeout(() => modalMf.focus(), 100);
+        }
+
+        function closeMathModal() {
+            modal.style.display = 'none';
+            activeTargetMf = null;
+            syncHeightOnly();
+        }
+
+        function saveMathModal() {
+            if (activeTargetMf) {
+                activeTargetMf.value = modalMf.value;
+                syncWithStreamlit();
+            }
+            closeMathModal();
+        }
+
+        function toggleModalKb() {
+            if (window.mathVirtualKeyboard) {
+                window.mathVirtualKeyboard.toggle();
+            }
+        }
+
+        modalMf.addEventListener('input', (e) => {
+            txtLatex.value = modalMf.value;
+            prevMf.value = modalMf.value;
+        });
+
+        txtLatex.addEventListener('input', (e) => {
+            modalMf.value = txtLatex.value;
+            prevMf.value = txtLatex.value;
         });
 
         function buildEditor(rawText) {
@@ -151,7 +269,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
                 span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
                 span.addEventListener('focus', () => { isUserEditing = true; });
                 container.appendChild(span); 
-                updateHeight(); 
+                syncHeightOnly(); 
                 return;
             }
             const tokens = rawText.split(/(\$\$.*?\$\$|\$.*?\$)/g);
@@ -163,18 +281,13 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
                     mf.value = token.slice(1, -1);
                     mf.mathVirtualKeyboardPolicy = "auto";
                     
+                    mf.addEventListener('click', (e) => {
+                        openMathModal(mf);
+                    });
+                    
                     mf.addEventListener('change', syncWithStreamlit);
-                    mf.addEventListener('blur', () => { 
-                        isUserEditing = false; 
-                        syncWithStreamlit(); 
-                    });
-                    mf.addEventListener('focus', () => { 
-                        isUserEditing = true; 
-                        if (window.mathVirtualKeyboard) {
-                            window.mathVirtualKeyboard.show();
-                        }
-                        updateHeight(); 
-                    });
+                    mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
+                    mf.addEventListener('focus', () => { isUserEditing = true; syncHeightOnly(); });
                     container.appendChild(mf);
                 } else {
                     const span = document.createElement('span'); 
@@ -186,7 +299,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
                     container.appendChild(span);
                 }
             });
-            updateHeight();
+            syncHeightOnly();
         }
 
         const container = document.getElementById('editor');
@@ -227,7 +340,6 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
 with open(INDEX_HTML_PATH, "w", encoding="utf-8") as f:
     f.write(MATHLIVE_HTML_CONTENT)
 
-# Sửa thành:
 interactive_math_editor = components.declare_component("interactive_math_editor", path=COMPONENT_DIR)
 
 # 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS
@@ -330,7 +442,7 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN PLANNER
+# CSS GIAO DIỆN
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
@@ -354,11 +466,11 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { height: 48px !important; border-radius: 10px !important; padding: 0px 28px !important; font-size: 1.02rem !important; font-weight: 600 !important; color: #6b635b !important; border: none !important; transition: all 0.25s ease !important; }
     .stTabs [aria-selected="true"] { background-color: #ffffff !important; color: #b8543f !important; box-shadow: 0 3px 8px rgba(44, 40, 37, 0.1) !important; transform: translateY(-1px); }
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { background-color: #faf8f5 !important; border-color: #d8cfc4 !important; border-radius: 10px !important; color: #2c2825 !important; }
-iframe[title*="interactive_math_editor"] {
-    width: 100% !important;
-    border-radius: 12px !important;
-    transition: height 0.25s ease !important;
-}
+    iframe[title*="interactive_math_editor"] {
+        width: 100% !important;
+        border-radius: 12px !important;
+        transition: height 0.2s ease !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -416,7 +528,6 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         elif q_fmt == QuestionType.TN:
             is_opt = False
             for line in lines:
-                # ĐÃ SỬA: Thêm (.*) vào cuối mẫu Regex để lấy nội dung phương án
                 opt_match = re.match(r'^([A-D])[\.\)]\s*(.*)', line)
                 if opt_match:
                     is_opt = True
@@ -440,6 +551,7 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         ))
 
     return parsed_questions
+
 # POPUP SỬA 1 CÂU HỎI
 @st.dialog("✏️ Chỉnh sửa câu hỏi", width="large")
 def show_single_question_edit_dialog(q: Question):
@@ -449,28 +561,50 @@ def show_single_question_edit_dialog(q: Question):
     q.grade = col_a.selectbox("Khối lớp", [12, 11, 10], index=[12, 11, 10].index(q.grade))
     q.chapter = col_b.number_input("Chương", min_value=1, value=q.chapter)
 
+    # DẠNG BÀI - BIẾN HÌNH THEO PHONG CÁCH GOOGLE FORMS
+    key_custom_top_s = f"custom_top_single_{q.code}"
+    if key_custom_top_s not in st.session_state: st.session_state[key_custom_top_s] = False
+
     chap_topics = get_chapter_topics(all_questions, q.grade, q.chapter)
-    top_options = chap_topics + ["➕ Nhập dạng bài mới..."]
-    default_top_idx = chap_topics.index(q.topic) if q.topic in chap_topics else (len(top_options)-1 if q.topic else 0)
-    
-    sel_topic = st.selectbox(f"Chọn hoặc tìm Dạng bài (Lớp {q.grade} - CH{q.chapter}):", top_options, index=default_top_idx, key=f"single_top_sel_{q.code}")
-    if sel_topic == "➕ Nhập dạng bài mới...":
-        q.topic = st.text_input("Nhập tên Dạng bài mới:", value="" if q.topic in chap_topics else q.topic, key=f"single_top_inp_{q.code}")
+    if st.session_state[key_custom_top_s]:
+        c_i, c_b = st.columns([5, 1])
+        q.topic = c_i.text_input("Nhập tên Dạng bài mới:", value=q.topic if q.topic not in chap_topics else "", key=f"single_top_inp_{q.code}")
+        if c_b.button("↩️", key=f"btn_canc_single_top_{q.code}"):
+            st.session_state[key_custom_top_s] = False
+            st.rerun()
     else:
-        q.topic = sel_topic
+        top_options = chap_topics + ["➕ Nhập dạng bài mới..."]
+        default_top_idx = chap_topics.index(q.topic) if q.topic in chap_topics else 0
+        sel_topic = st.selectbox(f"Dạng bài (Lớp {q.grade} - CH{q.chapter}):", top_options, index=default_top_idx, key=f"single_top_sel_{q.code}")
+        if sel_topic == "➕ Nhập dạng bài mới...":
+            st.session_state[key_custom_top_s] = True
+            st.rerun()
+        else:
+            q.topic = sel_topic
 
     col_f1, col_f2 = st.columns(2)
     q.level = col_f1.selectbox("Mức độ", [1, 2, 3], index=q.level-1)
 
+    # NGUỒN ĐỀ - BIẾN HÌNH THEO PHONG CÁCH GOOGLE FORMS
+    key_custom_src_s = f"custom_src_single_{q.code}"
+    if key_custom_src_s not in st.session_state: st.session_state[key_custom_src_s] = False
+
     all_sources = get_all_stored_sources(all_questions)
-    src_options = all_sources + ["➕ Nhập nguồn đề mới..."]
-    default_src_idx = all_sources.index(q.source) if (q.source and q.source in all_sources) else (len(src_options)-1 if q.source else 0)
-    
-    sel_source = col_f2.selectbox("Chọn hoặc tìm Nguồn đề:", src_options, index=default_src_idx, key=f"single_src_sel_{q.code}")
-    if sel_source == "➕ Nhập nguồn đề mới...":
-        q.source = st.text_input("Nhập tên Nguồn đề mới:", value="" if (q.source and q.source in all_sources) else (q.source or ""), key=f"single_src_inp_{q.code}")
+    if st.session_state[key_custom_src_s]:
+        c_i, c_b = col_f2.columns([4, 1])
+        q.source = c_i.text_input("Nhập Nguồn đề mới:", value=q.source if (q.source and q.source not in all_sources) else "", key=f"single_src_inp_{q.code}")
+        if c_b.button("↩️", key=f"btn_canc_single_src_{q.code}"):
+            st.session_state[key_custom_src_s] = False
+            st.rerun()
     else:
-        q.source = sel_source
+        src_options = all_sources + ["➕ Nhập nguồn đề mới..."]
+        default_src_idx = all_sources.index(q.source) if (q.source and q.source in all_sources) else 0
+        sel_source = col_f2.selectbox("Nguồn đề:", src_options, index=default_src_idx, key=f"single_src_sel_{q.code}")
+        if sel_source == "➕ Nhập nguồn đề mới...":
+            st.session_state[key_custom_src_s] = True
+            st.rerun()
+        else:
+            q.source = sel_source
 
     st.divider()
 
@@ -573,7 +707,7 @@ def show_single_question_edit_dialog(q: Question):
     if btn_col2.button("🗑️ Xóa câu hỏi này", use_container_width=True):
         confirm_delete_dialog(q)
 
-# POPUP NHẬP LIỆU NHANH TAB 3 (SỬA LỖI POPUP KHÔNG BẬT)
+# POPUP NHẬP LIỆU NHANH TAB 3
 @st.dialog("📥 Phân loại & Chỉnh sửa chi tiết từng câu", width="large")
 def show_import_modal(raw_text: str):
     default_meta = {"grade": 12, "chapter": 1, "topic": "Dạng 1", "level": 2, "source": "Đề thi thử THPT 2026"}
@@ -582,24 +716,49 @@ def show_import_modal(raw_text: str):
         st.session_state["temp_questions"] = parse_raw_text_to_questions(raw_text, default_meta)
         st.session_state["reset_temp"] = False
 
-    st.markdown("### ⚡ 1. Thiết lặp thông tin phân loại chung")
+    if "custom_top_global" not in st.session_state: st.session_state["custom_top_global"] = False
+    if "custom_src_global" not in st.session_state: st.session_state["custom_src_global"] = False
+
+    st.markdown("### ⚡ 1. Thiết lập thông tin phân loại chung")
     col_a, col_b = st.columns(2)
     g_val = col_a.selectbox("Khối lớp (Chung)", [12, 11, 10], index=0)
     c_val = col_b.number_input("Chương (Chung)", 1, 20, 1)
 
-    global_chap_topics = get_chapter_topics(all_questions, g_val, c_val)
-    top_global_options = global_chap_topics + ["➕ Nhập dạng bài mới..."]
-    col_d, col_e = st.columns([2, 1])
-    sel_global_top = col_d.selectbox(f"Chọn hoặc tìm Dạng bài (Lớp {g_val} - CH{c_val}):", top_global_options, index=0, key="global_top_sel")
-    t_val = col_d.text_input("Nhập tên Dạng bài mới:", value="Dạng 1. Cực trị hàm số", key="global_top_inp") if sel_global_top == "➕ Nhập dạng bài mới..." else sel_global_top
+    col_d, col_e = st.columns(2)
 
-    col_f1, col_f2 = st.columns(2)
-    lvl_val = col_f1.selectbox("Mức độ (Chung)", [1, 2, 3], index=1)
+    global_chap_topics = get_chapter_topics(all_questions, g_val, c_val)
+    if st.session_state["custom_top_global"]:
+        c_inp, c_btn = col_d.columns([5, 1])
+        t_val = c_inp.text_input(f"Nhập Dạng bài mới (Lớp {g_val} - CH{c_val}):", value="Dạng 1. Cực trị hàm số", key="global_top_inp")
+        if c_btn.button("↩️", help="Quay lại chọn từ danh sách", key="btn_cancel_top_g"):
+            st.session_state["custom_top_global"] = False
+            st.rerun()
+    else:
+        top_global_options = global_chap_topics + ["➕ Nhập dạng bài mới..."]
+        sel_global_top = col_d.selectbox(f"Chọn Dạng bài (Lớp {g_val} - CH{c_val}):", top_global_options, index=0, key="global_top_sel")
+        if sel_global_top == "➕ Nhập dạng bài mới...":
+            st.session_state["custom_top_global"] = True
+            st.rerun()
+        else:
+            t_val = sel_global_top
 
     all_stored_srcs = get_all_stored_sources(all_questions)
-    src_global_options = all_stored_srcs + ["➕ Nhập nguồn đề mới..."]
-    sel_global_src = col_f2.selectbox("Chọn hoặc tìm Nguồn đề (Chung):", src_global_options, index=0, key="global_src_sel")
-    src_val = col_f2.text_input("Nhập tên Nguồn đề mới:", value="Đề thi thử THPT 2026", key="global_src_inp") if sel_global_src == "➕ Nhập nguồn đề mới..." else sel_global_src
+    if st.session_state["custom_src_global"]:
+        c_inp, c_btn = col_e.columns([5, 1])
+        src_val = c_inp.text_input("Nhập Nguồn đề mới (Chung):", value="Đề thi thử THPT 2026", key="global_src_inp")
+        if c_btn.button("↩️", help="Quay lại chọn từ danh sách", key="btn_cancel_src_g"):
+            st.session_state["custom_src_global"] = False
+            st.rerun()
+    else:
+        src_global_options = all_stored_srcs + ["➕ Nhập nguồn đề mới..."]
+        sel_global_src = col_e.selectbox("Chọn Nguồn đề (Chung):", src_global_options, index=0, key="global_src_sel")
+        if sel_global_src == "➕ Nhập nguồn đề mới...":
+            st.session_state["custom_src_global"] = True
+            st.rerun()
+        else:
+            src_val = sel_global_src
+
+    lvl_val = st.selectbox("Mức độ (Chung)", [1, 2, 3], index=1)
 
     if st.button("🔄 Gán thông tin chung phía trên cho TẤT CẢ các câu", use_container_width=True):
         for q in st.session_state["temp_questions"]:
@@ -624,11 +783,25 @@ def show_import_modal(raw_text: str):
 
             ct1, ct2, ct3 = st.columns([2, 1, 1])
             q_chap_topics = get_chapter_topics(all_questions, q.grade, q.chapter)
-            t3_top_options = q_chap_topics + ["➕ Nhập dạng bài mới..."]
-            t3_top_default_idx = q_chap_topics.index(q.topic) if q.topic in q_chap_topics else (len(t3_top_options)-1 if q.topic else 0)
             
-            sel_t3_top = ct1.selectbox(f"Dạng bài (Câu {idx+1}):", t3_top_options, index=t3_top_default_idx, key=f"t3_top_sel_{idx}")
-            q.topic = ct1.text_input(f"Nhập Dạng mới (Câu {idx+1}):", value="" if q.topic in q_chap_topics else q.topic, key=f"t3_top_inp_{idx}") if sel_t3_top == "➕ Nhập dạng bài mới..." else sel_t3_top
+            key_custom_top_q = f"custom_top_q_{idx}"
+            if key_custom_top_q not in st.session_state: st.session_state[key_custom_top_q] = False
+
+            if st.session_state[key_custom_top_q]:
+                c_i, c_b = ct1.columns([4, 1])
+                q.topic = c_i.text_input(f"Nhập Dạng bài mới (Câu {idx+1}):", value=q.topic if q.topic not in q_chap_topics else "", key=f"t3_top_inp_{idx}")
+                if c_b.button("↩️", key=f"btn_canc_top_{idx}"):
+                    st.session_state[key_custom_top_q] = False
+                    st.rerun()
+            else:
+                t3_top_options = q_chap_topics + ["➕ Nhập dạng bài mới..."]
+                t3_top_default_idx = q_chap_topics.index(q.topic) if q.topic in q_chap_topics else 0
+                sel_t3_top = ct1.selectbox(f"Dạng bài (Câu {idx+1}):", t3_top_options, index=t3_top_default_idx, key=f"t3_top_sel_{idx}")
+                if sel_t3_top == "➕ Nhập dạng bài mới...":
+                    st.session_state[key_custom_top_q] = True
+                    st.rerun()
+                else:
+                    q.topic = sel_t3_top
 
             q.format = QuestionType(ct2.selectbox(f"Loại (Câu {idx+1})", ["TN", "DS", "TLN"], index=["TN", "DS", "TLN"].index(q.format.value), key=f"t3_fmt_{idx}"))
             q.level = ct3.selectbox(f"Mức độ (Câu {idx+1})", [1, 2, 3], index=q.level-1, key=f"t3_lvl_{idx}")
