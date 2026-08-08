@@ -15,17 +15,13 @@
             width: 100%;
         }
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f0ebe1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #d8cfc4; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #b8543f; }
-
+        /* KHUNG GÕ NỘI DUNG CO DÃN THEO DÒNG */
         .editor-container { 
             background-color: #faf8f5; 
             border: 1px solid #e2dbd0; 
             border-radius: 12px; 
-            padding: 10px 14px; 
-            line-height: 1.8; 
+            padding: 8px 12px; 
+            line-height: 1.7; 
             box-shadow: 0 1px 4px rgba(44,40,37,0.03); 
             outline: none; 
             width: 100%;
@@ -47,15 +43,28 @@
             box-shadow: 0 1px 2px rgba(184, 84, 63, 0.08); 
             cursor: pointer; 
         }
+        math-field.inline-math-chip:hover { border-color: #b8543f !important; }
 
-        /* POPUP CHUẨN TÔNG MÀU ĐỎ GẠCH */
+        /* ÉP BÀN PHÍM ẢO NỔI LÊN TRÊN CÙNG (KHÔNG BỊ LỚP NỀN CHE) */
+        .ML__keyboard, 
+        math-field-virtual-keyboard,
+        div[data-ml-keyboard],
+        .ml-virtual-keyboard {
+            z-index: 9999999 !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+        }
+
+        /* POPUP CHUẨN TÔNG MÀU ĐỎ GẠCH #b8543f */
         .modal-overlay {
             display: none; 
             position: fixed; 
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(44, 40, 37, 0.55); 
             backdrop-filter: blur(3px);
-            z-index: 999999; 
+            z-index: 99999; 
             justify-content: center; 
             align-items: center;
             padding: 16px;
@@ -63,7 +72,7 @@
         .modal-content {
             background: #ffffff; 
             width: 100%; 
-            max-width: 620px; 
+            max-width: 600px; 
             border-radius: 16px; 
             padding: 22px 26px;
             box-shadow: 0 12px 36px rgba(44, 40, 37, 0.25); 
@@ -97,21 +106,21 @@
         }
         
         math-field.modal-mf { 
-            width: 100%; min-height: 56px; font-size: 1.15rem; 
+            width: 100%; min-height: 54px; font-size: 1.15rem; 
             border: 2px solid #b8543f !important; border-radius: 10px !important; 
             padding: 8px 12px; background: #ffffff !important; outline: none !important; 
             box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.12);
         }
         
         textarea.latex-area { 
-            width: 100%; height: 65px; border: 1px solid #e8c4b8; border-radius: 10px; 
+            width: 100%; height: 60px; border: 1px solid #e8c4b8; border-radius: 10px; 
             padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; 
             background: #faf0ec; color: #2c2825; resize: vertical; outline: none;
         }
         
         .preview-box { 
             border: 1px dashed #b8543f; background: #faf8f5; border-radius: 10px; 
-            padding: 14px; text-align: center; min-height: 50px; font-size: 1.1rem; 
+            padding: 12px; text-align: center; min-height: 48px; font-size: 1.1rem; 
             display: flex; justify-content: center; align-items: center;
         }
         
@@ -124,6 +133,7 @@
             background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; 
             padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
         }
+        .btn-save:hover { background: #a34834 !important; }
         
         .btn-kb-toggle { 
             background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; 
@@ -151,7 +161,6 @@
                     <span>NHẬP TRỰC QUAN BẰNG MATHLIVE</span>
                     <button class="btn-kb-toggle" onclick="toggleModalKb()">Mở bàn phím Toán</button>
                 </div>
-                <!-- ÉP BẬT BÀN PHÍM ẢO CẢ TRÊN PC -->
                 <math-field id="modalMathField" class="modal-mf" math-virtual-keyboard-policy="manual"></math-field>
             </div>
             
@@ -197,6 +206,20 @@
             return fullText;
         }
 
+        function applyHeightMode() {
+            const editor = document.getElementById('editor');
+            if (currentHeightMode === "large") {
+                editor.style.minHeight = "320px";
+                editor.style.maxHeight = "480px";
+                editor.style.overflowY = "auto";
+            } else {
+                editor.style.minHeight = "48px";
+                editor.style.maxHeight = "none";
+                editor.style.overflowY = "visible";
+            }
+            syncHeightOnly();
+        }
+
         function syncHeightOnly() {
             let isKbVisible = false;
             try {
@@ -208,17 +231,17 @@
             let isModalOpen = (document.getElementById('mathModal').style.display === 'flex');
             let editorElem = document.getElementById('editor');
             
-            let targetHeight = 70;
+            let targetHeight = 60;
             if (currentHeightMode === "large") {
-                targetHeight = 400;
+                targetHeight = 360;
             } else if (editorElem) {
-                targetHeight = Math.max(65, editorElem.scrollHeight + 20);
+                targetHeight = Math.max(55, editorElem.scrollHeight + 16);
             }
 
             if (isModalOpen) {
-                targetHeight = isKbVisible ? 860 : 650;
+                targetHeight = isKbVisible ? 840 : 620;
             } else if (isKbVisible) {
-                targetHeight = targetHeight + 340;
+                targetHeight = targetHeight + 320;
             }
 
             sendToStreamlit("streamlit:setFrameHeight", { height: targetHeight });
@@ -250,9 +273,7 @@
             prevMf.value = mf.value;
             modal.style.display = 'flex';
             syncHeightOnly();
-            setTimeout(() => {
-                modalMf.focus();
-            }, 100);
+            setTimeout(() => modalMf.focus(), 100);
         }
 
         function closeMathModal() {
@@ -272,7 +293,6 @@
             closeMathModal();
         }
 
-        // BẬT BÀN PHÍM MÁY TÍNH ẢO TRỰC TIẾP
         function toggleModalKb() {
             if (window.mathVirtualKeyboard) {
                 modalMf.focus();
@@ -281,7 +301,7 @@
                 } else {
                     window.mathVirtualKeyboard.show();
                 }
-                setTimeout(syncHeightOnly, 150);
+                setTimeout(syncHeightOnly, 120);
             }
         }
 
@@ -317,8 +337,6 @@
                     const mf = document.createElement('math-field'); 
                     mf.className = 'inline-math-chip'; 
                     mf.value = token.slice(1, -1);
-                    
-                    // CHUYỂN CHẾ ĐỘ BÀN PHÍM BẰNG TAY CHO CHIP
                     mf.mathVirtualKeyboardPolicy = "manual";
                     
                     mf.addEventListener('click', () => { openMathModal(mf); });
@@ -364,6 +382,7 @@
                 if (args) {
                     if (args.height_mode) {
                         currentHeightMode = args.height_mode;
+                        applyHeightMode();
                     }
                     if (args.text !== undefined && !isUserEditing && args.text !== currentText) { 
                         currentText = args.text; 
