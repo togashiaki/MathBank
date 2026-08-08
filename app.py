@@ -45,7 +45,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. TẠO COMPONENT MATHLIVE VỚI MODAL SỬA CÔNG THỨC VÀ FIX LỖI TOGGLE KEYBOARD
+# 2. TẠO COMPONENT MATHLIVE VỚI MODAL POPUP VÀ BÀN PHÍM TOÁN HOÀN CHỈNH
 COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
 os.makedirs(COMPONENT_DIR, exist_ok=True)
 INDEX_HTML_PATH = os.path.join(COMPONENT_DIR, "index.html")
@@ -56,19 +56,37 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
     <meta charset="utf-8">
     <script src="https://unpkg.com/mathlive"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-        html, body { margin: 0; padding: 4px; background-color: transparent; color: #2c2825; font-family: 'Plus Jakarta Sans', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+        
+        * { box-sizing: border-box; }
+        html, body { 
+            margin: 0; padding: 4px; 
+            background-color: transparent; 
+            color: #2c2825; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            width: 100%;
+        }
+
+        /* Thanh trượt tùy chỉnh */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f0ebe1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #d8cfc4; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #b8543f; }
+
+        /* KHUNG SOẠN THẢO TAB 3 CỐ ĐỊNH HIỂN THỊ TO & CÓ THANH TRƯỢT */
         .editor-container { 
             background-color: #faf8f5; 
             border: 1px solid #e2dbd0; 
             border-radius: 12px; 
-            padding: 10px 14px; 
-            min-height: 120px; 
+            padding: 14px 16px; 
+            min-height: 380px; 
+            max-height: 520px;
+            overflow-y: auto;
             line-height: 1.8; 
             box-shadow: 0 1px 4px rgba(44,40,37,0.03); 
             outline: none; 
         }
-        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.88rem; white-space: pre-wrap; }
+        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.9rem; white-space: pre-wrap; }
         
         math-field.inline-math-chip { 
             display: inline-block; 
@@ -86,44 +104,103 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         }
         math-field.inline-math-chip:hover { border-color: #b8543f !important; }
 
-        /* MODAL POPUP SỬA CÔNG THỨC */
+        /* POPUP SỬA CÔNG THỨC TO & PHỦ KÍN MÀN HÌNH (ĐỒNG BỘ CHỦ ĐỀ ĐỎ/CAM) */
         .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4); z-index: 99999; justify-content: center; align-items: center;
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(44, 40, 37, 0.55); 
+            backdrop-filter: blur(3px);
+            z-index: 999999; 
+            justify-content: center; 
+            align-items: center;
+            padding: 16px;
         }
         .modal-content {
-            background: #ffffff; width: 92%; max-width: 640px; border-radius: 16px; padding: 20px 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); font-family: 'Plus Jakarta Sans', sans-serif;
-            position: relative; animation: fadeIn 0.2s ease-in-out;
+            background: #ffffff; 
+            width: 100%; 
+            max-width: 640px; 
+            border-radius: 16px; 
+            padding: 22px 26px;
+            box-shadow: 0 12px 36px rgba(44, 40, 37, 0.25); 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            position: relative; 
+            animation: popIn 0.2s ease-out;
+            border: 1px solid #e8c4b8;
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .modal-title { font-size: 1.15rem; font-weight: 700; color: #1a1a1a; }
-        .close-btn { background: #f0f0f0; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-weight: bold; color: #666; }
-        .close-btn:hover { background: #e0e0e0; color: #000; }
+        @keyframes popIn { 
+            from { opacity: 0; transform: scale(0.96); } 
+            to { opacity: 1; transform: scale(1); } 
+        }
         
-        .form-group { margin-bottom: 14px; }
-        .form-label { font-size: 0.78rem; font-weight: 700; color: #008080; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-title { font-size: 1.2rem; font-weight: 700; color: #2c2825; }
+        .close-btn { 
+            background: #f0ebe1; border: none; border-radius: 50%; width: 30px; height: 30px; 
+            cursor: pointer; font-weight: bold; color: #6b635b; display: flex; align-items: center; justify-content: center;
+        }
+        .close-btn:hover { background: #e8c4b8; color: #b8543f; }
         
-        .inline-check { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; margin-bottom: 10px; font-size: 0.88rem; color: #333; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { 
+            font-size: 0.8rem; font-weight: 700; color: #b8543f; 
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        }
         
-        math-field.modal-mf { width: 100%; min-height: 50px; font-size: 1.1rem; border: 2px solid #20b2aa; border-radius: 12px; padding: 8px 12px; background: #ffffff; outline: none; }
+        .inline-check { 
+            display: flex; align-items: center; justify-content: space-between; 
+            padding: 6px 0; margin-bottom: 12px; font-size: 0.9rem; color: #2c2825; font-weight: 500; 
+        }
+        .inline-check input[type="checkbox"] {
+            accent-color: #b8543f; width: 18px; height: 18px; cursor: pointer;
+        }
         
-        textarea.latex-area { width: 100%; height: 60px; border: 1px solid #b2ecd8; border-radius: 10px; padding: 8px; font-family: monospace; font-size: 0.88rem; background: #f4fbf8; color: #2c2825; box-sizing: border-box; resize: vertical; }
+        math-field.modal-mf { 
+            width: 100%; min-height: 56px; font-size: 1.15rem; 
+            border: 2px solid #b8543f !important; border-radius: 10px !important; 
+            padding: 8px 12px; background: #ffffff !important; outline: none !important; 
+            box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.1);
+        }
         
-        .preview-box { border: 1px dashed #20b2aa; background: #f9fdfc; border-radius: 10px; padding: 12px; text-align: center; min-height: 45px; font-size: 1.1rem; }
+        textarea.latex-area { 
+            width: 100%; height: 65px; border: 1px solid #e8c4b8; border-radius: 10px; 
+            padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; 
+            background: #faf0ec; color: #2c2825; resize: vertical; outline: none;
+        }
+        textarea.latex-area:focus { border-color: #b8543f; }
         
-        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
-        .btn-cancel { background: #f0f0f0; color: #333; border: none; border-radius: 8px; padding: 8px 18px; font-weight: 600; cursor: pointer; }
-        .btn-save { background: #00a884; color: #ffffff; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; cursor: pointer; }
-        .btn-save:hover { background: #008f70; }
-        .btn-kb-toggle { background: #e6f7f3; color: #008080; border: none; border-radius: 16px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+        .preview-box { 
+            border: 1px dashed #b8543f; background: #faf8f5; border-radius: 10px; 
+            padding: 14px; text-align: center; min-height: 50px; font-size: 1.1rem; 
+            display: flex; justify-content: center; align-items: center;
+        }
+        
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+        .btn-cancel { 
+            background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; 
+            padding: 9px 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
+        }
+        .btn-cancel:hover { background: #e2dbd0; }
+        .btn-save { 
+            background: #b8543f; color: #ffffff; border: none; border-radius: 10px; 
+            padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
+            box-shadow: 0 2px 8px rgba(184, 84, 63, 0.25);
+        }
+        .btn-save:hover { background: #a34834; }
+        
+        .btn-kb-toggle { 
+            background: #faf0ec; color: #b8543f; border: 1px solid #e8c4b8; 
+            border-radius: 14px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; 
+            white-space: nowrap; transition: all 0.2s;
+        }
+        .btn-kb-toggle:hover { background: #b8543f; color: #ffffff; }
     </style>
 </head>
 <body>
     <div id="editor" class="editor-container" contenteditable="true"></div>
 
-    <!-- MODAL SỬA CÔNG THỨC POPUP -->
+    <!-- MODAL POPUP SỬA CÔNG THỨC -->
     <div id="mathModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -185,15 +262,25 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             return fullText;
         }
 
-        // TÍNH TOÁN CHIỀU CAO IFRAME CHỈ GỬI CHIỀU CAO, KHÔNG RERUN STREAMLIT
+        // TÍNH TOÁN CHIỀU CAO IFRAME DÃN DÒNG CHUẨN XÁC
         function syncHeightOnly() {
-            let isKbVisible = (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible);
-            let isModalOpen = document.getElementById('mathModal').style.display === 'flex';
-            let baseHeight = document.getElementById('editor').offsetHeight || 140;
+            let isKbVisible = false;
+            if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible) {
+                isKbVisible = true;
+            }
+            let isModalOpen = (document.getElementById('mathModal').style.display === 'flex');
             
-            let targetHeight = baseHeight + 30;
-            if (isKbVisible) targetHeight = Math.max(targetHeight + 320, 500);
-            if (isModalOpen) targetHeight = Math.max(targetHeight, 480);
+            let targetHeight = 420; // Luôn giữ tối thiểu cao thoáng
+            let editorElem = document.getElementById('editor');
+            if (editorElem) {
+                targetHeight = Math.max(targetHeight, editorElem.offsetHeight + 30);
+            }
+
+            if (isModalOpen) {
+                targetHeight = isKbVisible ? 850 : 680;
+            } else if (isKbVisible) {
+                targetHeight = Math.max(targetHeight + 320, 680);
+            }
 
             sendToStreamlit("streamlit:setFrameHeight", { height: targetHeight });
         }
@@ -204,15 +291,16 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             syncHeightOnly(); 
         }
 
-        // KẾT NỐI SỰ KIỆN BẬT TẮT BÀN PHÍM CỦA MATHLIVE (CHỈ ĐỔI CHIỀU CAO, KHÔNG RERUN STREAMLIT)
+        // KẾT NỐI BÀN PHÍM VÀO BODY VÀ THEO DÕI SỰ KIỆN BẬT TẮT
         window.addEventListener('DOMContentLoaded', () => {
             if (window.mathVirtualKeyboard) {
+                window.mathVirtualKeyboard.container = document.body;
                 window.mathVirtualKeyboard.addEventListener("geometrychange", syncHeightOnly);
                 window.mathVirtualKeyboard.addEventListener("visibilitychange", syncHeightOnly);
             }
         });
 
-        // XỬ LÝ MODAL POPUP SỬA CÔNG THỨC
+        // XỬ LÝ MODAL POPUP
         const modal = document.getElementById('mathModal');
         const modalMf = document.getElementById('modalMathField');
         const txtLatex = document.getElementById('txtLatex');
@@ -245,6 +333,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         function toggleModalKb() {
             if (window.mathVirtualKeyboard) {
                 window.mathVirtualKeyboard.toggle();
+                syncHeightOnly();
             }
         }
 
@@ -561,7 +650,6 @@ def show_single_question_edit_dialog(q: Question):
     q.grade = col_a.selectbox("Khối lớp", [12, 11, 10], index=[12, 11, 10].index(q.grade))
     q.chapter = col_b.number_input("Chương", min_value=1, value=q.chapter)
 
-    # DẠNG BÀI - BIẾN HÌNH THEO PHONG CÁCH GOOGLE FORMS
     key_custom_top_s = f"custom_top_single_{q.code}"
     if key_custom_top_s not in st.session_state: st.session_state[key_custom_top_s] = False
 
@@ -585,7 +673,6 @@ def show_single_question_edit_dialog(q: Question):
     col_f1, col_f2 = st.columns(2)
     q.level = col_f1.selectbox("Mức độ", [1, 2, 3], index=q.level-1)
 
-    # NGUỒN ĐỀ - BIẾN HÌNH THEO PHONG CÁCH GOOGLE FORMS
     key_custom_src_s = f"custom_src_single_{q.code}"
     if key_custom_src_s not in st.session_state: st.session_state[key_custom_src_s] = False
 
@@ -1132,6 +1219,5 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
             st.session_state["reset_temp"] = True
             st.session_state["show_import_modal"] = True
 
-    # CỐ ĐỊNH POPUP MỞ BẰNG STATE
     if st.session_state["show_import_modal"]:
         show_import_modal(st.session_state["tab3_input_text"])
