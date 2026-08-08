@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://unpkg.com/mathlive"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 2px; background-color: transparent; color: #2c2825; }
+        .editor-container { background-color: #faf8f5; border: 1px solid #e2dbd0; border-radius: 12px; padding: 14px 16px; min-height: 180px; line-height: 1.8; box-shadow: 0 1px 4px rgba(44,40,37,0.03); outline: none; }
+        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.98rem; white-space: pre-wrap; }
+        math-field.inline-math-chip { display: inline-block; vertical-align: middle; background-color: #faf0ec !important; border: 1px solid #e8c4b8 !important; color: #a8412c !important; border-radius: 8px !important; padding: 2px 8px !important; margin: 2px 4px !important; font-size: 1.15rem !important; outline: none !important; box-shadow: 0 1px 3px rgba(184, 84, 63, 0.08); cursor: pointer; }
+        math-field.inline-math-chip:focus-within { border-color: #b8543f !important; background-color: #ffffff !important; box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.2) !important; }
+    </style>
+</head>
+<body>
+    <div id="editor" class="editor-container" contenteditable="true"></div>
+    <script>
+        let currentText = "";
+        let isUserEditing = false;
+        function sendToStreamlit(type, data) { window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*"); }
+        function getFullText() {
+            const container = document.getElementById('editor');
+            let fullText = "";
+            container.childNodes.forEach(node => {
+                if (node.nodeName && node.nodeName.toLowerCase() === 'math-field') { fullText += '$' + node.value + '$'; }
+                else if (node.nodeType === Node.ELEMENT_NODE) { fullText += node.innerText; }
+                else if (node.nodeType === Node.TEXT_NODE) { fullText += node.textContent; }
+            });
+            return fullText;
+        }
+        function syncWithStreamlit() { currentText = getFullText(); sendToStreamlit("streamlit:setComponentValue", { value: currentText }); sendToStreamlit("streamlit:setFrameHeight", { height: document.body.scrollHeight + 20 }); }
+        function updateHeight() { sendToStreamlit("streamlit:setFrameHeight", { height: document.body.scrollHeight + 20 }); }
+        function buildEditor(rawText) {
+            const container = document.getElementById('editor');
+            container.innerHTML = "";
+            if (!rawText) {
+                const span = document.createElement('span'); span.className = 'plain-text'; span.contentEditable = "true"; span.innerText = "";
+                span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
+                span.addEventListener('focus', () => { isUserEditing = true; });
+                container.appendChild(span); updateHeight(); return;
+            }
+            const tokens = rawText.split(/(\$\$.*?\$\$|\$.*?\$)/g);
+            tokens.forEach((token) => {
+                if (!token) return;
+                if ((token.startsWith('$$') && token.endsWith('$$')) || (token.startsWith('$') && token.endsWith('$'))) {
+                    const mf = document.createElement('math-field'); mf.className = 'inline-math-chip'; mf.value = token.slice(1, -1);
+                    mf.addEventListener('change', syncWithStreamlit);
+                    mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
+                    mf.addEventListener('focus', () => { isUserEditing = true; });
+                    container.appendChild(mf);
+                } else {
+                    const span = document.createElement('span'); span.className = 'plain-text'; span.contentEditable = "true"; span.innerText = token;
+                    span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
+                    span.addEventListener('focus', () => { isUserEditing = true; });
+                    container.appendChild(span);
+                }
+            });
+            updateHeight();
+        }
+        const container = document.getElementById('editor');
+        container.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
+            const sel = window.getSelection();
+            if (sel.rangeCount) { const range = sel.getRangeAt(0); range.deleteContents(); range.insertNode(document.createTextNode(pastedText)); }
+            else { container.appendChild(document.createTextNode(pastedText)); }
+            isUserEditing = false; currentText = getFullText(); buildEditor(currentText); syncWithStreamlit();
+        });
+        window.addEventListener("message", function(event) {
+            if (event.data && event.data.type === "streamlit:render") {
+                const args = event.data.args;
+                if (args && args.text !== undefined && !isUserEditing && args.text !== currentText) { currentText = args.text; buildEditor(args.text); }
+            }
+        });
+        window.addEventListener('load', () => { sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); });
+    </script>
+</body>
+</html>
