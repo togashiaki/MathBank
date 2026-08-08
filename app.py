@@ -416,7 +416,8 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         elif q_fmt == QuestionType.TN:
             is_opt = False
             for line in lines:
-                opt_match = re.match(r'^([A-D])[\.\)]\s*', line)
+                # ĐÃ SỬA: Thêm (.*) vào cuối mẫu Regex để lấy nội dung phương án
+                opt_match = re.match(r'^([A-D])[\.\)]\s*(.*)', line)
                 if opt_match:
                     is_opt = True
                     options[opt_match.group(1)] = opt_match.group(2).strip()
@@ -439,7 +440,6 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         ))
 
     return parsed_questions
-
 # POPUP SỬA 1 CÂU HỎI
 @st.dialog("✏️ Chỉnh sửa câu hỏi", width="large")
 def show_single_question_edit_dialog(q: Question):
