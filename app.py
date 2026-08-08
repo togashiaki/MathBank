@@ -45,420 +45,10 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. TẠO COMPONENT MATHLIVE CHUẨN TÔNG MÀU ĐỎ/CAM & ĐIỀU CHỈNH KÍCH THƯỚC LINH HOẠT
-COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
-os.makedirs(COMPONENT_DIR, exist_ok=True)
-INDEX_HTML_PATH = os.path.join(COMPONENT_DIR, "index.html")
-
-MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <script src="https://unpkg.com/mathlive"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
-        
-        * { box-sizing: border-box; }
-        html, body { 
-            margin: 0; padding: 2px; 
-            background-color: transparent; 
-            color: #2c2825; 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            width: 100%;
-        }
-
-        /* Thanh trượt tùy chỉnh */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f0ebe1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #d8cfc4; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #b8543f; }
-
-        .editor-container { 
-            background-color: #faf8f5; 
-            border: 1px solid #e2dbd0; 
-            border-radius: 12px; 
-            padding: 10px 14px; 
-            line-height: 1.8; 
-            box-shadow: 0 1px 4px rgba(44,40,37,0.03); 
-            outline: none; 
-            width: 100%;
-            word-wrap: break-word;
-        }
-        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; }
-        
-        math-field.inline-math-chip { 
-            display: inline-block; 
-            vertical-align: middle; 
-            background-color: #faf0ec !important; 
-            border: 1px solid #e8c4b8 !important; 
-            color: #a8412c !important; 
-            border-radius: 6px !important; 
-            padding: 1px 6px !important; 
-            margin: 1px 3px !important; 
-            font-size: 0.92rem !important; 
-            outline: none !important; 
-            box-shadow: 0 1px 2px rgba(184, 84, 63, 0.08); 
-            cursor: pointer; 
-        }
-        math-field.inline-math-chip:hover { border-color: #b8543f !important; }
-
-        /* POPUP SỬA CÔNG THỨC TO & PHỦ KÍN (ĐỒNG BỘ MÀU ĐỎ GẠCH #b8543f) */
-        .modal-overlay {
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(44, 40, 37, 0.55); 
-            backdrop-filter: blur(3px);
-            z-index: 999999; 
-            justify-content: center; 
-            align-items: center;
-            padding: 16px;
-        }
-        .modal-content {
-            background: #ffffff; 
-            width: 100%; 
-            max-width: 620px; 
-            border-radius: 16px; 
-            padding: 22px 26px;
-            box-shadow: 0 12px 36px rgba(44, 40, 37, 0.25); 
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            position: relative; 
-            animation: popIn 0.2s ease-out;
-            border: 1px solid #e8c4b8;
-        }
-        @keyframes popIn { 
-            from { opacity: 0; transform: scale(0.96); } 
-            to { opacity: 1; transform: scale(1); } 
-        }
-        
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .modal-title { font-size: 1.2rem; font-weight: 700; color: #2c2825; }
-        .close-btn { 
-            background: #f0ebe1; border: none; border-radius: 50%; width: 30px; height: 30px; 
-            cursor: pointer; font-weight: bold; color: #6b635b; display: flex; align-items: center; justify-content: center;
-        }
-        .close-btn:hover { background: #e8c4b8; color: #b8543f; }
-        
-        .form-group { margin-bottom: 16px; }
-        .form-label { 
-            font-size: 0.8rem; font-weight: 700; color: #b8543f !important; 
-            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
-        }
-        
-        .inline-check { 
-            display: flex; align-items: center; justify-content: space-between; 
-            padding: 6px 0; margin-bottom: 12px; font-size: 0.9rem; color: #2c2825; font-weight: 500; 
-        }
-        .inline-check input[type="checkbox"] {
-            accent-color: #b8543f !important; width: 18px; height: 18px; cursor: pointer;
-        }
-        
-        math-field.modal-mf { 
-            width: 100%; min-height: 56px; font-size: 1.15rem; 
-            border: 2px solid #b8543f !important; border-radius: 10px !important; 
-            padding: 8px 12px; background: #ffffff !important; outline: none !important; 
-            box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.12);
-        }
-        
-        textarea.latex-area { 
-            width: 100%; height: 65px; border: 1px solid #e8c4b8; border-radius: 10px; 
-            padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; 
-            background: #faf0ec; color: #2c2825; resize: vertical; outline: none;
-        }
-        textarea.latex-area:focus { border-color: #b8543f; }
-        
-        .preview-box { 
-            border: 1px dashed #b8543f; background: #faf8f5; border-radius: 10px; 
-            padding: 14px; text-align: center; min-height: 50px; font-size: 1.1rem; 
-            display: flex; justify-content: center; align-items: center;
-        }
-        
-        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
-        .btn-cancel { 
-            background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; 
-            padding: 9px 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
-        }
-        .btn-cancel:hover { background: #e2dbd0; }
-        .btn-save { 
-            background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; 
-            padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
-            box-shadow: 0 2px 8px rgba(184, 84, 63, 0.25);
-        }
-        .btn-save:hover { background: #a34834 !important; }
-        
-        .btn-kb-toggle { 
-            background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; 
-            border-radius: 14px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; 
-            white-space: nowrap; transition: all 0.2s;
-        }
-        .btn-kb-toggle:hover { background: #b8543f !important; color: #ffffff !important; }
-    </style>
-</head>
-<body>
-    <div id="editor" class="editor-container" contenteditable="true"></div>
-
-    <!-- MODAL POPUP SỬA CÔNG THỨC -->
-    <div id="mathModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">Sửa công thức</div>
-                <button class="close-btn" onclick="closeMathModal()">✕</button>
-            </div>
-            
-            <div class="inline-check">
-                <span>Hiển thị cùng dòng</span>
-                <input type="checkbox" id="chkInline" checked>
-            </div>
-            
-            <div class="form-group">
-                <div class="form-label">
-                    <span>NHẬP TRỰC QUAN BẰNG MATHLIVE</span>
-                    <button class="btn-kb-toggle" onclick="toggleModalKb()">Mở bàn phím Toán</button>
-                </div>
-                <math-field id="modalMathField" class="modal-mf"></math-field>
-            </div>
-            
-            <div class="form-group">
-                <div class="form-label">LATEX TỰ ĐỘNG</div>
-                <textarea id="txtLatex" class="latex-area"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <div class="form-label">XEM TRƯỚC MATHJAX</div>
-                <div class="preview-box">
-                    <math-field id="previewMathField" read-only style="border:none; background:transparent; display:inline-block;"></math-field>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeMathModal()">Huỷ</button>
-                <button class="btn-save" onclick="saveMathModal()">Lưu công thức</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let currentText = "";
-        let isUserEditing = false;
-        let activeTargetMf = null;
-        let currentHeightMode = "compact";
-
-        function sendToStreamlit(type, data) { 
-            window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*"); 
-        }
-
-        function getFullText() {
-            const container = document.getElementById('editor');
-            let fullText = "";
-            container.childNodes.forEach(node => {
-                if (node.nodeName && node.nodeName.toLowerCase() === 'math-field') { 
-                    fullText += '$' + node.value + '$'; 
-                }
-                else if (node.nodeType === Node.ELEMENT_NODE) { fullText += node.innerText; }
-                else if (node.nodeType === Node.TEXT_NODE) { fullText += node.textContent; }
-            });
-            return fullText;
-        }
-
-        function applyHeightMode() {
-            const editor = document.getElementById('editor');
-            if (currentHeightMode === "large") {
-                editor.style.minHeight = "360px";
-                editor.style.maxHeight = "520px";
-                editor.style.overflowY = "auto";
-            } else {
-                editor.style.minHeight = "55px";
-                editor.style.maxHeight = "none";
-                editor.style.overflowY = "visible";
-            }
-            syncHeightOnly();
-        }
-
-        function syncHeightOnly() {
-            let isKbVisible = false;
-            try {
-                if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible) {
-                    isKbVisible = true;
-                }
-            } catch(e) {}
-
-            let isModalOpen = (document.getElementById('mathModal').style.display === 'flex');
-            let editorElem = document.getElementById('editor');
-            
-            let targetHeight = 70;
-            if (currentHeightMode === "large") {
-                targetHeight = 400;
-            } else if (editorElem) {
-                targetHeight = Math.max(65, editorElem.scrollHeight + 20);
-            }
-
-            if (isModalOpen) {
-                targetHeight = isKbVisible ? 820 : 640;
-            } else if (isKbVisible) {
-                targetHeight = targetHeight + 320;
-            }
-
-            sendToStreamlit("streamlit:setFrameHeight", { height: targetHeight });
-        }
-
-        function syncWithStreamlit() { 
-            currentText = getFullText(); 
-            sendToStreamlit("streamlit:setComponentValue", { value: currentText }); 
-            syncHeightOnly(); 
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if (window.mathVirtualKeyboard) {
-                window.mathVirtualKeyboard.container = document.body;
-                window.mathVirtualKeyboard.addEventListener("geometrychange", syncHeightOnly);
-                window.mathVirtualKeyboard.addEventListener("visibilitychange", syncHeightOnly);
-            }
-        });
-
-        const modal = document.getElementById('mathModal');
-        const modalMf = document.getElementById('modalMathField');
-        const txtLatex = document.getElementById('txtLatex');
-        const prevMf = document.getElementById('previewMathField');
-
-        function openMathModal(mf) {
-            activeTargetMf = mf;
-            modalMf.value = mf.value;
-            txtLatex.value = mf.value;
-            prevMf.value = mf.value;
-            modal.style.display = 'flex';
-            syncHeightOnly();
-            setTimeout(() => modalMf.focus(), 100);
-        }
-
-        function closeMathModal() {
-            modal.style.display = 'none';
-            activeTargetMf = null;
-            syncHeightOnly();
-        }
-
-        function saveMathModal() {
-            if (activeTargetMf) {
-                activeTargetMf.value = modalMf.value;
-                syncWithStreamlit();
-            }
-            closeMathModal();
-        }
-
-        function toggleModalKb() {
-            if (window.mathVirtualKeyboard) {
-                if (window.mathVirtualKeyboard.visible) {
-                    window.mathVirtualKeyboard.hide();
-                } else {
-                    window.mathVirtualKeyboard.show();
-                }
-                setTimeout(syncHeightOnly, 120);
-            }
-        }
-
-        modalMf.addEventListener('input', (e) => {
-            txtLatex.value = modalMf.value;
-            prevMf.value = modalMf.value;
-        });
-
-        txtLatex.addEventListener('input', (e) => {
-            modalMf.value = txtLatex.value;
-            prevMf.value = txtLatex.value;
-        });
-
-        function buildEditor(rawText) {
-            const container = document.getElementById('editor');
-            container.innerHTML = "";
-            if (!rawText) {
-                const span = document.createElement('span'); 
-                span.className = 'plain-text'; 
-                span.contentEditable = "true"; 
-                span.innerText = "";
-                span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
-                span.addEventListener('focus', () => { isUserEditing = true; });
-                span.addEventListener('input', syncHeightOnly);
-                container.appendChild(span); 
-                syncHeightOnly(); 
-                return;
-            }
-            const tokens = rawText.split(/(\$\$.*?\$\$|\$.*?\$)/g);
-            tokens.forEach((token) => {
-                if (!token) return;
-                if ((token.startsWith('$$') && token.endsWith('$$')) || (token.startsWith('$') && token.endsWith('$'))) {
-                    const mf = document.createElement('math-field'); 
-                    mf.className = 'inline-math-chip'; 
-                    mf.value = token.slice(1, -1);
-                    mf.mathVirtualKeyboardPolicy = "auto";
-                    
-                    mf.addEventListener('click', (e) => {
-                        openMathModal(mf);
-                    });
-                    
-                    mf.addEventListener('change', syncWithStreamlit);
-                    mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
-                    mf.addEventListener('focus', () => { isUserEditing = true; syncHeightOnly(); });
-                    container.appendChild(mf);
-                } else {
-                    const span = document.createElement('span'); 
-                    span.className = 'plain-text'; 
-                    span.contentEditable = "true"; 
-                    span.innerText = token;
-                    span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
-                    span.addEventListener('focus', () => { isUserEditing = true; });
-                    span.addEventListener('input', syncHeightOnly);
-                    container.appendChild(span);
-                }
-            });
-            syncHeightOnly();
-        }
-
-        const container = document.getElementById('editor');
-        container.addEventListener('paste', function(e) {
-            e.preventDefault();
-            const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
-            const sel = window.getSelection();
-            if (sel.rangeCount) { 
-                const range = sel.getRangeAt(0); 
-                range.deleteContents(); 
-                range.insertNode(document.createTextNode(pastedText)); 
-            } else { 
-                container.appendChild(document.createTextNode(pastedText)); 
-            }
-            isUserEditing = false; 
-            currentText = getFullText(); 
-            buildEditor(currentText); 
-            syncWithStreamlit();
-        });
-
-        window.addEventListener("message", function(event) {
-            if (event.data && event.data.type === "streamlit:render") {
-                const args = event.data.args;
-                if (args) {
-                    if (args.height_mode) {
-                        currentHeightMode = args.height_mode;
-                        applyHeightMode();
-                    }
-                    if (args.text !== undefined && !isUserEditing && args.text !== currentText) { 
-                        currentText = args.text; 
-                        buildEditor(args.text); 
-                    }
-                }
-            }
-        });
-
-        window.addEventListener('load', () => { 
-            sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); 
-        });
-    </script>
-</body>
-</html>"""
-
-with open(INDEX_HTML_PATH, "w", encoding="utf-8") as f:
-    f.write(MATHLIVE_HTML_CONTENT)
-
-# 2. KHỞI TẠO COMPONENT MATHLIVE TỪ FILE TĨNH
+# 2. KHỞI TẠO COMPONENT MATHLIVE TỪ THƯ MỤC MATHLIVE_COMPONENT
 COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
 interactive_math_editor = components.declare_component("interactive_math_editor", path=COMPONENT_DIR)
+
 # 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS
 all_questions = load_all_questions_from_cloud()
 
@@ -559,12 +149,11 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN CHÍNH (ĐÃ TINH CHỈNH HOÀN CHỈNH)
+# CSS GIAO DIỆN CHÍNH & LÀM THANH TAB TO RỘNG CĂN GIỮA
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
     
-    /* PHÔNG CHỮ & MÀU NỀN TỔNG THỂ */
     html, body, [class*="css"] { 
         font-family: 'Plus Jakarta Sans', sans-serif !important; 
         color: #2c2825 !important; 
@@ -577,7 +166,6 @@ st.markdown("""
         border-right: 1px solid #e2dbd0 !important; 
     }
 
-    /* CARD CÂU HỎI & BADGE */
     .question-card { 
         background-color: #faf8f5; 
         border: 1px solid #e2dbd0; 
@@ -609,7 +197,6 @@ st.markdown("""
         display: inline-block; 
     }
 
-    /* BẢNG THỐNG KÊ & KHUNG THÔNG TIN */
     .stat-box { 
         background-color: #faf8f5; 
         border: 1px solid #e2dbd0; 
@@ -662,7 +249,6 @@ st.markdown("""
         color: #2c2825; 
     }
 
-    /* NÚT BẤM (BUTTONS) */
     .stButton>button { 
         border-radius: 10px !important; 
         border: 1px solid #d8cfc4 !important; 
@@ -689,41 +275,48 @@ st.markdown("""
         box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25) !important; 
     }
 
-    /* THANH TAB TRÊN CÙNG (XÓA VIỀN GẠCH CHÂN ĐỎ THÔ XẤU) */
+    /* ĐIỀU CHỈNH THANH 3 TAB TO RỘNG, CĂN GIỮA TOÀN TRANG SANG TRỌNG */
     .stTabs [data-baseweb="tab-list"] { 
         display: flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 8px !important; 
+        gap: 12px !important; 
         background-color: #eae5da !important; 
-        padding: 6px !important; 
-        border-radius: 14px !important; 
+        padding: 8px 12px !important; 
+        border-radius: 18px !important; 
         border: 1px solid #d8cfc4 !important; 
-        max-width: 680px !important; 
-        margin: 0 auto 24px auto !important; 
-        box-shadow: 0 4px 12px rgba(44, 40, 37, 0.04) !important; 
+        width: 100% !important;
+        max-width: 900px !important; 
+        margin: 0 auto 32px auto !important; 
+        box-shadow: 0 4px 16px rgba(44, 40, 37, 0.06) !important; 
     }
     .stTabs [data-baseweb="tab"] { 
-        height: 42px !important; 
-        border-radius: 10px !important; 
-        padding: 0px 22px !important; 
-        font-size: 0.92rem !important; 
+        height: 52px !important; 
+        flex: 1 !important;
+        border-radius: 12px !important; 
+        padding: 0px 24px !important; 
+        font-size: 1.05rem !important; 
         font-weight: 600 !important; 
         color: #6b635b !important; 
         border: none !important; 
         background-color: transparent !important; 
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.25s ease !important;
     }
     .stTabs [aria-selected="true"] { 
         background-color: #ffffff !important; 
         color: #b8543f !important; 
-        box-shadow: 0 2px 8px rgba(44, 40, 37, 0.08) !important; 
+        box-shadow: 0 3px 10px rgba(44, 40, 37, 0.1) !important; 
     }
+    
+    /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH */
     div[data-baseweb="tab-highlight-title"], 
     div[data-baseweb="tab-border"] { 
         display: none !important; 
     }
 
-    /* INPUTS & IFRAME MATHLIVE */
     div[data-baseweb="input"], 
     div[data-baseweb="select"], 
     div[data-baseweb="textarea"] { 
@@ -739,6 +332,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 # PARSER THÔNG MINH
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
     if not raw_text or not raw_text.strip(): return []
