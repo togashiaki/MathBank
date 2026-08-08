@@ -55,14 +55,46 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
 <head>
     <meta charset="utf-8">
     <script src="https://unpkg.com/mathlive"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 2px; background-color: transparent; color: #2c2825; }
-        .editor-container { background-color: #faf8f5; border: 1px solid #e2dbd0; border-radius: 12px; padding: 14px 16px; min-height: 180px; line-height: 1.8; box-shadow: 0 1px 4px rgba(44,40,37,0.03); outline: none; }
-        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.98rem; white-space: pre-wrap; }
-        math-field.inline-math-chip { display: inline-block; vertical-align: middle; background-color: #faf0ec !important; border: 1px solid #e8c4b8 !important; color: #a8412c !important; border-radius: 8px !important; padding: 2px 8px !important; margin: 2px 4px !important; font-size: 1.15rem !important; outline: none !important; box-shadow: 0 1px 3px rgba(184, 84, 63, 0.08); cursor: pointer; }
-        math-field.inline-math-chip:focus-within { border-color: #b8543f !important; background-color: #ffffff !important; box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.2) !important; }
-    </style>
+   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 2px; background-color: transparent; color: #2c2825; }
+    .editor-container { 
+        background-color: #faf8f5; 
+        border: 1px solid #e2dbd0; 
+        border-radius: 12px; 
+        padding: 10px 14px; 
+        min-height: 140px; 
+        line-height: 1.6; 
+        box-shadow: 0 1px 4px rgba(44,40,37,0.03); 
+        outline: none; 
+    }
+    .plain-text { 
+        outline: none; 
+        display: inline; 
+        color: #2c2825; 
+        font-size: 0.88rem; /* Giảm cỡ chữ văn bản vừa vặn */
+        white-space: pre-wrap; 
+    }
+    math-field.inline-math-chip { 
+        display: inline-block; 
+        vertical-align: middle; 
+        background-color: #faf0ec !important; 
+        border: 1px solid #e8c4b8 !important; 
+        color: #a8412c !important; 
+        border-radius: 6px !important; 
+        padding: 1px 5px !important; /* Thu nhỏ khoảng đệm quanh công thức */
+        margin: 1px 3px !important; 
+        font-size: 0.92rem !important; /* Giảm cỡ chữ công thức toán */
+        outline: none !important; 
+        box-shadow: 0 1px 2px rgba(184, 84, 63, 0.08); 
+        cursor: pointer; 
+    }
+    math-field.inline-math-chip:focus-within { 
+        border-color: #b8543f !important; 
+        background-color: #ffffff !important; 
+        box-shadow: 0 0 0 2px rgba(184, 84, 63, 0.2) !important; 
+    }
+</style>
 </head>
 <body>
     <div id="editor" class="editor-container" contenteditable="true"></div>
@@ -259,11 +291,11 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { height: 48px !important; border-radius: 10px !important; padding: 0px 28px !important; font-size: 1.02rem !important; font-weight: 600 !important; color: #6b635b !important; border: none !important; transition: all 0.25s ease !important; }
     .stTabs [aria-selected="true"] { background-color: #ffffff !important; color: #b8543f !important; box-shadow: 0 3px 8px rgba(44, 40, 37, 0.1) !important; transform: translateY(-1px); }
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { background-color: #faf8f5 !important; border-color: #d8cfc4 !important; border-radius: 10px !important; color: #2c2825 !important; }
-iframe[title="app.interactive_math_editor"] {
-        min-height: 200px !important;
-        width: 100% !important;
-        border-radius: 12px !important;
-    }
+iframe[title*="interactive_math_editor"] {
+    min-height: 360px !important;
+    width: 100% !important;
+    border-radius: 12px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
