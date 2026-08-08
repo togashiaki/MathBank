@@ -45,7 +45,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. TẠO COMPONENT MATHLIVE VỚI MODAL POPUP VÀ BÀN PHÍM TOÁN HOÀN CHỈNH
+# 2. TẠO COMPONENT MATHLIVE CHUẨN TÔNG MÀU ĐỎ/CAM & ĐIỀU CHỈNH KÍCH THƯỚC LINH HOẠT
 COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
 os.makedirs(COMPONENT_DIR, exist_ok=True)
 INDEX_HTML_PATH = os.path.join(COMPONENT_DIR, "index.html")
@@ -60,7 +60,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         
         * { box-sizing: border-box; }
         html, body { 
-            margin: 0; padding: 4px; 
+            margin: 0; padding: 2px; 
             background-color: transparent; 
             color: #2c2825; 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -73,20 +73,18 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         ::-webkit-scrollbar-thumb { background: #d8cfc4; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #b8543f; }
 
-        /* KHUNG SOẠN THẢO TAB 3 CỐ ĐỊNH HIỂN THỊ TO & CÓ THANH TRƯỢT */
         .editor-container { 
             background-color: #faf8f5; 
             border: 1px solid #e2dbd0; 
             border-radius: 12px; 
-            padding: 14px 16px; 
-            min-height: 380px; 
-            max-height: 520px;
-            overflow-y: auto;
+            padding: 10px 14px; 
             line-height: 1.8; 
             box-shadow: 0 1px 4px rgba(44,40,37,0.03); 
             outline: none; 
+            width: 100%;
+            word-wrap: break-word;
         }
-        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.9rem; white-space: pre-wrap; }
+        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.9rem; white-space: pre-wrap; word-break: break-word; }
         
         math-field.inline-math-chip { 
             display: inline-block; 
@@ -104,7 +102,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         }
         math-field.inline-math-chip:hover { border-color: #b8543f !important; }
 
-        /* POPUP SỬA CÔNG THỨC TO & PHỦ KÍN MÀN HÌNH (ĐỒNG BỘ CHỦ ĐỀ ĐỎ/CAM) */
+        /* POPUP SỬA CÔNG THỨC TO & PHỦ KÍN (ĐỒNG BỘ MÀU ĐỎ GẠCH #b8543f) */
         .modal-overlay {
             display: none; 
             position: fixed; 
@@ -119,7 +117,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         .modal-content {
             background: #ffffff; 
             width: 100%; 
-            max-width: 640px; 
+            max-width: 620px; 
             border-radius: 16px; 
             padding: 22px 26px;
             box-shadow: 0 12px 36px rgba(44, 40, 37, 0.25); 
@@ -143,7 +141,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         
         .form-group { margin-bottom: 16px; }
         .form-label { 
-            font-size: 0.8rem; font-weight: 700; color: #b8543f; 
+            font-size: 0.8rem; font-weight: 700; color: #b8543f !important; 
             text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
             display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
         }
@@ -153,14 +151,14 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             padding: 6px 0; margin-bottom: 12px; font-size: 0.9rem; color: #2c2825; font-weight: 500; 
         }
         .inline-check input[type="checkbox"] {
-            accent-color: #b8543f; width: 18px; height: 18px; cursor: pointer;
+            accent-color: #b8543f !important; width: 18px; height: 18px; cursor: pointer;
         }
         
         math-field.modal-mf { 
             width: 100%; min-height: 56px; font-size: 1.15rem; 
             border: 2px solid #b8543f !important; border-radius: 10px !important; 
             padding: 8px 12px; background: #ffffff !important; outline: none !important; 
-            box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.1);
+            box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.12);
         }
         
         textarea.latex-area { 
@@ -183,18 +181,18 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         }
         .btn-cancel:hover { background: #e2dbd0; }
         .btn-save { 
-            background: #b8543f; color: #ffffff; border: none; border-radius: 10px; 
+            background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; 
             padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
             box-shadow: 0 2px 8px rgba(184, 84, 63, 0.25);
         }
-        .btn-save:hover { background: #a34834; }
+        .btn-save:hover { background: #a34834 !important; }
         
         .btn-kb-toggle { 
-            background: #faf0ec; color: #b8543f; border: 1px solid #e8c4b8; 
+            background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; 
             border-radius: 14px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; 
             white-space: nowrap; transition: all 0.2s;
         }
-        .btn-kb-toggle:hover { background: #b8543f; color: #ffffff; }
+        .btn-kb-toggle:hover { background: #b8543f !important; color: #ffffff !important; }
     </style>
 </head>
 <body>
@@ -244,6 +242,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         let currentText = "";
         let isUserEditing = false;
         let activeTargetMf = null;
+        let currentHeightMode = "compact";
 
         function sendToStreamlit(type, data) { 
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*"); 
@@ -262,24 +261,42 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             return fullText;
         }
 
-        // TÍNH TOÁN CHIỀU CAO IFRAME DÃN DÒNG CHUẨN XÁC
+        function applyHeightMode() {
+            const editor = document.getElementById('editor');
+            if (currentHeightMode === "large") {
+                editor.style.minHeight = "360px";
+                editor.style.maxHeight = "520px";
+                editor.style.overflowY = "auto";
+            } else {
+                editor.style.minHeight = "55px";
+                editor.style.maxHeight = "none";
+                editor.style.overflowY = "visible";
+            }
+            syncHeightOnly();
+        }
+
         function syncHeightOnly() {
             let isKbVisible = false;
-            if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible) {
-                isKbVisible = true;
-            }
+            try {
+                if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible) {
+                    isKbVisible = true;
+                }
+            } catch(e) {}
+
             let isModalOpen = (document.getElementById('mathModal').style.display === 'flex');
-            
-            let targetHeight = 420; // Luôn giữ tối thiểu cao thoáng
             let editorElem = document.getElementById('editor');
-            if (editorElem) {
-                targetHeight = Math.max(targetHeight, editorElem.offsetHeight + 30);
+            
+            let targetHeight = 70;
+            if (currentHeightMode === "large") {
+                targetHeight = 400;
+            } else if (editorElem) {
+                targetHeight = Math.max(65, editorElem.scrollHeight + 20);
             }
 
             if (isModalOpen) {
-                targetHeight = isKbVisible ? 850 : 680;
+                targetHeight = isKbVisible ? 820 : 640;
             } else if (isKbVisible) {
-                targetHeight = Math.max(targetHeight + 320, 680);
+                targetHeight = targetHeight + 320;
             }
 
             sendToStreamlit("streamlit:setFrameHeight", { height: targetHeight });
@@ -291,7 +308,6 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             syncHeightOnly(); 
         }
 
-        // KẾT NỐI BÀN PHÍM VÀO BODY VÀ THEO DÕI SỰ KIỆN BẬT TẮT
         window.addEventListener('DOMContentLoaded', () => {
             if (window.mathVirtualKeyboard) {
                 window.mathVirtualKeyboard.container = document.body;
@@ -300,7 +316,6 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             }
         });
 
-        // XỬ LÝ MODAL POPUP
         const modal = document.getElementById('mathModal');
         const modalMf = document.getElementById('modalMathField');
         const txtLatex = document.getElementById('txtLatex');
@@ -332,8 +347,12 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
 
         function toggleModalKb() {
             if (window.mathVirtualKeyboard) {
-                window.mathVirtualKeyboard.toggle();
-                syncHeightOnly();
+                if (window.mathVirtualKeyboard.visible) {
+                    window.mathVirtualKeyboard.hide();
+                } else {
+                    window.mathVirtualKeyboard.show();
+                }
+                setTimeout(syncHeightOnly, 120);
             }
         }
 
@@ -357,6 +376,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
                 span.innerText = "";
                 span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
                 span.addEventListener('focus', () => { isUserEditing = true; });
+                span.addEventListener('input', syncHeightOnly);
                 container.appendChild(span); 
                 syncHeightOnly(); 
                 return;
@@ -385,6 +405,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
                     span.innerText = token;
                     span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
                     span.addEventListener('focus', () => { isUserEditing = true; });
+                    span.addEventListener('input', syncHeightOnly);
                     container.appendChild(span);
                 }
             });
@@ -412,9 +433,15 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
         window.addEventListener("message", function(event) {
             if (event.data && event.data.type === "streamlit:render") {
                 const args = event.data.args;
-                if (args && args.text !== undefined && !isUserEditing && args.text !== currentText) { 
-                    currentText = args.text; 
-                    buildEditor(args.text); 
+                if (args) {
+                    if (args.height_mode) {
+                        currentHeightMode = args.height_mode;
+                        applyHeightMode();
+                    }
+                    if (args.text !== undefined && !isUserEditing && args.text !== currentText) { 
+                        currentText = args.text; 
+                        buildEditor(args.text); 
+                    }
                 }
             }
         });
@@ -531,7 +558,7 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN
+# CSS GIAO DIỆN CHÍNH
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
@@ -558,7 +585,7 @@ st.markdown("""
     iframe[title*="interactive_math_editor"] {
         width: 100% !important;
         border-radius: 12px !important;
-        transition: height 0.2s ease !important;
+        transition: height 0.15s ease !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -696,7 +723,7 @@ def show_single_question_edit_dialog(q: Question):
     st.divider()
 
     st.markdown("##### 📝 Chỉnh sửa đề bài (Sửa trực tiếp bằng MathLive):")
-    updated_content = interactive_math_editor(key=f"editor_single_content_{q.code}", text=q.content)
+    updated_content = interactive_math_editor(key=f"editor_single_content_{q.code}", text=q.content, height_mode="compact")
     if updated_content is not None: q.content = updated_content
 
     if q.image_path:
@@ -723,18 +750,18 @@ def show_single_question_edit_dialog(q: Question):
         opt_col1, opt_col2 = st.columns(2)
         with opt_col1:
             st.markdown("**Phương án A:**")
-            opt_a = interactive_math_editor(key=f"editor_single_opt_{q.code}_A", text=q.options.get('A', ''))
+            opt_a = interactive_math_editor(key=f"editor_single_opt_{q.code}_A", text=q.options.get('A', ''), height_mode="compact")
             if opt_a is not None: q.options['A'] = opt_a
             st.markdown("**Phương án B:**")
-            opt_b = interactive_math_editor(key=f"editor_single_opt_{q.code}_B", text=q.options.get('B', ''))
+            opt_b = interactive_math_editor(key=f"editor_single_opt_{q.code}_B", text=q.options.get('B', ''), height_mode="compact")
             if opt_b is not None: q.options['B'] = opt_b
 
         with opt_col2:
             st.markdown("**Phương án C:**")
-            opt_c = interactive_math_editor(key=f"editor_single_opt_{q.code}_C", text=q.options.get('C', ''))
+            opt_c = interactive_math_editor(key=f"editor_single_opt_{q.code}_C", text=q.options.get('C', ''), height_mode="compact")
             if opt_c is not None: q.options['C'] = opt_c
             st.markdown("**Phương án D:**")
-            opt_d = interactive_math_editor(key=f"editor_single_opt_{q.code}_D", text=q.options.get('D', ''))
+            opt_d = interactive_math_editor(key=f"editor_single_opt_{q.code}_D", text=q.options.get('D', ''), height_mode="compact")
             if opt_d is not None: q.options['D'] = opt_d
 
         q.answer = st.radio("🔑 Chọn đáp án đúng:", ['A', 'B', 'C', 'D'], index=['A', 'B', 'C', 'D'].index(q.answer) if q.answer in ['A', 'B', 'C', 'D'] else 0, horizontal=True)
@@ -748,7 +775,7 @@ def show_single_question_edit_dialog(q: Question):
             c_stmt, c_val = st.columns([4, 1])
             with c_stmt:
                 st.markdown(f"**Ý {label}):**")
-                updated_stmt = interactive_math_editor(key=f"editor_single_ds_{q.code}_{label}", text=clean_stmt_text)
+                updated_stmt = interactive_math_editor(key=f"editor_single_ds_{q.code}_{label}", text=clean_stmt_text, height_mode="compact")
                 stmt_text = updated_stmt if updated_stmt is not None else clean_stmt_text
             with c_val:
                 val_choice = st.selectbox(f"Đ/S ({label})", ["Đúng", "Sai"], index=0 if raw_stmt_tuple[1] in ["Đúng", "D"] else 1, key=f"dialog_tf_val_{label}")
@@ -762,7 +789,7 @@ def show_single_question_edit_dialog(q: Question):
     st.divider()
 
     st.markdown("##### 📝 Chỉnh sửa Lời giải chi tiết (MathLive):")
-    updated_sol = interactive_math_editor(key=f"editor_single_sol_{q.code}", text=q.solution if q.solution else "")
+    updated_sol = interactive_math_editor(key=f"editor_single_sol_{q.code}", text=q.solution if q.solution else "", height_mode="compact")
     if updated_sol is not None: q.solution = updated_sol
 
     sol_img_path = getattr(q, 'solution_image_path', None)
@@ -861,7 +888,7 @@ def show_import_modal(raw_text: str):
             st.markdown(f"""<div class="edit-q-box"><b>Câu {idx + 1}</b> [{q.format.value}]</div>""", unsafe_allow_html=True)
             
             st.markdown("<b>Sửa nội dung đề bài (MathLive):</b>", unsafe_allow_html=True)
-            updated_t3_content = interactive_math_editor(key=f"editor_t3_content_{idx}", text=q.content)
+            updated_t3_content = interactive_math_editor(key=f"editor_t3_content_{idx}", text=q.content, height_mode="compact")
             if updated_t3_content is not None: q.content = updated_t3_content
 
             uploaded_img = st.file_uploader(f"🖼️ Tải ảnh đính kèm đề bài (Câu {idx+1}):", type=["png", "jpg", "jpeg"], key=f"t3_img_{idx}")
@@ -898,14 +925,14 @@ def show_import_modal(raw_text: str):
                 if not q.options: q.options = {'A': '', 'B': '', 'C': '', 'D': ''}
                 t3_opt_col1, t3_opt_col2 = st.columns(2)
                 with t3_opt_col1:
-                    opt_a = interactive_math_editor(key=f"editor_t3_opt_{idx}_A", text=q.options.get('A', ''))
+                    opt_a = interactive_math_editor(key=f"editor_t3_opt_{idx}_A", text=q.options.get('A', ''), height_mode="compact")
                     if opt_a is not None: q.options['A'] = opt_a
-                    opt_b = interactive_math_editor(key=f"editor_t3_opt_{idx}_B", text=q.options.get('B', ''))
+                    opt_b = interactive_math_editor(key=f"editor_t3_opt_{idx}_B", text=q.options.get('B', ''), height_mode="compact")
                     if opt_b is not None: q.options['B'] = opt_b
                 with t3_opt_col2:
-                    opt_c = interactive_math_editor(key=f"editor_t3_opt_{idx}_C", text=q.options.get('C', ''))
+                    opt_c = interactive_math_editor(key=f"editor_t3_opt_{idx}_C", text=q.options.get('C', ''), height_mode="compact")
                     if opt_c is not None: q.options['C'] = opt_c
-                    opt_d = interactive_math_editor(key=f"editor_t3_opt_{idx}_D", text=q.options.get('D', ''))
+                    opt_d = interactive_math_editor(key=f"editor_t3_opt_{idx}_D", text=q.options.get('D', ''), height_mode="compact")
                     if opt_d is not None: q.options['D'] = opt_d
                 
                 ans_idx = ['A', 'B', 'C', 'D'].index(q.answer) if q.answer in ['A', 'B', 'C', 'D'] else 0
@@ -919,7 +946,7 @@ def show_import_modal(raw_text: str):
                     clean_stmt_text = re.sub(r'^[a-d][\.\)\:-]\s*', '', raw_stmt_tuple[0], flags=re.IGNORECASE).strip()
                     c_txt, c_sel = st.columns([4, 1])
                     with c_txt:
-                        updated_stmt = interactive_math_editor(key=f"editor_t3_ds_{idx}_{label}", text=clean_stmt_text)
+                        updated_stmt = interactive_math_editor(key=f"editor_t3_ds_{idx}_{label}", text=clean_stmt_text, height_mode="compact")
                         stmt_input = updated_stmt if updated_stmt is not None else clean_stmt_text
                     with c_sel:
                         choice = st.selectbox(f"Đ/S ({label})", ["Đúng", "Sai"], index=0 if raw_stmt_tuple[1] in ["Đúng", "D"] else 1, key=f"t3_ds_val_{idx}_{label}")
@@ -931,7 +958,7 @@ def show_import_modal(raw_text: str):
                 q.answer = st.text_input(f"🔑 Nhập đáp án Trả lời ngắn (Câu {idx+1}):", value=q.answer, key=f"t3_tln_{idx}")
 
             st.markdown("<b>Sửa lời giải chi tiết (MathLive):</b>", unsafe_allow_html=True)
-            updated_t3_sol = interactive_math_editor(key=f"editor_t3_sol_{idx}", text=q.solution if q.solution else "")
+            updated_t3_sol = interactive_math_editor(key=f"editor_t3_sol_{idx}", text=q.solution if q.solution else "", height_mode="compact")
             if updated_t3_sol is not None: q.solution = updated_t3_sol
 
             uploaded_sol_img = st.file_uploader(f"🖼️ Tải ảnh lời giải (Câu {idx+1}):", type=["png", "jpg", "jpeg"], key=f"t3_sol_img_{idx}")
@@ -1208,7 +1235,7 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
         st.session_state["tab3_input_text"] = sample_paste_text
 
     st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
-    edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"])
+    edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"], height_mode="large")
     if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
         st.session_state["tab3_input_text"] = edited_live_text
 
