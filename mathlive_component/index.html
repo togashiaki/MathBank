@@ -2,43 +2,84 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>MathLive Streamlit Component</title>
-    <!-- Nhúng MathLive từ CDN -->
+    <title>MathLive Custom Editor</title>
+    <!-- Nhúng MathLive qua CDN chính thức -->
     <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 4px;
+            background-color: transparent;
+            font-family: sans-serif;
+        }
+        math-field {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #d8cfc4;
+            padding: 8px;
+            background-color: #faf8f5;
+            font-size: 1.1rem;
+        }
+        math-field:focus-within {
+            border-color: #b8543f;
+            box-shadow: 0 0 0 2px rgba(184, 84, 63, 0.2);
+        }
+    </style>
 </head>
 <body>
-    <!-- Thẻ math-field với chế độ tự động bật bàn phím ảo -->
-    <math-field id="math-field" virtual-keyboard-mode="auto">
-        f(x) = 
-    </math-field>
+
+    <!-- Thẻ math-field bật sẵn bàn phím ảo tự động -->
+    <math-field id="math-target" virtual-keyboard-mode="auto"></math-field>
 
     <script>
-        const mf = document.getElementById('math-field');
+        const mf = document.getElementById('math-target');
 
-        // Lắng nghe sự kiện thay đổi dữ liệu khi người dùng gõ hoặc bấm bàn phím ảo
-        mf.addEventListener('input', (ev) => {
-            const latexValue = mf.value;
-            
-            // Gửi dữ liệu LaTeX về cho Streamlit Python app nhận diện
-            window.parent.postMessage({
-                isStreamlitMessage: true,
-                type: 'streamlit:setComponentValue',
-                value: latexValue
-            }, '*');
-        });
-
-        // Thiết lập kích thước component cho Streamlit tự động co giãn
-        const sendHeight = () => {
-            const height = document.body.scrollHeight;
+        // Hàm thông báo chiều cao để Streamlit tự động co giãn khung chứa không bị cụt giao diện
+        function sendHeight() {
+            const height = document.body.scrollHeight || document.documentElement.scrollHeight;
             window.parent.postMessage({
                 isStreamlitMessage: true,
                 type: 'streamlit:frameHeight',
-                height: height
+                height: height + 15
             }, '*');
-        };
+        }
+
+        // Nhận dữ liệu truyền từ Python sang Component (nếu có)
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'streamlit:render') {
+                const args = event.data.args;
+                if (args && args.text !== undefined) {
+                    if (mf.value !== args.text) {
+                        mf.value = args.text;
+                    }
+                }
+            }
+        });
+
+        // Gửi dữ liệu LaTeX về cho Python mỗi khi người dùng gõ phím hoặc bấm bàn phím ảo
+        mf.addEventListener('input', (ev) => {
+            sendHeight();
+            window.parent.postMessage({
+                isStreamlitMessage: true,
+                type: 'streamlit:setComponentValue',
+                value: mf.value
+            }, '*');
+        });
+
+        // Cập nhật kích thước lúc load trang
+        window.addEventListener('load', () => {
+            sendHeight();
+            // Gửi tín hiệu báo component đã sẵn sàng với Streamlit
+            window.parent.postMessage({
+                isStreamlitMessage: true,
+                type: 'streamlit:componentReady',
+                apiVersion: 1
+            }, '*');
+        });
         
-        window.addEventListener('load', sendHeight);
-        mf.addEventListener('input', sendHeight);
+        // Theo dõi thay đổi kích thước DOM để co giãn mượt mà
+        const observer = new ResizeObserver(() => sendHeight());
+        observer.observe(document.body);
     </script>
 </body>
 </html>
