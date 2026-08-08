@@ -132,7 +132,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
 with open(INDEX_HTML_PATH, "w", encoding="utf-8") as f:
     f.write(MATHLIVE_HTML_CONTENT)
 
-interactive_math_editor = components.declare_component("interactive_math_editor", path=COMPONENT_DIR)
+interactive_math_editor = components.declare_component("interactive_math_editor", path=COMPONENT_DIR, default_height=200)
 
 # 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS
 all_questions = load_all_questions_from_cloud()
@@ -260,7 +260,11 @@ st.markdown("""
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { background-color: #faf8f5 !important; border-color: #d8cfc4 !important; border-radius: 10px !important; color: #2c2825 !important; }
 </style>
 """, unsafe_allow_html=True)
-
+iframe[title="app.interactive_math_editor"] {
+    min-height: 200px !important;
+    width: 100% !important;
+    border-radius: 12px !important;
+}
 # PARSER THÔNG MINH
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
     if not raw_text or not raw_text.strip(): return []
