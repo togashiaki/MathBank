@@ -588,6 +588,41 @@ st.markdown("""
         border-radius: 12px !important;
         transition: height 0.15s ease !important;
     }
+    /* GIAO DIỆN THANH TAB CAO CẤP */
+.stTabs [data-baseweb="tab-list"] {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    background-color: #eae5da !important;
+    padding: 6px !important;
+    border-radius: 14px !important;
+    border: 1px solid #d8cfc4 !important;
+    max-width: 680px !important;
+    margin: 0 auto 28px auto !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 40px !important;
+    border-radius: 10px !important;
+    padding: 0px 22px !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    color: #6b635b !important;
+    border: none !important;
+    background-color: transparent !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: #ffffff !important;
+    color: #b8543f !important;
+    box-shadow: 0 2px 8px rgba(44, 40, 37, 0.08) !important;
+}
+
+/* XÓA VIỀN GẠCH CHÂN DƯ THỪA CỦA STREAMLIT */
+div[data-baseweb="tab-highlight-title"], 
+div[data-baseweb="tab-border"] {
+    display: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
