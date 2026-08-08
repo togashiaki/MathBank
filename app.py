@@ -149,7 +149,7 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN CHÍNH & LÀM THANH TAB TO RỘNG CĂN GIỮA
+# CSS GIAO DIỆN CHÍNH & THANH TAB RỘNG RÃI CĂN GIỮA TOÀN TRANG
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
