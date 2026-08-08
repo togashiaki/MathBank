@@ -27,17 +27,33 @@ sheet, drive_service = get_google_services()
 DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 
 def load_all_questions_from_cloud() -> list[Question]:
-    """Đọc toàn bộ danh sách câu hỏi từ Google Sheet"""
-    records = sheet.get_all_records()
+    """Đọc toàn bộ danh sách câu hỏi từ Google Sheet an toàn"""
+    try:
+        records = sheet.get_all_records()
+    except Exception as e:
+        st.error(f"Lỗi kết nối đọc Google Sheet: {e}")
+        return []
+        
     questions = []
-    
-    for r in records:
+    for idx, r in enumerate(records, start=2): # Hàng 2 là dòng dữ liệu đầu tiên
         try:
+            # Ép kiểu an toàn cho grade, chapter, level
+            grade_val = int(r.get('grade')) if str(r.get('grade', '')).strip().isdigit() else 12
+            chap_val = int(r.get('chapter')) if str(r.get('chapter', '')).strip().isdigit() else 1
+            lvl_val = int(r.get('level')) if str(r.get('level', '')).strip().isdigit() else 1
+
+            # Chuẩn hóa format
+            fmt_str = str(r.get('format', 'TN')).strip().upper()
+            if fmt_str not in ['TN', 'DS', 'TLN']:
+                fmt_str = 'TN'
+            fmt_enum = QuestionType(fmt_str)
+
             # Parse options
             options = {}
             if r.get('options'):
                 try:
-                    options = eval(str(r['options'])) if isinstance(r['options'], str) and r['options'].startswith('{') else {}
+                    raw_opt = str(r['options']).strip()
+                    options = eval(raw_opt) if raw_opt.startswith('{') else {}
                 except Exception:
                     options = {}
 
@@ -45,29 +61,35 @@ def load_all_questions_from_cloud() -> list[Question]:
             tf_statements = []
             if r.get('tf_statements'):
                 try:
-                    tf_statements = eval(str(r['tf_statements'])) if isinstance(r['tf_statements'], str) and r['tf_statements'].startswith('[') else []
+                    raw_tf = str(r['tf_statements']).strip()
+                    tf_statements = eval(raw_tf) if raw_tf.startswith('[') else []
                 except Exception:
                     tf_statements = []
 
             q = Question(
-                code=str(r.get('code', '')),
-                grade=int(r.get('grade', 12)),
-                chapter=int(r.get('chapter', 1)),
+                code=str(r.get('code', f'Q_{idx}')),
+                grade=grade_val,
+                chapter=chap_val,
                 lesson=1,
                 topic=str(r.get('topic', '')),
-                format=QuestionType(str(r.get('format', 'TN'))),
-                level=int(r.get('level', 1)),
+                format=fmt_enum,
+                level=lvl_val,
                 source=str(r.get('source', '')),
                 content=str(r.get('content', '')),
                 options=options,
                 tf_statements=tf_statements,
                 answer=str(r.get('answer', '')),
                 solution=str(r.get('solution', '')),
-                image_path=str(r.get('image_path', '')) or None
+                image_path=str(r.get('image_path', '')).strip() or None
             )
-            setattr(q, 'solution_image_path', str(r.get('solution_image_path', '')) or None)
-            questions.append(q)
-        except Exception:
+            setattr(q, 'solution_image_path', str(r.get('solution_image_path', '')).strip() or None)
+            
+            # Chỉ lấy những câu có nội dung đề bài
+            if q.content.strip():
+                questions.append(q)
+
+        except Exception as err:
+            st.warning(f"⚠️ Không đọc được câu hỏi tại Dòng {idx} trên Google Sheet: {err}")
             continue
             
     return questions
