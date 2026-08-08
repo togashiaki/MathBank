@@ -47,9 +47,8 @@
             box-shadow: 0 1px 2px rgba(184, 84, 63, 0.08); 
             cursor: pointer; 
         }
-        math-field.inline-math-chip:hover { border-color: #b8543f !important; }
 
-        /* POPUP MODAL CHUẨN ĐỎ GẠCH */
+        /* POPUP CHUẨN TÔNG MÀU ĐỎ GẠCH */
         .modal-overlay {
             display: none; 
             position: fixed; 
@@ -70,12 +69,7 @@
             box-shadow: 0 12px 36px rgba(44, 40, 37, 0.25); 
             font-family: 'Plus Jakarta Sans', sans-serif;
             position: relative; 
-            animation: popIn 0.2s ease-out;
             border: 1px solid #e8c4b8;
-        }
-        @keyframes popIn { 
-            from { opacity: 0; transform: scale(0.96); } 
-            to { opacity: 1; transform: scale(1); } 
         }
         
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -90,7 +84,8 @@
         .form-label { 
             font-size: 0.8rem; font-weight: 700; color: #b8543f !important; 
             text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+            min-height: 28px;
         }
         
         .inline-check { 
@@ -113,7 +108,6 @@
             padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; 
             background: #faf0ec; color: #2c2825; resize: vertical; outline: none;
         }
-        textarea.latex-area:focus { border-color: #b8543f; }
         
         .preview-box { 
             border: 1px dashed #b8543f; background: #faf8f5; border-radius: 10px; 
@@ -126,20 +120,15 @@
             background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; 
             padding: 9px 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
         }
-        .btn-cancel:hover { background: #e2dbd0; }
         .btn-save { 
             background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; 
             padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
-            box-shadow: 0 2px 8px rgba(184, 84, 63, 0.25);
         }
-        .btn-save:hover { background: #a34834 !important; }
         
         .btn-kb-toggle { 
             background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; 
             border-radius: 14px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; 
-            white-space: nowrap; transition: all 0.2s;
         }
-        .btn-kb-toggle:hover { background: #b8543f !important; color: #ffffff !important; }
     </style>
 </head>
 <body>
@@ -162,7 +151,8 @@
                     <span>NHẬP TRỰC QUAN BẰNG MATHLIVE</span>
                     <button class="btn-kb-toggle" onclick="toggleModalKb()">Mở bàn phím Toán</button>
                 </div>
-                <math-field id="modalMathField" class="modal-mf"></math-field>
+                <!-- ÉP BẬT BÀN PHÍM ẢO CẢ TRÊN PC -->
+                <math-field id="modalMathField" class="modal-mf" math-virtual-keyboard-policy="manual"></math-field>
             </div>
             
             <div class="form-group">
@@ -207,20 +197,6 @@
             return fullText;
         }
 
-        function applyHeightMode() {
-            const editor = document.getElementById('editor');
-            if (currentHeightMode === "large") {
-                editor.style.minHeight = "360px";
-                editor.style.maxHeight = "520px";
-                editor.style.overflowY = "auto";
-            } else {
-                editor.style.minHeight = "55px";
-                editor.style.maxHeight = "none";
-                editor.style.overflowY = "visible";
-            }
-            syncHeightOnly();
-        }
-
         function syncHeightOnly() {
             let isKbVisible = false;
             try {
@@ -240,9 +216,9 @@
             }
 
             if (isModalOpen) {
-                targetHeight = isKbVisible ? 820 : 640;
+                targetHeight = isKbVisible ? 860 : 650;
             } else if (isKbVisible) {
-                targetHeight = targetHeight + 320;
+                targetHeight = targetHeight + 340;
             }
 
             sendToStreamlit("streamlit:setFrameHeight", { height: targetHeight });
@@ -274,12 +250,17 @@
             prevMf.value = mf.value;
             modal.style.display = 'flex';
             syncHeightOnly();
-            setTimeout(() => modalMf.focus(), 100);
+            setTimeout(() => {
+                modalMf.focus();
+            }, 100);
         }
 
         function closeMathModal() {
             modal.style.display = 'none';
             activeTargetMf = null;
+            if (window.mathVirtualKeyboard) {
+                window.mathVirtualKeyboard.hide();
+            }
             syncHeightOnly();
         }
 
@@ -291,23 +272,25 @@
             closeMathModal();
         }
 
+        // BẬT BÀN PHÍM MÁY TÍNH ẢO TRỰC TIẾP
         function toggleModalKb() {
             if (window.mathVirtualKeyboard) {
+                modalMf.focus();
                 if (window.mathVirtualKeyboard.visible) {
                     window.mathVirtualKeyboard.hide();
                 } else {
                     window.mathVirtualKeyboard.show();
                 }
-                setTimeout(syncHeightOnly, 120);
+                setTimeout(syncHeightOnly, 150);
             }
         }
 
-        modalMf.addEventListener('input', (e) => {
+        modalMf.addEventListener('input', () => {
             txtLatex.value = modalMf.value;
             prevMf.value = modalMf.value;
         });
 
-        txtLatex.addEventListener('input', (e) => {
+        txtLatex.addEventListener('input', () => {
             modalMf.value = txtLatex.value;
             prevMf.value = txtLatex.value;
         });
@@ -334,12 +317,11 @@
                     const mf = document.createElement('math-field'); 
                     mf.className = 'inline-math-chip'; 
                     mf.value = token.slice(1, -1);
-                    mf.mathVirtualKeyboardPolicy = "auto";
                     
-                    mf.addEventListener('click', (e) => {
-                        openMathModal(mf);
-                    });
+                    // CHUYỂN CHẾ ĐỘ BÀN PHÍM BẰNG TAY CHO CHIP
+                    mf.mathVirtualKeyboardPolicy = "manual";
                     
+                    mf.addEventListener('click', () => { openMathModal(mf); });
                     mf.addEventListener('change', syncWithStreamlit);
                     mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
                     mf.addEventListener('focus', () => { isUserEditing = true; syncHeightOnly(); });
@@ -382,7 +364,6 @@
                 if (args) {
                     if (args.height_mode) {
                         currentHeightMode = args.height_mode;
-                        applyHeightMode();
                     }
                     if (args.text !== undefined && !isUserEditing && args.text !== currentText) { 
                         currentText = args.text; 
