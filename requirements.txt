@@ -1,6 +1,7 @@
 streamlit
 pandas
 pypandoc
+pydantic
 gspread
 google-api-python-client
 google-auth
