@@ -57,7 +57,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
     <script src="https://unpkg.com/mathlive"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 2px; background-color: transparent; color: #2c2825; overflow: visible; }
+        html, body { margin: 0; padding: 4px; background-color: transparent; color: #2c2825; font-family: 'Plus Jakarta Sans', sans-serif; }
         .editor-container { 
             background-color: #faf8f5; 
             border: 1px solid #e2dbd0; 
@@ -68,13 +68,7 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             box-shadow: 0 1px 4px rgba(44,40,37,0.03); 
             outline: none; 
         }
-        .plain-text { 
-            outline: none; 
-            display: inline; 
-            color: #2c2825; 
-            font-size: 0.88rem; 
-            white-space: pre-wrap; 
-        }
+        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.88rem; white-space: pre-wrap; }
         math-field.inline-math-chip { 
             display: inline-block; 
             vertical-align: middle; 
@@ -117,14 +111,18 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             return fullText;
         }
 
-        // TỰ ĐỘNG TÍNH TOÁN CHIỀU CAO KHI BẬT/TẮT BÀN PHÍM MÁY TÍNH ẢO
+        // TÍNH TOÁN VÀ ÉP CHIỀU CAO IFRAME KHI BÀN PHÍM BẬT
         function updateHeight() {
-            let extraKbHeight = 0;
+            let isKbVisible = false;
             if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible) {
-                extraKbHeight = window.mathVirtualKeyboard.boundingRect.height || 320;
+                isKbVisible = true;
             }
-            const totalHeight = document.body.scrollHeight + extraKbHeight + 30;
-            sendToStreamlit("streamlit:setFrameHeight", { height: totalHeight });
+            
+            let baseHeight = document.getElementById('editor').offsetHeight || 140;
+            // Nếu bàn phím ảo mở, dãn rộng khung lên 520px để chứa bàn phím
+            let targetHeight = isKbVisible ? Math.max(baseHeight + 360, 520) : Math.max(baseHeight + 30, 160);
+            
+            sendToStreamlit("streamlit:setFrameHeight", { height: targetHeight });
         }
 
         function syncWithStreamlit() { 
@@ -133,11 +131,14 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             updateHeight(); 
         }
 
-        // LẮNG NGHE SỰ KIỆN BẬT BÀN PHÍM CỦA MATHLIVE
-        if (window.mathVirtualKeyboard) {
-            window.mathVirtualKeyboard.addEventListener("geometrychange", updateHeight);
-            window.mathVirtualKeyboard.addEventListener("visibilitychange", updateHeight);
-        }
+        // KẾT NỐI SỰ KIỆN BẬT TẮT BÀN PHÍM
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.mathVirtualKeyboard) {
+                window.mathVirtualKeyboard.container = document.body;
+                window.mathVirtualKeyboard.addEventListener("geometrychange", updateHeight);
+                window.mathVirtualKeyboard.addEventListener("visibilitychange", updateHeight);
+            }
+        });
 
         function buildEditor(rawText) {
             const container = document.getElementById('editor');
@@ -160,13 +161,20 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
                     const mf = document.createElement('math-field'); 
                     mf.className = 'inline-math-chip'; 
                     mf.value = token.slice(1, -1);
-                    
-                    // KÍCH HOẠT CHẾ ĐỘ BÀN PHÍM TỰ ĐỘNG
                     mf.mathVirtualKeyboardPolicy = "auto";
                     
                     mf.addEventListener('change', syncWithStreamlit);
-                    mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
-                    mf.addEventListener('focus', () => { isUserEditing = true; updateHeight(); });
+                    mf.addEventListener('blur', () => { 
+                        isUserEditing = false; 
+                        syncWithStreamlit(); 
+                    });
+                    mf.addEventListener('focus', () => { 
+                        isUserEditing = true; 
+                        if (window.mathVirtualKeyboard) {
+                            window.mathVirtualKeyboard.show();
+                        }
+                        updateHeight(); 
+                    });
                     container.appendChild(mf);
                 } else {
                     const span = document.createElement('span'); 
@@ -347,9 +355,9 @@ st.markdown("""
     .stTabs [aria-selected="true"] { background-color: #ffffff !important; color: #b8543f !important; box-shadow: 0 3px 8px rgba(44, 40, 37, 0.1) !important; transform: translateY(-1px); }
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { background-color: #faf8f5 !important; border-color: #d8cfc4 !important; border-radius: 10px !important; color: #2c2825 !important; }
 iframe[title*="interactive_math_editor"] {
-    min-height: 360px !important;
     width: 100% !important;
     border-radius: 12px !important;
+    transition: height 0.25s ease !important;
 }
 </style>
 """, unsafe_allow_html=True)
