@@ -58,7 +58,7 @@
             box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
         }
 
-        /* BÀN PHÍM ẢO DÁN CỐ ĐỊNH Ở ĐÁY MÀN HÌNH TRÌNH DUYỆT */
+        /* ÉP BÀN PHÍM ẢO NỔI LÊN LỚP TRÊN CÙNG Ở ĐÁY IFRAME */
         math-virtual-keyboard, 
         .ML__keyboard, 
         div[data-ml-keyboard] { 
@@ -70,22 +70,24 @@
             width: 100% !important;
         }
 
-        /* POPUP MODAL MỜ PHỦ KÍN TOÀN MÀN HÌNH WEB */
+        /* POPUP MODAL MỜ PHỦ KÍN IFRAME VÀ CHỪA CHỖ CHO BÀN PHÍM */
         .modal-overlay {
             display: none; 
             position: fixed; 
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(44, 40, 37, 0.55); 
             backdrop-filter: blur(4px);
             z-index: 999999; 
             justify-content: center; 
             align-items: flex-start;
-            padding-top: 5vh;
+            padding-top: 20px;
+            padding-bottom: 380px; /* Chừa không gian cho bàn phím ảo ở đáy */
+            overflow-y: auto;
         }
 
         .modal-content {
             background: #ffffff; 
-            width: 90%; 
+            width: 95%; 
             max-width: 620px; 
             border-radius: 20px; 
             padding: 22px 26px;
@@ -94,6 +96,7 @@
             position: relative; 
             border: 1px solid #e8c4b8;
             animation: popIn 0.22s ease-out;
+            margin-bottom: 20px;
         }
         @keyframes popIn { 
             0% { opacity: 0; transform: scale(0.96) translateY(8px); }
@@ -216,43 +219,6 @@
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
         }
 
-        /* HÀM PHÓNG TO / THU NHỎ IFRAME TRÀN TRANG WEB STREAMLIT */
-        function makeIframeFullscreen(enable) {
-            try {
-                let frame = window.frameElement;
-                if (!frame && window.parent && window.parent.document) {
-                    const iframes = window.parent.document.querySelectorAll('iframe');
-                    for (let i = 0; i < iframes.length; i++) {
-                        if (iframes[i].contentWindow === window) {
-                            frame = iframes[i];
-                            break;
-                        }
-                    }
-                }
-                if (frame) {
-                    if (enable) {
-                        frame.style.setProperty('position', 'fixed', 'important');
-                        frame.style.setProperty('top', '0px', 'important');
-                        frame.style.setProperty('left', '0px', 'important');
-                        frame.style.setProperty('width', '100vw', 'important');
-                        frame.style.setProperty('height', '100vh', 'important');
-                        frame.style.setProperty('z-index', '999999', 'important');
-                        frame.style.setProperty('background', 'transparent', 'important');
-                    } else {
-                        frame.style.removeProperty('position');
-                        frame.style.removeProperty('top');
-                        frame.style.removeProperty('left');
-                        frame.style.removeProperty('width');
-                        frame.style.removeProperty('height');
-                        frame.style.removeProperty('z-index');
-                        frame.style.removeProperty('background');
-                    }
-                }
-            } catch(e) {
-                console.warn("Chế độ bảo mật iframe:", e);
-            }
-        }
-
         function setIframeHeight(height) {
             if (window.Streamlit) {
                 Streamlit.setFrameHeight(height);
@@ -276,9 +242,17 @@
         }
 
         function syncHeightOnly() {
-            let editorElem = document.getElementById('editor');
-            let targetHeight = (currentHeightMode === "large") ? 380 : Math.max(65, (editorElem ? editorElem.scrollHeight + 20 : 65));
-            setIframeHeight(targetHeight);
+            const modal = document.getElementById('mathModal');
+            const isModalOpen = modal && (modal.style.display === 'flex');
+            
+            if (isModalOpen) {
+                // Nới rộng iFrame lên 1100px khi mở modal để đủ chỗ hiển thị bàn phím ảo
+                setIframeHeight(1100);
+            } else {
+                let editorElem = document.getElementById('editor');
+                let targetHeight = (currentHeightMode === "large") ? 380 : Math.max(65, (editorElem ? editorElem.scrollHeight + 20 : 65));
+                setIframeHeight(targetHeight);
+            }
         }
 
         function syncWithStreamlit() { 
@@ -301,14 +275,12 @@
             modalMf.value = mf.value;
             txtLatex.value = mf.value;
             prevMf.value = mf.value;
-
-            // 1. Phóng to iFrame tràn toàn bộ màn hình Streamlit
-            makeIframeFullscreen(true);
-
-            // 2. Hiển thị Popup Modal
             modal.style.display = 'flex';
+            
+            // 1. Ép mở rộng iFrame lên 1100px
+            syncHeightOnly();
 
-            // 3. Focus vào ô gõ và bật Bàn phím ảo MathLive ở đáy màn hình
+            // 2. Focus ô nhập và kích hoạt bàn phím ảo hiển thị
             setTimeout(() => {
                 modalMf.focus();
                 try {
@@ -318,14 +290,12 @@
                         mathVirtualKeyboard.show();
                     }
                 } catch(e) {}
-            }, 120);
+            }, 150);
         }
 
         function closeMathModal() {
             modal.style.display = 'none';
             activeTargetMf = null;
-
-            // 1. Ẩn Bàn phím ảo
             try {
                 if (window.mathVirtualKeyboard) {
                     window.mathVirtualKeyboard.hide();
@@ -333,11 +303,6 @@
                     mathVirtualKeyboard.hide();
                 }
             } catch(e) {}
-
-            // 2. Thu nhỏ iFrame về lại vị trí cũ trong trang Streamlit
-            makeIframeFullscreen(false);
-
-            // 3. Cập nhật lại chiều cao khung nhập liệu ban đầu
             syncHeightOnly();
         }
 
