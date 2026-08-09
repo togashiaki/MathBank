@@ -55,20 +55,11 @@ interactive_math_editor_comp = components.declare_component(
     path=COMPONENT_DIR
 )
 
-# Thay thế phần hàm gọi component trong file app.py của bạn thành như sau:
-
 def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
-    """Wrapper gọi bộ soạn thảo MathLive an toàn với khả năng tự động mở rộng không gian cho bàn phím ảo"""
-    # Nếu đang ở chế độ chỉnh sửa chi tiết, ta tăng chiều cao mặc định của component lên để chứa bàn phím
-    component_height = 420 if height_mode == "large" else 140
-    val = interactive_math_editor_comp(
-        key=key, 
-        text=text, 
-        height_mode=height_mode, 
-        default=text, 
-        height=component_height
-    )
+    """Wrapper gọi bộ soạn thảo MathLive an toàn"""
+    val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text)
     return val if val is not None else text
+
 # 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS
 all_questions = load_all_questions_from_cloud()
 
