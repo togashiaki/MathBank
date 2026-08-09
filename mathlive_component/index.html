@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Streamlit Component API -->
+    <!-- Nhúng thư viện MathLive & Streamlit Component API -->
+    <script defer src="https://unpkg.com/mathlive"></script>
     <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
         
@@ -62,7 +62,7 @@
             box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
         }
 
-        /* BÀN PHÍM ẢO NỔI LÊN CỐ ĐỊNH Ở ĐÁY MÀN HÌNH */
+        /* BÀN PHÍM ẢO DÁN CỐ ĐỊNH Ở ĐÁY KHUNG POPUP */
         math-virtual-keyboard, 
         .ML__keyboard, 
         div[data-ml-keyboard] { 
@@ -71,88 +71,87 @@
             position: fixed !important;
             bottom: 0 !important;
             left: 0 !important;
-            width: 100vw !important;
+            width: 100% !important;
         }
 
-        /* POPUP MODAL MỜ PHỦ TOÀN MÀN HÌNH */
+        /* POPUP MODAL NẰM GỌN TRONG KHUNG STREAMLIT NỚI RỘNG */
         .modal-overlay {
             display: none; 
-            position: fixed; 
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(44, 40, 37, 0.55); 
             backdrop-filter: blur(4px);
             z-index: 10000; 
             justify-content: center; 
             align-items: flex-start;
-            padding-top: 25px;
-            overflow-y: auto;
+            padding-top: 15px;
+            border-radius: 16px;
         }
 
         .modal-content {
             background: #ffffff; 
-            width: 90%; 
-            max-width: 640px; 
+            width: 95%; 
+            max-width: 620px; 
             border-radius: 20px; 
-            padding: 22px 26px;
+            padding: 20px 24px;
             box-shadow: 0 16px 40px rgba(44, 40, 37, 0.28); 
             font-family: 'Plus Jakarta Sans', sans-serif;
             position: relative; 
             border: 1px solid #e8c4b8;
             animation: popIn 0.22s ease-out;
-            margin-bottom: 340px;
         }
         @keyframes popIn { 
             0% { opacity: 0; transform: scale(0.96) translateY(8px); }
             100% { opacity: 1; transform: scale(1) translateY(0px); }
         }
         
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .modal-title { font-size: 1.25rem; font-weight: 700; color: #2c2825; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .modal-title { font-size: 1.2rem; font-weight: 700; color: #2c2825; }
         .close-btn { 
             background: #f0ebe1; border: none; border-radius: 50%; width: 32px; height: 32px; 
             cursor: pointer; font-weight: bold; color: #6b635b; display: flex; align-items: center; justify-content: center;
         }
         .close-btn:hover { background: #e8c4b8; color: #b8543f; }
         
-        .form-group { margin-bottom: 16px; }
+        .form-group { margin-bottom: 14px; }
         .form-label { 
-            font-size: 0.8rem; font-weight: 800; color: #b8543f !important; 
-            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
+            font-size: 0.78rem; font-weight: 800; color: #b8543f !important; 
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; 
             display: flex; justify-content: space-between; align-items: center;
-            min-height: 28px;
+            min-height: 26px;
         }
         
         .inline-check { 
             display: flex; align-items: center; justify-content: space-between; 
-            padding: 6px 0; margin-bottom: 12px; font-size: 0.92rem; color: #2c2825; font-weight: 600; 
+            padding: 4px 0; margin-bottom: 10px; font-size: 0.9rem; color: #2c2825; font-weight: 600; 
         }
         .inline-check input[type="checkbox"] { accent-color: #b8543f !important; width: 18px; height: 18px; cursor: pointer; }
         
         math-field.modal-mf { 
-            width: 100%; min-height: 65px; font-size: 1.25rem; 
+            width: 100%; min-height: 58px; font-size: 1.2rem; 
             border: 2px solid #b8543f !important; border-radius: 12px !important; 
-            padding: 10px 14px; background: #ffffff !important; outline: none !important; 
+            padding: 8px 12px; background: #ffffff !important; outline: none !important; 
             box-shadow: 0 0 0 4px rgba(184, 84, 63, 0.12);
         }
         
         textarea.latex-area { 
-            width: 100%; height: 65px; border: 1.5px solid #e8c4b8; border-radius: 12px; 
-            padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; 
+            width: 100%; height: 58px; border: 1.5px solid #e8c4b8; border-radius: 12px; 
+            padding: 8px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; 
             background: #faf0ec; color: #2c2825; resize: vertical; outline: none;
         }
         
         .preview-box { 
             border: 1.5px dashed #b8543f; background: #faf8f5; border-radius: 12px; 
-            padding: 12px; text-align: center; min-height: 52px; font-size: 1.1rem; 
+            padding: 10px; text-align: center; min-height: 48px; font-size: 1.05rem; 
             display: flex; justify-content: center; align-items: center;
         }
         
-        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 22px; }
-        .btn-cancel { background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; padding: 9px 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
-        .btn-save { background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25); }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px; }
+        .btn-cancel { background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; padding: 8px 18px; font-weight: 600; cursor: pointer; font-size: 0.88rem; }
+        .btn-save { background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; padding: 8px 20px; font-weight: 600; cursor: pointer; font-size: 0.88rem; box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25); }
         .btn-save:hover { background: #a34834 !important; }
         
-        .btn-kb-toggle { background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; border-radius: 12px; padding: 5px 12px; font-size: 0.78rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+        .btn-kb-toggle { background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; border-radius: 12px; padding: 4px 10px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
         .btn-kb-toggle:hover { background: #b8543f !important; color: #ffffff !important; }
     </style>
 </head>
@@ -199,19 +198,7 @@
         </div>
     </div>
 
-    <!-- NHÚNG MATHLIVE DẠNG ES MODULE CHUẨN ĐỂ MỞ ĐẦY ĐỦ TÍNH NĂNG -->
-    <script type="module">
-        import { MathfieldElement } from 'https://unpkg.com/mathlive?module';
-
-        // 1. Cấu hình vị trí tải Fonts và Âm thanh từ CDN chính thức
-        MathfieldElement.fontsDirectory = 'https://unpkg.com/mathlive/dist/fonts';
-        MathfieldElement.soundsDirectory = 'https://unpkg.com/mathlive/dist/sounds';
-
-        // 2. Kích hoạt toàn bộ Layouts bàn phím ảo (Số, Ký hiệu, Chữ Hy Lạp, Chữ cái)
-        if (window.mathVirtualKeyboard) {
-            window.mathVirtualKeyboard.layouts = ["numeric", "symbols", "greek", "alphabetic"];
-        }
-
+    <script>
         let currentText = "";
         let isUserEditing = false;
         let activeTargetMf = null;
@@ -219,40 +206,6 @@
 
         function sendToStreamlit(type, data) {
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
-        }
-
-        function makeIframeFullscreen(enable) {
-            try {
-                let frame = window.frameElement;
-                if (!frame && window.parent && window.parent.document) {
-                    const iframes = window.parent.document.querySelectorAll('iframe');
-                    for (let i = 0; i < iframes.length; i++) {
-                        if (iframes[i].contentWindow === window) {
-                            frame = iframes[i];
-                            break;
-                        }
-                    }
-                }
-                if (frame) {
-                    if (enable) {
-                        frame.style.setProperty('position', 'fixed', 'important');
-                        frame.style.setProperty('top', '0px', 'important');
-                        frame.style.setProperty('left', '0px', 'important');
-                        frame.style.setProperty('width', '100vw', 'important');
-                        frame.style.setProperty('height', '100vh', 'important');
-                        frame.style.setProperty('z-index', '999999', 'important');
-                        frame.style.setProperty('background', 'transparent', 'important');
-                    } else {
-                        frame.style.removeProperty('position');
-                        frame.style.removeProperty('top');
-                        frame.style.removeProperty('left');
-                        frame.style.removeProperty('width');
-                        frame.style.removeProperty('height');
-                        frame.style.removeProperty('z-index');
-                        frame.style.removeProperty('background');
-                    }
-                }
-            } catch(e) {}
         }
 
         function setIframeHeight(height) {
@@ -298,23 +251,24 @@
         const txtLatex = document.getElementById('txtLatex');
         const prevMf = document.getElementById('previewMathField');
 
-        // BẮT SỰ KIỆN FOCUSIN / FOCUSOUT BẬT BÀN PHÍM BẰNG POLICY MANUAL
+        // BẮT SỰ KIỆN FOCUSIN ĐỂ HIỂN THỊ BÀN PHÍM ẢO
         modalMf.mathVirtualKeyboardPolicy = "manual";
         
         modalMf.addEventListener("focusin", () => {
             try {
-                if (window.mathVirtualKeyboard) {
-                    window.mathVirtualKeyboard.container = document.body;
-                    window.mathVirtualKeyboard.show();
+                const kb = window.mathVirtualKeyboard || (typeof mathVirtualKeyboard !== 'undefined' ? mathVirtualKeyboard : null);
+                if (kb) {
+                    kb.layouts = ["numeric", "symbols", "greek", "alphabetic"];
+                    kb.container = document.body;
+                    kb.show();
                 }
             } catch(e) {}
         });
 
         modalMf.addEventListener("focusout", () => {
             try {
-                if (window.mathVirtualKeyboard) {
-                    window.mathVirtualKeyboard.hide();
-                }
+                const kb = window.mathVirtualKeyboard || (typeof mathVirtualKeyboard !== 'undefined' ? mathVirtualKeyboard : null);
+                if (kb) kb.hide();
             } catch(e) {}
         });
 
@@ -324,9 +278,13 @@
             txtLatex.value = mf.value;
             prevMf.value = mf.value;
 
-            makeIframeFullscreen(true);
+            // 1. Ép Streamlit nới rộng khung Iframe lên 780px chính chủ
+            setIframeHeight(780);
+
+            // 2. Mở Modal
             modal.style.display = 'flex';
 
+            // 3. Focus ô nhập liệu -> tự kích hoạt focusin mở bàn phím
             setTimeout(() => {
                 modalMf.focus();
             }, 100);
@@ -337,10 +295,11 @@
             activeTargetMf = null;
 
             try {
-                if (window.mathVirtualKeyboard) window.mathVirtualKeyboard.hide();
+                const kb = window.mathVirtualKeyboard || (typeof mathVirtualKeyboard !== 'undefined' ? mathVirtualKeyboard : null);
+                if (kb) kb.hide();
             } catch(e) {}
 
-            makeIframeFullscreen(false);
+            // Thu nhỏ Iframe về chiều cao ban đầu
             syncHeightOnly();
         };
 
@@ -355,11 +314,12 @@
         window.toggleModalKb = function() {
             modalMf.focus();
             try {
-                if (window.mathVirtualKeyboard) {
-                    if (window.mathVirtualKeyboard.visible) {
-                        window.mathVirtualKeyboard.hide();
+                const kb = window.mathVirtualKeyboard || (typeof mathVirtualKeyboard !== 'undefined' ? mathVirtualKeyboard : null);
+                if (kb) {
+                    if (kb.visible) {
+                        kb.hide();
                     } else {
-                        window.mathVirtualKeyboard.show();
+                        kb.show();
                     }
                 }
             } catch(e) {}
