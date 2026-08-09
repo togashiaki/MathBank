@@ -4,8 +4,8 @@ import time
 import random
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from datetime import datetime
-from streamlit_mathlive import streamlit_mathlive
 from models import Question, QuestionType
 from exporter import export_questions_to_word
 from cloud_db import (
@@ -23,7 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# KHÓA MẬT KHẨU TRUY CẬP APP
+# KHÓA MẬT KHẨU TRUY CẬP APP (NẾU CÓ TRONG SECRETS)
 def check_password():
     if "APP_PASSWORD" not in st.secrets:
         return True
@@ -45,11 +45,25 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. HÀM BỌC KẾT NỐI STREAMLIT-MATHLIVE
+# 2. KHỞI TẠO VÀ KẾT NỐI VỚI ST_MATHLIVE
+try:
+    from st_mathlive import st_mathlive
+except ImportError:
+    parent_dir = os.path.dirname(os.path.abspath(__file__))
+    build_dir = os.path.join(parent_dir, "st_mathlive", "frontend", "build")
+    if not os.path.exists(build_dir):
+        build_dir = os.path.join(parent_dir, "mathlive_component")
+    st_mathlive_comp = components.declare_component("st_mathlive", path=build_dir)
+    def st_mathlive(value="", key=None, **kwargs):
+        return st_mathlive_comp(value=value, key=key, default=value)
+
 def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
-    """Gọi trực tiếp component streamlit-mathlive"""
-    val = streamlit_mathlive(value=text, key=key)
-    return val if val is not None else text
+    """Wrapper gọi bộ soạn thảo MathLive an toàn"""
+    try:
+        val = st_mathlive(value=text, key=key)
+        return val if val is not None else text
+    except Exception:
+        return text
 
 # 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS
 all_questions = load_all_questions_from_cloud()
@@ -151,7 +165,7 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN CHÍNH & LÀM THANH TAB TO RỘNG CĂN GIỮA TOÀN TRANG
+# CSS GIAO DIỆN CHÍNH & THANH TAB RỘNG RÃI CĂN GIỮA NỔI BẬT
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
@@ -282,23 +296,23 @@ st.markdown("""
         display: flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 12px !important; 
+        gap: 16px !important; 
         background-color: #eae5da !important; 
-        padding: 8px 12px !important; 
-        border-radius: 18px !important; 
+        padding: 10px 16px !important; 
+        border-radius: 20px !important; 
         border: 1px solid #d8cfc4 !important; 
         width: 100% !important;
-        max-width: 900px !important; 
-        margin: 0 auto 32px auto !important; 
-        box-shadow: 0 4px 16px rgba(44, 40, 37, 0.06) !important; 
+        max-width: 960px !important; 
+        margin: 10px auto 36px auto !important; 
+        box-shadow: 0 4px 18px rgba(44, 40, 37, 0.08) !important; 
     }
     .stTabs [data-baseweb="tab"] { 
-        height: 52px !important; 
+        height: 56px !important; 
         flex: 1 !important;
-        border-radius: 12px !important; 
-        padding: 0px 24px !important; 
-        font-size: 1.05rem !important; 
-        font-weight: 600 !important; 
+        border-radius: 14px !important; 
+        padding: 0px 28px !important; 
+        font-size: 1.15rem !important; 
+        font-weight: 700 !important; 
         color: #6b635b !important; 
         border: none !important; 
         background-color: transparent !important; 
@@ -306,11 +320,12 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
         transition: all 0.25s ease !important;
+        cursor: pointer !important;
     }
     .stTabs [aria-selected="true"] { 
         background-color: #ffffff !important; 
         color: #b8543f !important; 
-        box-shadow: 0 3px 10px rgba(44, 40, 37, 0.1) !important; 
+        box-shadow: 0 4px 12px rgba(44, 40, 37, 0.12) !important; 
     }
     
     /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH */
@@ -326,6 +341,11 @@ st.markdown("""
         border-color: #d8cfc4 !important; 
         border-radius: 10px !important; 
         color: #2c2825 !important; 
+    }
+    iframe[title*="st_mathlive"], iframe[title*="interactive_math_editor"] { 
+        width: 100% !important; 
+        border-radius: 12px !important; 
+        transition: height 0.15s ease !important; 
     }
 </style>
 """, unsafe_allow_html=True)
