@@ -95,7 +95,7 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
     export_dir = get_export_dir()
     file_suffix = f"_{test_code}" if test_code else ""
 
-    if st.button("🚀 BẮT ĐẦU TẠO CÁC FILE WORD", type="primary", use_container_width=True):
+    if st.button("🚀 BẮT ĐẦU TẠO CÁC FILE WORD", type="primary", width="stretch):
         path_degoc = os.path.join(export_dir, f"1_De_Thi_Goc{file_suffix}.docx")
         export_questions_to_word(questions_to_export, path_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code)
 
@@ -117,24 +117,24 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
         paths = st.session_state[f"export_paths_{test_code}"]
         c1, c2 = st.columns(2)
         c3, c4 = st.columns(2)
-        with open(paths["degoc"], "rb") as f: c1.download_button("📝 Tải về đề thi gốc", f, file_name=os.path.basename(paths["degoc"]), use_container_width=True)
-        with open(paths["dongchua"], "rb") as f: c2.download_button("✍️ Tải đề có dòng chữa bài", f, file_name=os.path.basename(paths["dongchua"]), use_container_width=True)
-        with open(paths["dapan"], "rb") as f: c3.download_button("🔑 Tải về đáp án nhanh", f, file_name=os.path.basename(paths["dapan"]), use_container_width=True)
-        with open(paths["loigiai"], "rb") as f: c4.download_button("📖 Tải về lời giải chi tiết", f, file_name=os.path.basename(paths["loigiai"]), use_container_width=True)
+        with open(paths["degoc"], "rb") as f: c1.download_button("📝 Tải về đề thi gốc", f, file_name=os.path.basename(paths["degoc"]), width="stretch)
+        with open(paths["dongchua"], "rb") as f: c2.download_button("✍️ Tải đề có dòng chữa bài", f, file_name=os.path.basename(paths["dongchua"]), width="stretch)
+        with open(paths["dapan"], "rb") as f: c3.download_button("🔑 Tải về đáp án nhanh", f, file_name=os.path.basename(paths["dapan"]), width="stretch)
+        with open(paths["loigiai"], "rb") as f: c4.download_button("📖 Tải về lời giải chi tiết", f, file_name=os.path.basename(paths["loigiai"]), width="stretch)
 
 # POPUP XÓA CÂU HỎI
 @st.dialog("🗑️ Xác nhận xóa câu hỏi", width="small")
 def confirm_delete_dialog(q: Question):
     st.write(f"Bạn có chắc chắn muốn xóa câu hỏi **{q.code}** khỏi cơ sở dữ liệu không?")
     col_yes, col_no = st.columns(2)
-    if col_yes.button("❌ Có, xóa ngay", type="primary", use_container_width=True):
+    if col_yes.button("❌ Có, xóa ngay", type="primary", width="stretch):
         delete_question_from_cloud(q.code)
         st.session_state["selected_questions"].discard(q.code)
         st.success(f"Đã xóa câu hỏi {q.code}!")
         time.sleep(0.6)
         st.rerun()
 
-    if col_no.button("Hủy bỏ", use_container_width=True):
+    if col_no.button("Hủy bỏ", width="stretch):
         st.rerun()
 
 def get_chapter_topics(questions: list, grade: int, chapter: int) -> list:
@@ -567,13 +567,13 @@ def show_single_question_edit_dialog(q: Question):
     st.divider()
 
     btn_col1, btn_col2 = st.columns([3, 1])
-    if btn_col1.button("💾 LƯU THAY ĐỔI CÂU HỎI", type="primary", use_container_width=True):
+    if btn_col1.button("💾 LƯU THAY ĐỔI CÂU HỎI", type="primary", width="stretch):
         save_questions_to_cloud([q])
         st.success("Đã cập nhật câu hỏi lên Google Sheet thành công!")
         time.sleep(0.8)
         st.rerun()
 
-    if btn_col2.button("🗑️ Xóa câu hỏi này", use_container_width=True):
+    if btn_col2.button("🗑️ Xóa câu hỏi này", width="stretch):
         confirm_delete_dialog(q)
 
 # POPUP NHẬP LIỆU NHANH TAB 3
@@ -629,7 +629,7 @@ def show_import_modal(raw_text: str):
 
     lvl_val = st.selectbox("Mức độ (Chung)", [1, 2, 3], index=1)
 
-    if st.button("🔄 Gán thông tin chung phía trên cho TẤT CẢ các câu", use_container_width=True):
+    if st.button("🔄 Gán thông tin chung phía trên cho TẤT CẢ các câu", width="stretch):
         for q in st.session_state["temp_questions"]:
             q.grade, q.chapter, q.topic, q.level, q.source = g_val, c_val, t_val, lvl_val, src_val
         st.success("Đã áp dụng thông tin chung cho toàn bộ danh sách!")
@@ -723,7 +723,7 @@ def show_import_modal(raw_text: str):
             st.markdown("---")
 
     col_btn1, col_btn2 = st.columns(2)
-    if col_btn1.button("💾 LƯU TẤT CẢ VÀO GOOGLE SHEET", type="primary", use_container_width=True):
+    if col_btn1.button("💾 LƯU TẤT CẢ VÀO GOOGLE SHEET", type="primary", width="stretch):
         for q in st.session_state["temp_questions"]:
             std_code = generate_standard_code(all_questions, q.grade, q.chapter, q.topic)
             q.code = std_code
@@ -736,7 +736,7 @@ def show_import_modal(raw_text: str):
         time.sleep(1)
         st.rerun()
 
-    if col_btn2.button("❌ Hủy bỏ", use_container_width=True):
+    if col_btn2.button("❌ Hủy bỏ", width="stretch):
         st.session_state["reset_temp"] = True
         st.session_state["show_import_modal"] = False
         st.rerun()
@@ -820,7 +820,7 @@ with tab1:
     st.markdown("##### 📄 Tải file Word câu hỏi đã chọn:")
     selected_objs = [q for q in all_questions if q.code in st.session_state["selected_questions"]]
 
-    if st.button("📄 XUẤT FILE WORD VÀ TÙY CHỈNH", type="primary", use_container_width=True):
+    if st.button("📄 XUẤT FILE WORD VÀ TÙY CHỈNH", type="primary", width="stretch):
         if not selected_objs: st.error("Vui lòng tích chọn ít nhất 1 câu hỏi!")
         else: show_export_config_modal(selected_objs)
 
@@ -848,7 +848,7 @@ with tab1:
                 st.session_state["selected_questions"].discard(q.code)
 
             st.write(q.content)
-            if q.image_path: st.image(q.image_path, use_container_width=True)
+            if q.image_path: st.image(q.image_path, width="stretch)
 
             if q.format == QuestionType.TN and q.options:
                 for k, v in q.options.items(): st.write(f"**{k}.** {v}")
@@ -861,7 +861,7 @@ with tab1:
                 with st.expander("Lời giải chi tiết"):
                     if q.solution: st.write(q.solution)
                     sol_img = getattr(q, 'solution_image_path', None)
-                    if sol_img: st.image(sol_img, use_container_width=True)
+                    if sol_img: st.image(sol_img, width="stretch)
 
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -883,7 +883,7 @@ with tab2:
     if "matrix_df" not in st.session_state: st.session_state["matrix_df"] = pd.DataFrame(default_matrix_data)
 
     edited_df = st.data_editor(
-        st.session_state["matrix_df"], num_rows="dynamic", use_container_width=True,
+        st.session_state["matrix_df"], num_rows="dynamic", width="stretch,
         column_config={
             "Chủ đề / Nội dung": st.column_config.SelectboxColumn("Chủ đề / Nội dung (Chương hoặc Dạng)", options=matrix_options, required=True),
             "TN - 1": st.column_config.NumberColumn("TN (1)", min_value=0, default=0),
@@ -919,7 +919,7 @@ with tab2:
             code_input = st.text_input(f"Mã đề {i+1}:", value=f"{101 + i}", key=f"t2_custom_code_{i}")
             custom_exam_codes.append(code_input.strip())
 
-    if st.button("🎲 TỰ ĐỘNG TRỘN & TẠO CÁC MÃ ĐỀ THI", type="primary", use_container_width=True):
+    if st.button("🎲 TỰ ĐỘNG TRỘN & TẠO CÁC MÃ ĐỀ THI", type="primary", width="stretch):
         base_questions, errors = [], []
         for _, row in calc_df.iterrows():
             topic_or_chap = row["Chủ đề / Nội dung"]
@@ -962,7 +962,7 @@ with tab2:
         st.markdown("### 📥 Tải về các Mã đề thi đã tạo:")
         for e_code, q_list in st.session_state["generated_exams_dict"].items():
             with st.expander(f"📌 MÃ ĐỀ THI: {e_code} ({len(q_list)} câu)", expanded=True):
-                if st.button(f"📄 Tùy chỉnh & Tải file Word Mã đề {e_code}", key=f"btn_exp_modal_{e_code}", use_container_width=True):
+                if st.button(f"📄 Tùy chỉnh & Tải file Word Mã đề {e_code}", key=f"btn_exp_modal_{e_code}", width="stretch):
                     show_export_config_modal(q_list, test_code=e_code)
 
 # TAB 3
@@ -994,7 +994,7 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
     if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
         st.session_state["tab3_input_text"] = edited_live_text
 
-    if st.button("🔍 PHÂN TÍCH & MỞ POPUP ĐIỀU CHỈNH CHI TIẾT", type="primary", use_container_width=True):
+    if st.button("🔍 PHÂN TÍCH & MỞ POPUP ĐIỀU CHỈNH CHI TIẾT", type="primary", width="stretch):
         if not st.session_state["tab3_input_text"].strip():
             st.warning("Vui lòng dán văn bản câu hỏi trước khi nhấn phân tích!")
         else:
