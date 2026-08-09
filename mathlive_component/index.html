@@ -2,10 +2,9 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Nhúng thư viện MathLive -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Nhúng thư viện MathLive & Streamlit Component API -->
     <script defer src="https://unpkg.com/mathlive"></script>
-    <!-- Nhúng API kết nối Streamlit Custom Component -->
     <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
@@ -19,11 +18,7 @@
             width: 100%;
         }
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f0ebe1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #d8cfc4; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #b8543f; }
-
+        /* KHUNG CHỨA VĂN BẢN VÀ CHIPS CÔNG THỨC */
         .editor-container { 
             background-color: #faf8f5; 
             border: 1px solid #e2dbd0; 
@@ -33,35 +28,51 @@
             box-shadow: 0 1px 4px rgba(44,40,37,0.03); 
             outline: none; 
             width: 100%;
-            min-height: 52px;
+            min-height: 56px;
             word-wrap: break-word;
         }
         .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
         
-        /* HIỂN THỊ CHIP ĐỎ TRONG DÒNG VĂN BẢN */
+        /* ĐỊNH DẠNG CÔNG THỨC DẠNG CHIP ĐỎ (THEO CHUẨN MATH-BUBBLE) */
         math-field.inline-math-chip { 
-            display: inline-block; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
             vertical-align: middle; 
             background-color: #faf0ec !important; 
-            border: 1px solid #e8c4b8 !important; 
+            border: 1.5px solid #e8c4b8 !important; 
             color: #a8412c !important; 
-            border-radius: 8px !important; 
+            border-radius: 10px !important; 
             padding: 2px 8px !important; 
             margin: 2px 4px !important; 
             font-size: 0.98rem !important; 
             outline: none !important; 
-            box-shadow: 0 1px 3px rgba(184, 84, 63, 0.1); 
+            box-shadow: 0 2px 6px rgba(184, 84, 63, 0.08); 
             cursor: pointer; 
+            user-select: all;
+            transition: all 0.15s ease;
         }
-        math-field.inline-math-chip:hover { border-color: #b8543f !important; }
+        math-field.inline-math-chip:hover { 
+            background-color: #f5e2db !important;
+            border-color: #b8543f !important; 
+            box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
+        }
 
-        /* MODAL POPUP (MÀU ĐỎ GẠCH chuẩn Ảnh 2) */
+        /* NỔI BÀN PHÍM ẢO LÊN LỚP TRÊN CÙNG (CƠ CHẾ CHUẨN P_WORD_WEB) */
+        math-virtual-keyboard, 
+        .ML__keyboard, 
+        div[data-ml-keyboard] { 
+            z-index: 9999999 !important; 
+            --keyboard-zindex: 9999999 !important; 
+        }
+
+        /* POPUP MODAL BIÊN SOẠN CÔNG THỨC */
         .modal-overlay {
             display: none; 
             position: fixed; 
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(44, 40, 37, 0.55); 
-            backdrop-filter: blur(3px);
+            backdrop-filter: blur(4px);
             z-index: 99999; 
             justify-content: center; 
             align-items: center;
@@ -70,26 +81,31 @@
         .modal-content {
             background: #ffffff; 
             width: 100%; 
-            max-width: 600px; 
-            border-radius: 16px; 
+            max-width: 620px; 
+            border-radius: 20px; 
             padding: 22px 26px;
-            box-shadow: 0 12px 36px rgba(44, 40, 37, 0.25); 
+            box-shadow: 0 16px 40px rgba(44, 40, 37, 0.28); 
             font-family: 'Plus Jakarta Sans', sans-serif;
             position: relative; 
             border: 1px solid #e8c4b8;
+            animation: popIn 0.22s ease-out;
+        }
+        @keyframes popIn { 
+            0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0px); }
         }
         
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .modal-title { font-size: 1.2rem; font-weight: 700; color: #2c2825; }
+        .modal-title { font-size: 1.25rem; font-weight: 700; color: #2c2825; }
         .close-btn { 
-            background: #f0ebe1; border: none; border-radius: 50%; width: 30px; height: 30px; 
+            background: #f0ebe1; border: none; border-radius: 50%; width: 32px; height: 32px; 
             cursor: pointer; font-weight: bold; color: #6b635b; display: flex; align-items: center; justify-content: center;
         }
         .close-btn:hover { background: #e8c4b8; color: #b8543f; }
         
         .form-group { margin-bottom: 16px; }
         .form-label { 
-            font-size: 0.8rem; font-weight: 700; color: #b8543f !important; 
+            font-size: 0.8rem; font-weight: 800; color: #b8543f !important; 
             text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
             display: flex; justify-content: space-between; align-items: center;
             min-height: 28px;
@@ -97,32 +113,32 @@
         
         .inline-check { 
             display: flex; align-items: center; justify-content: space-between; 
-            padding: 6px 0; margin-bottom: 12px; font-size: 0.9rem; color: #2c2825; font-weight: 500; 
+            padding: 6px 0; margin-bottom: 12px; font-size: 0.92rem; color: #2c2825; font-weight: 600; 
         }
         .inline-check input[type="checkbox"] {
             accent-color: #b8543f !important; width: 18px; height: 18px; cursor: pointer;
         }
         
         math-field.modal-mf { 
-            width: 100%; min-height: 56px; font-size: 1.15rem; 
-            border: 2px solid #b8543f !important; border-radius: 10px !important; 
-            padding: 8px 12px; background: #ffffff !important; outline: none !important; 
-            box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.12);
+            width: 100%; min-height: 60px; font-size: 1.2rem; 
+            border: 2px solid #b8543f !important; border-radius: 12px !important; 
+            padding: 10px 14px; background: #ffffff !important; outline: none !important; 
+            box-shadow: 0 0 0 4px rgba(184, 84, 63, 0.12);
         }
         
         textarea.latex-area { 
-            width: 100%; height: 60px; border: 1px solid #e8c4b8; border-radius: 10px; 
-            padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; 
+            width: 100%; height: 65px; border: 1.5px solid #e8c4b8; border-radius: 12px; 
+            padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; 
             background: #faf0ec; color: #2c2825; resize: vertical; outline: none;
         }
         
         .preview-box { 
-            border: 1px dashed #b8543f; background: #faf8f5; border-radius: 10px; 
-            padding: 12px; text-align: center; min-height: 48px; font-size: 1.1rem; 
+            border: 1.5px dashed #b8543f; background: #faf8f5; border-radius: 12px; 
+            padding: 12px; text-align: center; min-height: 52px; font-size: 1.1rem; 
             display: flex; justify-content: center; align-items: center;
         }
         
-        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 22px; }
         .btn-cancel { 
             background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; 
             padding: 9px 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
@@ -130,24 +146,22 @@
         .btn-save { 
             background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; 
             padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
+            box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25);
         }
         .btn-save:hover { background: #a34834 !important; }
         
         .btn-kb-toggle { 
             background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; 
-            border-radius: 14px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; 
+            border-radius: 12px; padding: 5px 12px; font-size: 0.78rem; font-weight: 800; cursor: pointer; 
+            transition: all 0.2s;
         }
-
-        /* ĐẢM BẢO BÀN PHÍM ẢO NỔI LÊN TRÊN POPUP */
-        .ML__keyboard, math-field-virtual-keyboard, div[data-ml-keyboard] {
-            z-index: 9999999 !important;
-        }
+        .btn-kb-toggle:hover { background: #b8543f !important; color: #ffffff !important; }
     </style>
 </head>
 <body>
     <div id="editor" class="editor-container" contenteditable="true"></div>
 
-    <!-- CỬA SỔ POPUP SỬA CÔNG THỨC -->
+    <!-- CỬA SỔ POPUP MODAL TÙY CHỈNH -->
     <div id="mathModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -193,6 +207,10 @@
         let activeTargetMf = null;
         let currentHeightMode = "compact";
 
+        function sendToStreamlit(type, data) {
+            window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
+        }
+
         function getFullText() {
             const container = document.getElementById('editor');
             let fullText = "";
@@ -209,8 +227,8 @@
         function applyHeightMode() {
             const editor = document.getElementById('editor');
             if (currentHeightMode === "large") {
-                editor.style.minHeight = "320px";
-                editor.style.maxHeight = "480px";
+                editor.style.minHeight = "340px";
+                editor.style.maxHeight = "500px";
                 editor.style.overflowY = "auto";
             } else {
                 editor.style.minHeight = "52px";
@@ -233,26 +251,30 @@
             
             let targetHeight = 65;
             if (currentHeightMode === "large") {
-                targetHeight = 360;
+                targetHeight = 380;
             } else if (editorElem) {
-                targetHeight = Math.max(65, editorElem.scrollHeight + 16);
+                targetHeight = Math.max(65, editorElem.scrollHeight + 20);
             }
 
             if (isModalOpen) {
-                targetHeight = isKbVisible ? 840 : 620;
+                targetHeight = isKbVisible ? 860 : 640;
             } else if (isKbVisible) {
-                targetHeight = targetHeight + 320;
+                targetHeight = targetHeight + 340;
             }
 
             if (window.Streamlit) {
                 Streamlit.setFrameHeight(targetHeight);
+            } else {
+                sendToStreamlit("streamlit:setFrameHeight", { height: targetHeight });
             }
         }
 
         function syncWithStreamlit() { 
             currentText = getFullText(); 
             if (window.Streamlit) {
-                Streamlit.setComponentValue(currentText); 
+                Streamlit.setComponentValue(currentText);
+            } else {
+                sendToStreamlit("streamlit:setComponentValue", { value: currentText });
             }
             syncHeightOnly(); 
         }
@@ -343,7 +365,7 @@
                     mf.value = token.slice(1, -1);
                     mf.mathVirtualKeyboardPolicy = "manual";
                     
-                    /* Bấm vào chip đỏ để mở Popup Sửa Công Thức */
+                    /* Bấm vào chip đỏ để mở Popup Modal Sửa công thức */
                     mf.addEventListener('click', () => { openMathModal(mf); });
                     mf.addEventListener('change', syncWithStreamlit);
                     mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
@@ -382,7 +404,7 @@
         });
 
         function onRender(event) {
-            const args = event.detail.args;
+            const args = event.detail ? event.detail.args : event.data.args;
             if (args) {
                 if (args.height_mode) {
                     currentHeightMode = args.height_mode;
@@ -399,6 +421,17 @@
             Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
             Streamlit.setComponentReady();
         }
+
+        window.addEventListener("message", function(event) {
+            if (event.data && event.data.type === "streamlit:render") {
+                onRender(event);
+            }
+        });
+
+        window.addEventListener('load', () => { 
+            sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); 
+            syncHeightOnly();
+        });
     </script>
 </body>
 </html>
