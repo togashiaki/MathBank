@@ -3,8 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Nhúng MathLive ES Module & Streamlit Component API -->
-    <script type="module" src="https://unpkg.com/mathlive?module"></script>
+    <!-- Streamlit Component API -->
     <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
@@ -62,7 +61,7 @@
             box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
         }
 
-        /* BÀN PHÍM ẢO CỐ ĐỊNH Ở ĐÁY KHUNG IFRAME */
+        /* BÀN PHÍM ẢO CỐ ĐỊNH Ở ĐÁY MÀN HÌNH - NỔI TRÊN CÙNG */
         math-virtual-keyboard, 
         .ML__keyboard, 
         div[data-ml-keyboard] { 
@@ -71,89 +70,88 @@
             position: fixed !important;
             bottom: 0 !important;
             left: 0 !important;
-            width: 100% !important;
+            width: 100vw !important;
         }
 
-        /* POPUP MODAL MỜ NẰM TRONG KHUNG IFRAME ĐƯỢC GIÃN RỘNG */
+        /* POPUP MODAL MỜ PHỦ TOÀN MÀN HÌNH */
         .modal-overlay {
             display: none; 
             position: fixed; 
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(44, 40, 37, 0.55); 
             backdrop-filter: blur(4px);
             z-index: 10000; 
             justify-content: center; 
             align-items: flex-start;
-            padding-top: 15px;
-            padding-bottom: 300px;
+            padding-top: 20px;
             overflow-y: auto;
         }
 
         .modal-content {
             background: #ffffff; 
-            width: 95%; 
-            max-width: 620px; 
+            width: 90%; 
+            max-width: 680px; 
             border-radius: 20px; 
-            padding: 20px 24px;
+            padding: 22px 26px;
             box-shadow: 0 16px 40px rgba(44, 40, 37, 0.28); 
             font-family: 'Plus Jakarta Sans', sans-serif;
             position: relative; 
             border: 1px solid #e8c4b8;
             animation: popIn 0.22s ease-out;
-            margin-bottom: 20px;
+            margin-bottom: 340px; /* Chừa không gian bên dưới cho bàn phím */
         }
         @keyframes popIn { 
             0% { opacity: 0; transform: scale(0.96) translateY(8px); }
             100% { opacity: 1; transform: scale(1) translateY(0px); }
         }
         
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .modal-title { font-size: 1.2rem; font-weight: 700; color: #2c2825; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-title { font-size: 1.25rem; font-weight: 700; color: #2c2825; }
         .close-btn { 
             background: #f0ebe1; border: none; border-radius: 50%; width: 32px; height: 32px; 
             cursor: pointer; font-weight: bold; color: #6b635b; display: flex; align-items: center; justify-content: center;
         }
         .close-btn:hover { background: #e8c4b8; color: #b8543f; }
         
-        .form-group { margin-bottom: 14px; }
+        .form-group { margin-bottom: 16px; }
         .form-label { 
-            font-size: 0.78rem; font-weight: 800; color: #b8543f !important; 
-            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; 
+            font-size: 0.8rem; font-weight: 800; color: #b8543f !important; 
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; 
             display: flex; justify-content: space-between; align-items: center;
-            min-height: 26px;
+            min-height: 28px;
         }
         
         .inline-check { 
             display: flex; align-items: center; justify-content: space-between; 
-            padding: 4px 0; margin-bottom: 10px; font-size: 0.9rem; color: #2c2825; font-weight: 600; 
+            padding: 6px 0; margin-bottom: 12px; font-size: 0.92rem; color: #2c2825; font-weight: 600; 
         }
         .inline-check input[type="checkbox"] { accent-color: #b8543f !important; width: 18px; height: 18px; cursor: pointer; }
         
         math-field.modal-mf { 
-            width: 100%; min-height: 58px; font-size: 1.2rem; 
+            width: 100%; min-height: 65px; font-size: 1.25rem; 
             border: 2px solid #b8543f !important; border-radius: 12px !important; 
-            padding: 8px 12px; background: #ffffff !important; outline: none !important; 
+            padding: 10px 14px; background: #ffffff !important; outline: none !important; 
             box-shadow: 0 0 0 4px rgba(184, 84, 63, 0.12);
         }
         
         textarea.latex-area { 
-            width: 100%; height: 58px; border: 1.5px solid #e8c4b8; border-radius: 12px; 
-            padding: 8px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; 
+            width: 100%; height: 65px; border: 1.5px solid #e8c4b8; border-radius: 12px; 
+            padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; 
             background: #faf0ec; color: #2c2825; resize: vertical; outline: none;
         }
         
         .preview-box { 
             border: 1.5px dashed #b8543f; background: #faf8f5; border-radius: 12px; 
-            padding: 10px; text-align: center; min-height: 48px; font-size: 1.05rem; 
+            padding: 12px; text-align: center; min-height: 52px; font-size: 1.1rem; 
             display: flex; justify-content: center; align-items: center;
         }
         
-        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px; }
-        .btn-cancel { background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; padding: 8px 18px; font-weight: 600; cursor: pointer; font-size: 0.88rem; }
-        .btn-save { background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; padding: 8px 20px; font-weight: 600; cursor: pointer; font-size: 0.88rem; box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25); }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 22px; }
+        .btn-cancel { background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; padding: 9px 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+        .btn-save { background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25); }
         .btn-save:hover { background: #a34834 !important; }
         
-        .btn-kb-toggle { background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; border-radius: 12px; padding: 4px 10px; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+        .btn-kb-toggle { background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; border-radius: 12px; padding: 5px 12px; font-size: 0.78rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
         .btn-kb-toggle:hover { background: #b8543f !important; color: #ffffff !important; }
     </style>
 </head>
@@ -178,7 +176,7 @@
                     <span>NHẬP TRỰC QUAN BẰNG MATHLIVE</span>
                     <button class="btn-kb-toggle" id="btnToggleKb">Mở bàn phím Toán</button>
                 </div>
-                <math-field id="modalMathField" class="modal-mf" math-virtual-keyboard-policy="manual"></math-field>
+                <math-field id="modalMathField" class="modal-mf"></math-field>
             </div>
             
             <div class="form-group">
@@ -200,8 +198,83 @@
         </div>
     </div>
 
+    <!-- KẾT HỢP MODULE VÀ BỘ LAYOUTS TỰ ĐỊNH NGHĨA TỪ CODE BẠN CUNG CẤP -->
     <script type="module">
-        import { MathfieldElement } from 'https://unpkg.com/mathlive?module';
+        import 'https://unpkg.com/mathlive?module';
+
+        // TÍCH HỢP BỘ LAYOUTS TỪ CƠ SỞ CODE MẪU BẠN CUNG CẤP
+        mathVirtualKeyboard.layouts = [
+            {
+                label: 'Basic',
+                rows: [
+                    [
+                        '[7]', '[8]', '[9]', '[+]', '[separator-5]',
+                        { class: 'small', latex: '\\frac{#@}{#0}' },
+                        '\\varnothing', '\\infty', '\\in', '\\notin', '[separator]',
+                    ],
+                    [
+                        '[4]', '[5]', '[6]', '[-]', '[separator-5]',
+                        '[(]', '[)]', '\\lt', '\\le', '\\hat{=}', '[separator]',
+                    ],
+                    [
+                        '[1]', '[2]', '[3]', '\\cdot', '[separator-5]',
+                        '[', ']', '\\gt', '\\ge',
+                        { label: '[backspace]', width: 2 },
+                    ],
+                    [
+                        { label: '[0]', width: 2 }, '[.]', '\\colon', '[separator-5]',
+                        '\\lbrace', '\\rbrace', '=', '\\ne', '[left]', '[right]',
+                    ],
+                ],
+            },
+            {
+                label: 'Geometry',
+                rows: [
+                    [
+                        '\\vert', '\\not{\\vert}', '\\parallel', '\\bot',
+                        '\\overrightarrow{#@}', '\\begin{pmatrix}#0\\\\#0\\end{pmatrix}',
+                    ],
+                    [
+                        '\\measuredangle', ';', '\\longmapsto',
+                        '\\left\\lvert #0 \\right\\rvert',
+                        '\\left\\lvert \\overline{#0} \\right\\rvert',
+                        '\\overline{#@}',
+                    ],
+                    [],
+                    [
+                        { class: 'separator w20' }, { class: 'separator w20' },
+                        { class: 'separator w20' }, { class: 'separator w15' },
+                        '[left]', '[right]',
+                    ],
+                ],
+            },
+            {
+                label: 'Secondary',
+                rows: [
+                    [
+                        { latex: 'x', variants: [{ latex: '\\cos\\left( #0 \\right)' }], width: 1.5 },
+                        { latex: '\\cos', insert: '\\cos(#0)', shift: { latex: '\\sin', insert: '\\sin (#0)' }, width: 1.5 },
+                        { latex: '\\tan\\left( #0 \\right)', width: 1.5 },
+                        '[separator-5]', '\\land', '\\lor', '\\lnot', '[separator-5]', '\\approx',
+                    ],
+                    [
+                        { latex: '\\sin^{-1}\\left( #0 \\right)', width: 1.5 },
+                        { latex: '\\cos^{-1}\\left( #0 \\right)', width: 1.5 },
+                        { latex: '\\tan^{-1}\\left( #0 \\right)', width: 1.5 },
+                        '[separator-5]', { latex: '#@^{#?}', width: 1.5 }, { latex: '#@^2', width: 1.5 },
+                        '[separator-5]', '\\cong',
+                    ],
+                    [
+                        { latex: '\\begin{vmatrix}#?&#?\\\\#?&#?\\end{vmatrix}', width: 1.5 },
+                        '\\sqrt{#@}', '\\pm', '\\overarc{#@}', '\\sim', { latex: '#@_{#?}', width: 1.5 },
+                    ],
+                    [
+                        '[separator-20]', '[separator-20]', '[separator-20]', '[separator-15]',
+                        '[left]', '[right]',
+                    ],
+                ],
+            },
+        ];
 
         let currentText = "";
         let isUserEditing = false;
@@ -210,6 +283,41 @@
 
         function sendToStreamlit(type, data) {
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
+        }
+
+        /* PHÓNG TO IFRAME TRÀN MÀN HÌNH TRÌNH DUYỆT */
+        function makeIframeFullscreen(enable) {
+            try {
+                let frame = window.frameElement;
+                if (!frame && window.parent && window.parent.document) {
+                    const iframes = window.parent.document.querySelectorAll('iframe');
+                    for (let i = 0; i < iframes.length; i++) {
+                        if (iframes[i].contentWindow === window) {
+                            frame = iframes[i];
+                            break;
+                        }
+                    }
+                }
+                if (frame) {
+                    if (enable) {
+                        frame.style.setProperty('position', 'fixed', 'important');
+                        frame.style.setProperty('top', '0px', 'important');
+                        frame.style.setProperty('left', '0px', 'important');
+                        frame.style.setProperty('width', '100vw', 'important');
+                        frame.style.setProperty('height', '100vh', 'important');
+                        frame.style.setProperty('z-index', '999999', 'important');
+                        frame.style.setProperty('background', 'transparent', 'important');
+                    } else {
+                        frame.style.removeProperty('position');
+                        frame.style.removeProperty('top');
+                        frame.style.removeProperty('left');
+                        frame.style.removeProperty('width');
+                        frame.style.removeProperty('height');
+                        frame.style.removeProperty('z-index');
+                        frame.style.removeProperty('background');
+                    }
+                }
+            } catch(e) {}
         }
 
         function setIframeHeight(height) {
@@ -255,19 +363,18 @@
         const txtLatex = document.getElementById('txtLatex');
         const prevMf = document.getElementById('previewMathField');
 
-        /* HÀM BẮT BUỘC ÉP MATHLIVE HIỂN THỊ BÀN PHÍM ẢO TRÊN MÁY TÍNH */
-        function forceShowVirtualKeyboard() {
-            if (window.mathVirtualKeyboard) {
-                window.mathVirtualKeyboard.layouts = ["numeric", "symbols", "greek", "alphabetic"];
-                window.mathVirtualKeyboard.container = document.body;
-                window.mathVirtualKeyboard.target = modalMf;
-                window.mathVirtualKeyboard.visible = true; // ÉP HIỂN THỊ TRÊN DESKTOP
-            }
+        // BẮT SỰ KIỆN ĐỂ BẬT BÀN PHÍM TÙY CHỈNH KHI VÀO POPUP
+        modalMf.mathVirtualKeyboardPolicy = "manual";
+
+        function showCustomKeyboard() {
+            try {
+                mathVirtualKeyboard.container = document.body;
+                mathVirtualKeyboard.target = modalMf;
+                mathVirtualKeyboard.show();
+            } catch(e) {}
         }
 
-        modalMf.addEventListener("focusin", () => {
-            forceShowVirtualKeyboard();
-        });
+        modalMf.addEventListener("focusin", showCustomKeyboard);
 
         window.openMathModal = function(mf) {
             activeTargetMf = mf;
@@ -275,16 +382,12 @@
             txtLatex.value = mf.value;
             prevMf.value = mf.value;
 
-            // 1. Dùng API chính chủ của Streamlit giãn rộng Iframe lên 720px
-            setIframeHeight(720);
-
-            // 2. Mở Modal
+            makeIframeFullscreen(true);
             modal.style.display = 'flex';
 
-            // 3. Focus và Bật bàn phím
             setTimeout(() => {
                 modalMf.focus();
-                forceShowVirtualKeyboard();
+                showCustomKeyboard();
             }, 100);
         };
 
@@ -292,11 +395,11 @@
             modal.style.display = 'none';
             activeTargetMf = null;
 
-            if (window.mathVirtualKeyboard) {
-                window.mathVirtualKeyboard.visible = false;
-            }
+            try {
+                mathVirtualKeyboard.hide();
+            } catch(e) {}
 
-            // Thu nhỏ Iframe về kích thước cũ
+            makeIframeFullscreen(false);
             syncHeightOnly();
         };
 
@@ -310,12 +413,15 @@
 
         window.toggleModalKb = function() {
             modalMf.focus();
-            if (window.mathVirtualKeyboard) {
-                window.mathVirtualKeyboard.layouts = ["numeric", "symbols", "greek", "alphabetic"];
-                window.mathVirtualKeyboard.container = document.body;
-                window.mathVirtualKeyboard.target = modalMf;
-                window.mathVirtualKeyboard.visible = !window.mathVirtualKeyboard.visible;
-            }
+            try {
+                mathVirtualKeyboard.container = document.body;
+                mathVirtualKeyboard.target = modalMf;
+                if (mathVirtualKeyboard.visible) {
+                    mathVirtualKeyboard.hide();
+                } else {
+                    mathVirtualKeyboard.show();
+                }
+            } catch(e) {}
         };
 
         document.getElementById('btnCloseModal').addEventListener('click', window.closeMathModal);
