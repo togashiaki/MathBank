@@ -3,15 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Streamlit Component API -->
+    <!-- Nhúng thư viện MathLive & Streamlit Component API -->
+    <script defer src="https://unpkg.com/mathlive"></script>
     <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
         
-        :root {
-            --keyboard-zindex: 99999999 !important;
-        }
-
         * { box-sizing: border-box; }
         html, body { 
             margin: 0; padding: 2px; 
@@ -21,7 +18,7 @@
             width: 100%;
         }
 
-        /* KHUNG CHỨA VĂN BẢN TRÊN TRANG CHÍNH */
+        /* KHUNG CHỨA VĂN BẢN VÀ CHIPS CÔNG THỨC TRÊN GIAO DIỆN CHÍNH */
         .editor-container { 
             background-color: #faf8f5; 
             border: 1px solid #e2dbd0; 
@@ -36,7 +33,7 @@
         }
         .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
         
-        /* CHIP CÔNG THỨC ĐỎ */
+        /* ĐỊNH DẠNG CHIP CÔNG THỨC MÀU ĐỎ GẠCH */
         math-field.inline-math-chip { 
             display: inline-flex; 
             align-items: center; 
@@ -61,36 +58,36 @@
             box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
         }
 
-        /* BÀN PHÍM ẢO CỐ ĐỊNH Ở ĐÁY MÀN HÌNH - NỔI TRÊN CÙNG */
+        /* GÁN Z-INDEX CỰC CAO CHO BÀN PHÍM ẢO MATHLIVE */
         math-virtual-keyboard, 
         .ML__keyboard, 
         div[data-ml-keyboard] { 
-            z-index: 99999999 !important; 
-            --keyboard-zindex: 99999999 !important; 
+            z-index: 2147483647 !important; 
+            --keyboard-zindex: 2147483647 !important; 
             position: fixed !important;
             bottom: 0 !important;
             left: 0 !important;
-            width: 100vw !important;
+            width: 100% !important;
         }
 
-        /* POPUP MODAL MỜ PHỦ TOÀN MÀN HÌNH */
+        /* POPUP MODAL MỜ PHỦ TRÀN TOÀN BỘ KHUNG NHÌN */
         .modal-overlay {
             display: none; 
             position: fixed; 
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(44, 40, 37, 0.55); 
             backdrop-filter: blur(4px);
-            z-index: 10000; 
+            z-index: 999999; 
             justify-content: center; 
             align-items: flex-start;
-            padding-top: 20px;
+            padding-top: 30px;
             overflow-y: auto;
         }
 
         .modal-content {
             background: #ffffff; 
             width: 90%; 
-            max-width: 680px; 
+            max-width: 620px; 
             border-radius: 20px; 
             padding: 22px 26px;
             box-shadow: 0 16px 40px rgba(44, 40, 37, 0.28); 
@@ -98,7 +95,7 @@
             position: relative; 
             border: 1px solid #e8c4b8;
             animation: popIn 0.22s ease-out;
-            margin-bottom: 340px; /* Chừa không gian bên dưới cho bàn phím */
+            margin-bottom: 360px; /* Chừa không gian bên dưới cho bàn phím ảo */
         }
         @keyframes popIn { 
             0% { opacity: 0; transform: scale(0.96) translateY(8px); }
@@ -128,7 +125,7 @@
         .inline-check input[type="checkbox"] { accent-color: #b8543f !important; width: 18px; height: 18px; cursor: pointer; }
         
         math-field.modal-mf { 
-            width: 100%; min-height: 65px; font-size: 1.25rem; 
+            width: 100%; min-height: 60px; font-size: 1.2rem; 
             border: 2px solid #b8543f !important; border-radius: 12px !important; 
             padding: 10px 14px; background: #ffffff !important; outline: none !important; 
             box-shadow: 0 0 0 4px rgba(184, 84, 63, 0.12);
@@ -158,12 +155,12 @@
 <body>
     <div id="editor" class="editor-container" contenteditable="true"></div>
 
-    <!-- POPUP MODAL BIÊN SOẠN CÔNG THỨC -->
+    <!-- POPUP MODAL BIÊN SOẠN CÔNG THỨC TRÀN MÀN HÌNH -->
     <div id="mathModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title">Sửa công thức</div>
-                <button class="close-btn" id="btnCloseModal">✕</button>
+                <button class="close-btn" onclick="closeMathModal()">✕</button>
             </div>
             
             <div class="inline-check">
@@ -174,9 +171,9 @@
             <div class="form-group">
                 <div class="form-label">
                     <span>NHẬP TRỰC QUAN BẰNG MATHLIVE</span>
-                    <button class="btn-kb-toggle" id="btnToggleKb">Mở bàn phím Toán</button>
+                    <button class="btn-kb-toggle" onclick="toggleModalKb()">Mở bàn phím Toán</button>
                 </div>
-                <math-field id="modalMathField" class="modal-mf"></math-field>
+                <math-field id="modalMathField" class="modal-mf" math-virtual-keyboard-policy="manual"></math-field>
             </div>
             
             <div class="form-group">
@@ -192,90 +189,13 @@
             </div>
             
             <div class="modal-footer">
-                <button class="btn-cancel" id="btnCancelModal">Huỷ</button>
-                <button class="btn-save" id="btnSaveModal">Lưu công thức</button>
+                <button class="btn-cancel" onclick="closeMathModal()">Huỷ</button>
+                <button class="btn-save" onclick="saveMathModal()">Lưu công thức</button>
             </div>
         </div>
     </div>
 
-    <!-- KẾT HỢP MODULE VÀ BỘ LAYOUTS TỰ ĐỊNH NGHĨA TỪ CODE BẠN CUNG CẤP -->
-    <script type="module">
-        import 'https://unpkg.com/mathlive?module';
-
-        // TÍCH HỢP BỘ LAYOUTS TỪ CƠ SỞ CODE MẪU BẠN CUNG CẤP
-        mathVirtualKeyboard.layouts = [
-            {
-                label: 'Basic',
-                rows: [
-                    [
-                        '[7]', '[8]', '[9]', '[+]', '[separator-5]',
-                        { class: 'small', latex: '\\frac{#@}{#0}' },
-                        '\\varnothing', '\\infty', '\\in', '\\notin', '[separator]',
-                    ],
-                    [
-                        '[4]', '[5]', '[6]', '[-]', '[separator-5]',
-                        '[(]', '[)]', '\\lt', '\\le', '\\hat{=}', '[separator]',
-                    ],
-                    [
-                        '[1]', '[2]', '[3]', '\\cdot', '[separator-5]',
-                        '[', ']', '\\gt', '\\ge',
-                        { label: '[backspace]', width: 2 },
-                    ],
-                    [
-                        { label: '[0]', width: 2 }, '[.]', '\\colon', '[separator-5]',
-                        '\\lbrace', '\\rbrace', '=', '\\ne', '[left]', '[right]',
-                    ],
-                ],
-            },
-            {
-                label: 'Geometry',
-                rows: [
-                    [
-                        '\\vert', '\\not{\\vert}', '\\parallel', '\\bot',
-                        '\\overrightarrow{#@}', '\\begin{pmatrix}#0\\\\#0\\end{pmatrix}',
-                    ],
-                    [
-                        '\\measuredangle', ';', '\\longmapsto',
-                        '\\left\\lvert #0 \\right\\rvert',
-                        '\\left\\lvert \\overline{#0} \\right\\rvert',
-                        '\\overline{#@}',
-                    ],
-                    [],
-                    [
-                        { class: 'separator w20' }, { class: 'separator w20' },
-                        { class: 'separator w20' }, { class: 'separator w15' },
-                        '[left]', '[right]',
-                    ],
-                ],
-            },
-            {
-                label: 'Secondary',
-                rows: [
-                    [
-                        { latex: 'x', variants: [{ latex: '\\cos\\left( #0 \\right)' }], width: 1.5 },
-                        { latex: '\\cos', insert: '\\cos(#0)', shift: { latex: '\\sin', insert: '\\sin (#0)' }, width: 1.5 },
-                        { latex: '\\tan\\left( #0 \\right)', width: 1.5 },
-                        '[separator-5]', '\\land', '\\lor', '\\lnot', '[separator-5]', '\\approx',
-                    ],
-                    [
-                        { latex: '\\sin^{-1}\\left( #0 \\right)', width: 1.5 },
-                        { latex: '\\cos^{-1}\\left( #0 \\right)', width: 1.5 },
-                        { latex: '\\tan^{-1}\\left( #0 \\right)', width: 1.5 },
-                        '[separator-5]', { latex: '#@^{#?}', width: 1.5 }, { latex: '#@^2', width: 1.5 },
-                        '[separator-5]', '\\cong',
-                    ],
-                    [
-                        { latex: '\\begin{vmatrix}#?&#?\\\\#?&#?\\end{vmatrix}', width: 1.5 },
-                        '\\sqrt{#@}', '\\pm', '\\overarc{#@}', '\\sim', { latex: '#@_{#?}', width: 1.5 },
-                    ],
-                    [
-                        '[separator-20]', '[separator-20]', '[separator-20]', '[separator-15]',
-                        '[left]', '[right]',
-                    ],
-                ],
-            },
-        ];
-
+    <script>
         let currentText = "";
         let isUserEditing = false;
         let activeTargetMf = null;
@@ -285,7 +205,7 @@
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
         }
 
-        /* PHÓNG TO IFRAME TRÀN MÀN HÌNH TRÌNH DUYỆT */
+        /* HÀM KÉO GIÃN IFRAME TRÀN TOÀN BỘ MÀN HÌNH CHÍNH */
         function makeIframeFullscreen(enable) {
             try {
                 let frame = window.frameElement;
@@ -363,71 +283,68 @@
         const txtLatex = document.getElementById('txtLatex');
         const prevMf = document.getElementById('previewMathField');
 
-        // BẮT SỰ KIỆN ĐỂ BẬT BÀN PHÍM TÙY CHỈNH KHI VÀO POPUP
-        modalMf.mathVirtualKeyboardPolicy = "manual";
+        /* KHỞI TẠO BÀN PHÍM VIRTUAL KEYBOARD CHO MATHLIVE */
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.mathVirtualKeyboard) {
+                window.mathVirtualKeyboard.layouts = ["numeric", "symbols", "greek", "alphabetic"];
+                window.mathVirtualKeyboard.container = document.body;
+            }
+        });
 
-        function showCustomKeyboard() {
-            try {
-                mathVirtualKeyboard.container = document.body;
-                mathVirtualKeyboard.target = modalMf;
-                mathVirtualKeyboard.show();
-            } catch(e) {}
-        }
-
-        modalMf.addEventListener("focusin", showCustomKeyboard);
-
-        window.openMathModal = function(mf) {
+        function openMathModal(mf) {
             activeTargetMf = mf;
             modalMf.value = mf.value;
             txtLatex.value = mf.value;
             prevMf.value = mf.value;
 
+            // 1. Phóng to Iframe tràn màn hình trình duyệt
             makeIframeFullscreen(true);
+
+            // 2. Hiển thị Popup Modal
             modal.style.display = 'flex';
 
+            // 3. Focus vào ô nhập và buộc bàn phím ảo hiển thị
             setTimeout(() => {
                 modalMf.focus();
-                showCustomKeyboard();
+                if (window.mathVirtualKeyboard) {
+                    window.mathVirtualKeyboard.target = modalMf;
+                    window.mathVirtualKeyboard.show();
+                }
             }, 100);
-        };
+        }
 
-        window.closeMathModal = function() {
+        function closeMathModal() {
             modal.style.display = 'none';
             activeTargetMf = null;
 
-            try {
-                mathVirtualKeyboard.hide();
-            } catch(e) {}
+            if (window.mathVirtualKeyboard) {
+                window.mathVirtualKeyboard.hide();
+            }
 
+            // Thu nhỏ Iframe về kích thước ban đầu trên Streamlit
             makeIframeFullscreen(false);
             syncHeightOnly();
-        };
+        }
 
-        window.saveMathModal = function() {
+        function saveMathModal() {
             if (activeTargetMf) {
                 activeTargetMf.value = modalMf.value;
                 syncWithStreamlit();
             }
-            window.closeMathModal();
-        };
+            closeMathModal();
+        }
 
-        window.toggleModalKb = function() {
+        function toggleModalKb() {
             modalMf.focus();
-            try {
-                mathVirtualKeyboard.container = document.body;
-                mathVirtualKeyboard.target = modalMf;
-                if (mathVirtualKeyboard.visible) {
-                    mathVirtualKeyboard.hide();
+            if (window.mathVirtualKeyboard) {
+                window.mathVirtualKeyboard.target = modalMf;
+                if (window.mathVirtualKeyboard.visible) {
+                    window.mathVirtualKeyboard.hide();
                 } else {
-                    mathVirtualKeyboard.show();
+                    window.mathVirtualKeyboard.show();
                 }
-            } catch(e) {}
-        };
-
-        document.getElementById('btnCloseModal').addEventListener('click', window.closeMathModal);
-        document.getElementById('btnCancelModal').addEventListener('click', window.closeMathModal);
-        document.getElementById('btnSaveModal').addEventListener('click', window.saveMathModal);
-        document.getElementById('btnToggleKb').addEventListener('click', window.toggleModalKb);
+            }
+        }
 
         modalMf.addEventListener('input', () => {
             txtLatex.value = modalMf.value;
@@ -466,7 +383,7 @@
                     mf.value = token.slice(1, -1);
                     mf.mathVirtualKeyboardPolicy = "manual";
                     
-                    mf.addEventListener('click', () => { window.openMathModal(mf); });
+                    mf.addEventListener('click', () => { openMathModal(mf); });
                     mf.addEventListener('change', syncWithStreamlit);
                     mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
                     mf.addEventListener('focus', () => { isUserEditing = true; });
@@ -513,6 +430,7 @@
                 }
                 if (args.text !== undefined && !isUserEditing && args.text !== currentText) { 
                     currentText = args.text; 
+                    buildExpr = args.text;
                     buildEditor(args.text); 
                 }
             }
