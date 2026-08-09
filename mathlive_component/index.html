@@ -1,2245 +1,777 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-```
-<!--
-    IMPORTANT:
-    MathLive is loaded WITHOUT "defer" so that <math-field> is
-    registered before the application code starts using it.
--->
-<script src="https://unpkg.com/mathlive"></script>
-<script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
+    <!-- NHÚNG MATHLIVE & STREAMLIT COMPONENT LIB -->
+    <script src="https://unpkg.com/mathlive"></script>
+    <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
 
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
 
-    * {
-        box-sizing: border-box;
-    }
-
-    html,
-    body {
-        margin: 0;
-        padding: 2px;
-        background-color: transparent;
-        color: #2c2825;
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        width: 100%;
-    }
-
-    body {
-        overflow-x: hidden;
-    }
-
-    /* =========================================================
-       MAIN EDITOR
-       ========================================================= */
-
-    .editor-container {
-        background-color: #faf8f5;
-        border: 1px solid #e2dbd0;
-        border-radius: 12px;
-        padding: 10px 14px;
-        line-height: 1.8;
-        box-shadow: 0 1px 4px rgba(44, 40, 37, 0.03);
-        outline: none;
-        width: 100%;
-        min-height: 56px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-    }
-
-    .plain-text {
-        outline: none;
-        display: inline;
-        color: #2c2825;
-        font-size: 0.95rem;
-        white-space: pre-wrap;
-        word-break: break-word;
-    }
-
-    /* =========================================================
-       INLINE MATH CHIP
-
-       These are intentionally READ-ONLY.
-       Editing happens in the modal so that the virtual keyboard
-       has one clear editing target.
-       ========================================================= */
-
-    math-field.inline-math-chip {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        vertical-align: middle;
-
-        background-color: #faf0ec !important;
-        border: 1.5px solid #e8c4b8 !important;
-        color: #a8412c !important;
-
-        border-radius: 10px !important;
-        padding: 2px 8px !important;
-        margin: 2px 4px !important;
-
-        font-size: 0.98rem !important;
-
-        outline: none !important;
-        box-shadow: 0 2px 6px rgba(184, 84, 63, 0.08);
-
-        cursor: pointer;
-        user-select: none;
-
-        transition: all 0.15s ease;
-    }
-
-    math-field.inline-math-chip:hover {
-        background-color: #f5e2db !important;
-        border-color: #b8543f !important;
-        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
-    }
-
-    /* =========================================================
-       MATHLIVE VIRTUAL KEYBOARD
-
-       IMPORTANT:
-       Do NOT force position/fixed/width/bottom here.
-
-       MathLive owns the keyboard positioning.
-       ========================================================= */
-
-    /*
-     * Only customize the visual stacking level.
-     * MathLive controls the actual keyboard geometry.
-     */
-    :root {
-        --keyboard-zindex: 20000;
-    }
-
-    /*
-     * The virtual keyboard is created by MathLive.
-     * We deliberately do NOT use:
-     *
-     * position: fixed !important;
-     * bottom: 0 !important;
-     * width: 100vw !important;
-     *
-     * because this component runs inside a Streamlit iframe.
-     */
-
-    /* =========================================================
-       MODAL
-       ========================================================= */
-
-    .modal-overlay {
-        display: none;
-
-        position: fixed;
-        inset: 0;
-
-        background: rgba(44, 40, 37, 0.55);
-        backdrop-filter: blur(4px);
-
-        z-index: 10000;
-
-        justify-content: center;
-        align-items: flex-start;
-
-        padding: 30px 12px 30px;
-
-        overflow-y: auto;
-    }
-
-    .modal-overlay.open {
-        display: flex;
-    }
-
-    .modal-content {
-        background: #ffffff;
-
-        width: 90%;
-        max-width: 620px;
-
-        border-radius: 20px;
-
-        padding: 22px 26px;
-
-        box-shadow:
-            0 16px 40px rgba(44, 40, 37, 0.28);
-
-        font-family: 'Plus Jakarta Sans', sans-serif;
-
-        position: relative;
-
-        border: 1px solid #e8c4b8;
-
-        animation: popIn 0.22s ease-out;
-
-        /*
-         * Space for the virtual keyboard.
-         * JavaScript updates this value when MathLive reports
-         * keyboard geometry.
-         */
-        margin-bottom: var(--keyboard-height, 20px);
-
-        transition: margin-bottom 0.15s ease;
-    }
-
-    @keyframes popIn {
-        0% {
-            opacity: 0;
-            transform: scale(0.96) translateY(8px);
+        * {
+            box-sizing: border-box;
         }
 
-        100% {
-            opacity: 1;
-            transform: scale(1) translateY(0);
+        html,
+        body {
+            margin: 0;
+            padding: 2px;
+            background-color: transparent;
+            color: #2c2825;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            width: 100%;
+            overflow-x: hidden;
         }
-    }
 
-    /* =========================================================
-       HEADER
-       ========================================================= */
+        /* =========================================================
+            MAIN EDITOR
+            ========================================================= */
+
+        .editor-container {
+            background-color: #faf8f5;
+            border: 1px solid #e2dbd0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            line-height: 1.8;
+            box-shadow: 0 1px 4px rgba(44, 40, 37, 0.03);
+            outline: none;
+            width: 100%;
+            min-height: 56px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .plain-text {
+            outline: none;
+            display: inline;
+            color: #2c2825;
+            font-size: 0.95rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* =========================================================
+            INLINE MATH CHIP
+            ========================================================= */
+
+        math-field.inline-math-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+
+            background-color: #faf0ec !important;
+            border: 1.5px solid #e8c4b8 !important;
+            color: #a8412c !important;
+
+            border-radius: 10px !important;
+            padding: 2px 8px !important;
+            margin: 2px 4px !important;
+
+            font-size: 0.98rem !important;
+
+            outline: none !important;
+            box-shadow: 0 2px 6px rgba(184, 84, 63, 0.08);
+
+            cursor: pointer;
+            user-select: none;
+
+            transition: all 0.15s ease;
+        }
+
+        math-field.inline-math-chip:hover {
+            background-color: #f5e2db !important;
+            border-color: #b8543f !important;
+            box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
+        }
+
+        /* =========================================================
+            MATHLIVE VIRTUAL KEYBOARD STACKING
+            ========================================================= */
+
+        :root {
+            --keyboard-zindex: 2147483647 !important;
+        }
+
+        math-virtual-keyboard, 
+        .ML__keyboard, 
+        div[data-ml-keyboard] {
+            z-index: 2147483647 !important;
+            --keyboard-zindex: 2147483647 !important;
+        }
+
+        /* =========================================================
+            MODAL TRÀN MÀN HÌNH (FULLSCREEN PORTAL)
+            ========================================================= */
 
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-    }
-
-    .modal-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #2c2825;
-    }
-
-    .close-btn {
-        background: #f0ebe1;
-        border: none;
-        border-radius: 50%;
-
-        width: 32px;
-        height: 32px;
-
-        cursor: pointer;
-
-        font-weight: bold;
-        color: #6b635b;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .close-btn:hover {
-        background: #e8c4b8;
-        color: #b8543f;
-    }
-
-    /* =========================================================
-       FORM
-       ========================================================= */
-
-    .form-group {
-        margin-bottom: 16px;
-    }
-
-    .form-label {
-        font-size: 0.8rem;
-        font-weight: 800;
-
-        color: #b8543f !important;
-
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-
-        margin-bottom: 8px;
-
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-
-        min-height: 28px;
-    }
-
-    .inline-check {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-
-        padding: 6px 0;
-        margin-bottom: 12px;
-
-        font-size: 0.92rem;
-        color: #2c2825;
-        font-weight: 600;
-    }
-
-    .inline-check input[type="checkbox"] {
-        accent-color: #b8543f !important;
-
-        width: 18px;
-        height: 18px;
-
-        cursor: pointer;
-    }
-
-    /* =========================================================
-       MAIN EDITING MATHFIELD
-       ========================================================= */
-
-    math-field.modal-mf {
-        width: 100%;
-        min-height: 60px;
-
-        font-size: 1.2rem;
-
-        border: 2px solid #b8543f !important;
-        border-radius: 12px !important;
-
-        padding: 10px 14px;
-
-        background: #ffffff !important;
-
-        outline: none !important;
-
-        box-shadow:
-            0 0 0 4px rgba(184, 84, 63, 0.12);
-
-        /*
-         * Let MathLive control its internals.
-         */
-        --hue: 10;
-    }
-
-    math-field.modal-mf:focus {
-        border-color: #a34834 !important;
-    }
-
-    /* =========================================================
-       LATEX TEXTAREA
-       ========================================================= */
-
-    textarea.latex-area {
-        width: 100%;
-        height: 65px;
-
-        border: 1.5px solid #e8c4b8;
-        border-radius: 12px;
-
-        padding: 10px 14px;
-
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
-
-        background: #faf0ec;
-        color: #2c2825;
-
-        resize: vertical;
-
-        outline: none;
-    }
-
-    textarea.latex-area:focus {
-        border-color: #b8543f;
-        box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.10);
-    }
-
-    /* =========================================================
-       PREVIEW
-       ========================================================= */
-
-    .preview-box {
-        border: 1.5px dashed #b8543f;
-
-        background: #faf8f5;
-
-        border-radius: 12px;
-
-        padding: 12px;
-
-        text-align: center;
-
-        min-height: 52px;
-
-        font-size: 1.1rem;
-
-        display: flex;
-        justify-content: center;
-        align-items: center;
-
-        overflow-x: auto;
-    }
-
-    math-field.preview-mf {
-        border: none !important;
-        background: transparent !important;
-
-        display: inline-block;
-
-        min-width: 20px;
-    }
-
-    /* =========================================================
-       FOOTER
-       ========================================================= */
-
-    .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-
-        gap: 12px;
-
-        margin-top: 22px;
-    }
-
-    .btn-cancel {
-        background: #f0ebe1;
-        color: #57524e;
-
-        border: 1px solid #d8cfc4;
-
-        border-radius: 10px;
-
-        padding: 9px 20px;
-
-        font-weight: 600;
-
-        cursor: pointer;
-
-        font-size: 0.9rem;
-    }
-
-    .btn-cancel:hover {
-        background: #e7dfd4;
-    }
-
-    .btn-save {
-        background: #b8543f !important;
-        color: #ffffff !important;
-
-        border: none;
-
-        border-radius: 10px;
-
-        padding: 9px 22px;
-
-        font-weight: 600;
-
-        cursor: pointer;
-
-        font-size: 0.9rem;
-
-        box-shadow:
-            0 3px 10px rgba(184, 84, 63, 0.25);
-    }
-
-    .btn-save:hover {
-        background: #a34834 !important;
-    }
-
-    /* =========================================================
-       KEYBOARD TOGGLE
-       ========================================================= */
-
-    .btn-kb-toggle {
-        background: #faf0ec;
-
-        color: #b8543f !important;
-
-        border: 1px solid #e8c4b8 !important;
-
-        border-radius: 12px;
-
-        padding: 5px 12px;
-
-        font-size: 0.78rem;
-
-        font-weight: 800;
-
-        cursor: pointer;
-
-        transition: all 0.2s;
-    }
-
-    .btn-kb-toggle:hover {
-        background: #b8543f !important;
-        color: #ffffff !important;
-    }
-
-    /* =========================================================
-       MOBILE
-       ========================================================= */
-
-    @media (max-width: 700px) {
         .modal-overlay {
-            padding: 12px 8px 12px;
+            display: none;
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+
+            background: rgba(44, 40, 37, 0.55);
+            backdrop-filter: blur(4px);
+
+            z-index: 10000;
+
+            justify-content: center;
+            align-items: flex-start;
+
+            padding: 30px 12px 30px;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.open {
+            display: flex;
         }
 
         .modal-content {
-            width: 100%;
-            padding: 18px 16px;
-            border-radius: 16px;
+            background: #ffffff;
+            width: 90%;
+            max-width: 620px;
+            border-radius: 20px;
+            padding: 22px 26px;
+            box-shadow: 0 16px 40px rgba(44, 40, 37, 0.28);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            position: relative;
+            border: 1px solid #e8c4b8;
+            animation: popIn 0.22s ease-out;
+            margin-bottom: var(--keyboard-height, 350px);
+            transition: margin-bottom 0.15s ease;
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.96) translateY(8px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* =========================================================
+            HEADER & FORM ELEMENTS
+            ========================================================= */
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
         }
 
         .modal-title {
-            font-size: 1.1rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2c2825;
+        }
+
+        .close-btn {
+            background: #f0ebe1;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #6b635b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: #e8c4b8;
+            color: #b8543f;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
         }
 
         .form-label {
-            font-size: 0.72rem;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #b8543f !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 28px;
+        }
+
+        .inline-check {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            margin-bottom: 12px;
+            font-size: 0.92rem;
+            color: #2c2825;
+            font-weight: 600;
+        }
+
+        .inline-check input[type="checkbox"] {
+            accent-color: #b8543f !important;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
 
         math-field.modal-mf {
-            font-size: 1.05rem;
+            width: 100%;
+            min-height: 60px;
+            font-size: 1.2rem;
+            border: 2px solid #b8543f !important;
+            border-radius: 12px !important;
+            padding: 10px 14px;
+            background: #ffffff !important;
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(184, 84, 63, 0.12);
+            --hue: 10;
         }
-    }
-</style>
-```
 
+        math-field.modal-mf:focus {
+            border-color: #a34834 !important;
+        }
+
+        textarea.latex-area {
+            width: 100%;
+            height: 65px;
+            border: 1.5px solid #e8c4b8;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            background: #faf0ec;
+            color: #2c2825;
+            resize: vertical;
+            outline: none;
+        }
+
+        textarea.latex-area:focus {
+            border-color: #b8543f;
+            box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.10);
+        }
+
+        .preview-box {
+            border: 1.5px dashed #b8543f;
+            background: #faf8f5;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            min-height: 52px;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: auto;
+        }
+
+        math-field.preview-mf {
+            border: none !important;
+            background: transparent !important;
+            display: inline-block;
+            min-width: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 22px;
+        }
+
+        .btn-cancel {
+            background: #f0ebe1;
+            color: #57524e;
+            border: 1px solid #d8cfc4;
+            border-radius: 10px;
+            padding: 9px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-cancel:hover {
+            background: #e7dfd4;
+        }
+
+        .btn-save {
+            background: #b8543f !important;
+            color: #ffffff !important;
+            border: none;
+            border-radius: 10px;
+            padding: 9px 22px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25);
+        }
+
+        .btn-save:hover {
+            background: #a34834 !important;
+        }
+
+        .btn-kb-toggle {
+            background: #faf0ec;
+            color: #b8543f !important;
+            border: 1px solid #e8c4b8 !important;
+            border-radius: 12px;
+            padding: 5px 12px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-kb-toggle:hover {
+            background: #b8543f !important;
+            color: #ffffff !important;
+        }
+    </style>
 </head>
 
 <body>
 
-```
-<!-- =========================================================
-     MAIN EDITOR
-     ========================================================= -->
+    <!-- MAIN EDITOR -->
+    <div id="editor" class="editor-container" contenteditable="true" spellcheck="false"></div>
 
-<div
-    id="editor"
-    class="editor-container"
-    contenteditable="true"
-    spellcheck="false"
-></div>
-
-
-<!-- =========================================================
-     MATH EDITOR MODAL
-     ========================================================= -->
-
-<div
-    id="mathModal"
-    class="modal-overlay"
-    aria-hidden="true"
->
-
-    <div
-        class="modal-content"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mathModalTitle"
-    >
-
-        <div class="modal-header">
-
-            <div
-                id="mathModalTitle"
-                class="modal-title"
-            >
-                Sửa công thức
+    <!-- MATH EDITOR MODAL -->
+    <div id="mathModal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="mathModalTitle">
+            <div class="modal-header">
+                <div id="mathModalTitle" class="modal-title">Sửa công thức</div>
+                <button id="closeBtn" class="close-btn" type="button" aria-label="Đóng">✕</button>
             </div>
 
-            <button
-                id="closeBtn"
-                class="close-btn"
-                type="button"
-                aria-label="Đóng"
-            >
-                ✕
-            </button>
-
-        </div>
-
-
-        <!-- INLINE / DISPLAY -->
-
-        <div class="inline-check">
-
-            <span>
-                Hiển thị cùng dòng
-            </span>
-
-            <input
-                type="checkbox"
-                id="chkInline"
-                checked
-            >
-
-        </div>
-
-
-        <!-- =================================================
-             MATHLIVE
-             ================================================= -->
-
-        <div class="form-group">
-
-            <div class="form-label">
-
-                <span>
-                    NHẬP TRỰC QUAN BẰNG MATHLIVE
-                </span>
-
-                <button
-                    id="kbToggle"
-                    class="btn-kb-toggle"
-                    type="button"
-                >
-                    Mở bàn phím Toán
-                </button>
-
+            <div class="inline-check">
+                <span>Hiển thị cùng dòng</span>
+                <input type="checkbox" id="chkInline" checked>
             </div>
 
-
-            <!--
-                IMPORTANT:
-
-                This is "sandboxed" because the MathLive
-                component is itself inside a Streamlit iframe.
-
-                MathLive's API specifically documents "sandboxed"
-                for displaying the virtual keyboard in the
-                current iframe browsing context.
-            -->
-
-            <math-field
-                id="modalMathField"
-                class="modal-mf"
-                math-virtual-keyboard-policy="sandboxed"
-                smart-fence="on"
-                smart-superscript="on"
-            ></math-field>
-
-        </div>
-
-
-        <!-- =================================================
-             RAW LATEX
-             ================================================= -->
-
-        <div class="form-group">
-
-            <div class="form-label">
-                LATEX TỰ ĐỘNG
+            <div class="form-group">
+                <div class="form-label">
+                    <span>NHẬP TRỰC QUAN BẰNG MATHLIVE</span>
+                    <button id="kbToggle" class="btn-kb-toggle" type="button">Mở bàn phím Toán</button>
+                </div>
+                <math-field id="modalMathField" class="modal-mf" math-virtual-keyboard-policy="sandboxed" smart-fence="on" smart-superscript="on"></math-field>
             </div>
 
-            <textarea
-                id="txtLatex"
-                class="latex-area"
-                spellcheck="false"
-                autocomplete="off"
-            ></textarea>
-
-        </div>
-
-
-        <!-- =================================================
-             PREVIEW
-             ================================================= -->
-
-        <div class="form-group">
-
-            <div class="form-label">
-                XEM TRƯỚC
+            <div class="form-group">
+                <div class="form-label">LATEX TỰ ĐỘNG</div>
+                <textarea id="txtLatex" class="latex-area" spellcheck="false" autocomplete="off"></textarea>
             </div>
 
-            <div class="preview-box">
-
-                <math-field
-                    id="previewMathField"
-                    class="preview-mf"
-                    read-only
-                ></math-field>
-
+            <div class="form-group">
+                <div class="form-label">XEM TRƯỚC</div>
+                <div class="preview-box">
+                    <math-field id="previewMathField" class="preview-mf" read-only></math-field>
+                </div>
             </div>
 
+            <div class="modal-footer">
+                <button id="cancelBtn" class="btn-cancel" type="button">Huỷ</button>
+                <button id="saveBtn" class="btn-save" type="button">Lưu công thức</button>
+            </div>
         </div>
-
-
-        <!-- =================================================
-             FOOTER
-             ================================================= -->
-
-        <div class="modal-footer">
-
-            <button
-                id="cancelBtn"
-                class="btn-cancel"
-                type="button"
-            >
-                Huỷ
-            </button>
-
-            <button
-                id="saveBtn"
-                class="btn-save"
-                type="button"
-            >
-                Lưu công thức
-            </button>
-
-        </div>
-
     </div>
-</div>
 
+    <script>
+        let currentText = "";
+        let isUserEditing = false;
+        let activeTargetMf = null;
+        let currentHeightMode = "compact";
+        let suppressMathSync = false;
+        let keyboardHeight = 0;
 
-<script>
-    /*
-     * =========================================================
-     * MathBank MathLive Editor
-     * =========================================================
-     *
-     * Architecture:
-     *
-     * Streamlit
-     *     ↓
-     * iframe
-     *     ↓
-     * text editor + read-only math chips
-     *     ↓
-     * modal
-     *     ↓
-     * editable MathLive field
-     *     ↓
-     * MathLive virtual keyboard
-     *
-     * The editable MathLive field is deliberately kept stable.
-     * We do not recreate it on every Streamlit render.
-     */
-
-
-    let currentText = "";
-    let isUserEditing = false;
-
-    let activeTargetMf = null;
-
-    let currentHeightMode = "compact";
-
-    let editorInitialized = false;
-
-    let suppressMathSync = false;
-
-    let keyboardHeight = 0;
-
-
-    /* =========================================================
-       STREAMLIT COMMUNICATION
-       ========================================================= */
-
-    function sendToStreamlit(type, data) {
-        window.parent.postMessage(
-            Object.assign(
-                {
-                    isStreamlitMessage: true,
-                    type: type
-                },
-                data
-            ),
-            "*"
-        );
-    }
-
-
-    function setIframeHeight(height) {
-
-        const safeHeight = Math.max(
-            65,
-            Math.ceil(height)
-        );
-
-        if (window.Streamlit) {
-
-            Streamlit.setFrameHeight(
-                safeHeight
-            );
-
-        } else {
-
-            sendToStreamlit(
-                "streamlit:setFrameHeight",
-                {
-                    height: safeHeight
-                }
-            );
-        }
-    }
-
-
-    /* =========================================================
-       EDITOR HEIGHT
-       ========================================================= */
-
-    function syncHeightOnly() {
-
-        const editor =
-            document.getElementById("editor");
-
-        if (!editor) {
-            return;
+        function sendToStreamlit(type, data) {
+            window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
         }
 
-
-        /*
-         * The modal does not require the iframe itself to become
-         * fullscreen.
-         *
-         * When the virtual keyboard is visible, MathLive reports
-         * its geometry. We reserve enough iframe space for it.
-         */
-
-        const editorHeight =
-            editor.scrollHeight + 20;
-
-
-        const baseHeight =
-            currentHeightMode === "large"
-                ? 380
-                : Math.max(
-                    65,
-                    editorHeight
-                );
-
-
-        const modalOpen =
-            document
-                .getElementById("mathModal")
-                ?.classList
-                .contains("open");
-
-
-        if (modalOpen && keyboardHeight > 0) {
-
-            setIframeHeight(
-                Math.max(
-                    baseHeight,
-                    560 + keyboardHeight
-                )
-            );
-
-        } else {
-
-            setIframeHeight(
-                baseHeight
-            );
-        }
-    }
-
-
-    /* =========================================================
-       GET EDITOR VALUE
-       ========================================================= */
-
-    function getFullText() {
-
-        const container =
-            document.getElementById("editor");
-
-        if (!container) {
-            return "";
-        }
-
-
-        let fullText = "";
-
-
-        container.childNodes.forEach(
-            (node) => {
-
-                if (
-                    node.nodeType ===
-                    Node.ELEMENT_NODE
-                    &&
-                    node.nodeName.toLowerCase() ===
-                    "math-field"
-                ) {
-
-                    /*
-                     * Store formulas using the same format as
-                     * your existing application:
-                     *
-                     * $LATEX$
-                     */
-
-                    fullText +=
-                        "$" +
-                        node.value +
-                        "$";
-
-                }
-
-                else if (
-                    node.nodeType ===
-                    Node.TEXT_NODE
-                ) {
-
-                    fullText +=
-                        node.textContent || "";
-
-                }
-
-                else if (
-                    node.nodeType ===
-                    Node.ELEMENT_NODE
-                ) {
-
-                    fullText +=
-                        node.innerText || "";
-                }
-            }
-        );
-
-
-        return fullText;
-    }
-
-
-    /* =========================================================
-       SEND VALUE TO STREAMLIT
-       ========================================================= */
-
-    function syncWithStreamlit() {
-
-        currentText =
-            getFullText();
-
-
-        if (window.Streamlit) {
-
-            Streamlit.setComponentValue(
-                currentText
-            );
-
-        } else {
-
-            sendToStreamlit(
-                "streamlit:setComponentValue",
-                {
-                    value: currentText
-                }
-            );
-        }
-
-
-        syncHeightOnly();
-    }
-
-
-    /* =========================================================
-       MATHLIVE REFERENCES
-       ========================================================= */
-
-    const modal =
-        document.getElementById(
-            "mathModal"
-        );
-
-    const modalMf =
-        document.getElementById(
-            "modalMathField"
-        );
-
-    const txtLatex =
-        document.getElementById(
-            "txtLatex"
-        );
-
-    const prevMf =
-        document.getElementById(
-            "previewMathField"
-        );
-
-    const chkInline =
-        document.getElementById(
-            "chkInline"
-        );
-
-
-    /* =========================================================
-       MATHLIVE READY
-       ========================================================= */
-
-    async function waitForMathLive() {
-
-        try {
-
-            await customElements.whenDefined(
-                "math-field"
-            );
-
-        } catch (error) {
-
-            console.error(
-                "MathLive failed to initialize:",
-                error
-            );
-
-            return false;
-        }
-
-
-        return true;
-    }
-
-
-    /* =========================================================
-       CONFIGURE MATHFIELD
-       ========================================================= */
-
-    function configureMathfield(
-        mf,
-        options = {}
-    ) {
-
-        if (!mf) {
-            return;
-        }
-
-
-        const configure = () => {
-
+        /* HÀM PHÓNG TO IFRAME TRÀN TRỌN MÀN HÌNH TRÌNH DUYỆT (FULLSCREEN PORTAL) */
+        function makeIframeFullscreen(enable) {
             try {
-
-                if (
-                    options.readOnly !==
-                    undefined
-                ) {
-
-                    mf.readOnly =
-                        options.readOnly;
+                let frame = window.frameElement;
+                if (!frame && window.parent && window.parent.document) {
+                    const iframes = window.parent.document.querySelectorAll('iframe');
+                    for (let i = 0; i < iframes.length; i++) {
+                        if (iframes[i].contentWindow === window) {
+                            frame = iframes[i];
+                            break;
+                        }
+                    }
                 }
-
-
-                /*
-                 * Use properties rather than setOptions().
-                 * This follows the MathLive API.
-                 */
-
-                mf.smartFence = true;
-
-                mf.smartSuperscript = true;
-
-
-                if (
-                    options.keyboardPolicy
-                ) {
-
-                    mf.mathVirtualKeyboardPolicy =
-                        options.keyboardPolicy;
+                if (frame) {
+                    if (enable) {
+                        frame.style.setProperty('position', 'fixed', 'important');
+                        frame.style.setProperty('top', '0px', 'important');
+                        frame.style.setProperty('left', '0px', 'important');
+                        frame.style.setProperty('width', '100vw', 'important');
+                        frame.style.setProperty('height', '100vh', 'important');
+                        frame.style.setProperty('z-index', '999999', 'important');
+                        frame.style.setProperty('background', 'transparent', 'important');
+                    } else {
+                        frame.style.removeProperty('position');
+                        frame.style.removeProperty('top');
+                        frame.style.removeProperty('left');
+                        frame.style.removeProperty('width');
+                        frame.style.removeProperty('height');
+                        frame.style.removeProperty('z-index');
+                        frame.style.removeProperty('background');
+                    }
                 }
+            } catch(e) {}
+        }
 
-
-                /*
-                 * Inline chips are not editors.
-                 */
-
-                if (
-                    options.readOnly
-                ) {
-
-                    mf.tabIndex = 0;
-                }
-
-            } catch (error) {
-
-                console.warn(
-                    "MathLive configuration error:",
-                    error
-                );
+        function setIframeHeight(height) {
+            const safeHeight = Math.max(65, Math.ceil(height));
+            if (window.Streamlit) {
+                Streamlit.setFrameHeight(safeHeight);
+            } else {
+                sendToStreamlit("streamlit:setFrameHeight", { height: safeHeight });
             }
-        };
+        }
 
+        function syncHeightOnly() {
+            const editor = document.getElementById("editor");
+            if (!editor) return;
+            const modalOpen = document.getElementById("mathModal")?.classList.contains("open");
+            if (modalOpen) return; // Nếu modal mở thì iframe đang fullscreen portal 100vw x 100vh rồi
 
-        /*
-         * MathLive recommends configuring the
-         * MathfieldElement after mount.
-         */
+            const editorHeight = editor.scrollHeight + 20;
+            const baseHeight = currentHeightMode === "large" ? 380 : Math.max(65, editorHeight);
+            setIframeHeight(baseHeight);
+        }
 
-        if (
-            mf.matches &&
-            mf.matches(":defined")
-        ) {
-
-            configure();
-
-        } else {
-
-            mf.addEventListener(
-                "mount",
-                configure,
-                {
-                    once: true
+        function getFullText() {
+            const container = document.getElementById("editor");
+            if (!container) return "";
+            let fullText = "";
+            container.childNodes.forEach((node) => {
+                if (node.nodeType === Node.ELEMENT_NODE && node.nodeName.toLowerCase() === "math-field") {
+                    fullText += "$" + node.value + "$";
+                } else if (node.nodeType === Node.TEXT_NODE) {
+                    fullText += node.textContent || "";
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    fullText += node.innerText || "";
                 }
-            );
-        }
-    }
-
-
-    /* =========================================================
-       VIRTUAL KEYBOARD
-       ========================================================= */
-
-    function getVirtualKeyboard() {
-
-        return window.mathVirtualKeyboard || null;
-    }
-
-
-    function configureVirtualKeyboard() {
-
-        const kb =
-            getVirtualKeyboard();
-
-        if (!kb) {
-            return;
+            });
+            return fullText;
         }
 
-
-        /*
-         * Because this MathBank editor lives inside an iframe,
-         * explicitly keep the keyboard in THIS browsing context.
-         *
-         * The API documents "container" as the element the
-         * virtual keyboard is appended to.
-         */
-
-        try {
-
-            kb.container =
-                document.body;
-
-        } catch (error) {
-
-            console.warn(
-                "Could not configure MathLive keyboard container:",
-                error
-            );
+        function syncWithStreamlit() {
+            currentText = getFullText();
+            if (window.Streamlit) {
+                Streamlit.setComponentValue(currentText);
+            } else {
+                sendToStreamlit("streamlit:setComponentValue", { value: currentText });
+            }
+            syncHeightOnly();
         }
 
+        const modal = document.getElementById("mathModal");
+        const modalMf = document.getElementById("modalMathField");
+        const txtLatex = document.getElementById("txtLatex");
+        const prevMf = document.getElementById("previewMathField");
+        const chkInline = document.getElementById("chkInline");
 
-        /*
-         * React to keyboard geometry.
-         *
-         * This is much safer than manually setting:
-         *
-         * position: fixed
-         * bottom: 0
-         * width: 100vw
-         */
-
-        kb.addEventListener(
-            "geometrychange",
-            handleKeyboardGeometry
-        );
-
-        kb.addEventListener(
-            "virtual-keyboard-toggle",
-            handleKeyboardToggle
-        );
-    }
-
-
-    function handleKeyboardGeometry(event) {
-
-        const rect =
-            event.detail?.boundingRect;
-
-
-        if (rect) {
-
-            keyboardHeight =
-                Math.max(
-                    0,
-                    Math.ceil(
-                        rect.height
-                    )
-                );
-
-        } else {
-
-            const kb =
-                getVirtualKeyboard();
-
-            keyboardHeight =
-                kb?.visible
-                    ? 300
-                    : 0;
+        async function waitForMathLive() {
+            try {
+                await customElements.whenDefined("math-field");
+            } catch (error) {
+                return false;
+            }
+            return true;
         }
 
+        function configureMathfield(mf, options = {}) {
+            if (!mf) return;
+            const configure = () => {
+                try {
+                    if (options.readOnly !== undefined) mf.readOnly = options.readOnly;
+                    mf.smartFence = true;
+                    mf.mf = true;
+                    mf.smartSuperscript = true;
+                    if (options.keyboardPolicy) mf.mathVirtualKeyboardPolicy = options.keyboardPolicy;
+                } catch (error) {}
+            };
+            if (mf.matches && mf.matches(":defined")) {
+                configure();
+            } else {
+                mf.addEventListener("mount", configure, { once: true });
+            }
+        }
 
-        document.documentElement
-            .style
-            .setProperty(
-                "--keyboard-height",
-                keyboardHeight + "px"
-            );
+        function getVirtualKeyboard() {
+            return window.mathVirtualKeyboard || null;
+        }
 
+        function configureVirtualKeyboard() {
+            const kb = getVirtualKeyboard();
+            if (!kb) return;
+            try {
+                kb.container = document.body;
+            } catch (error) {}
 
-        syncHeightOnly();
-    }
+            kb.addEventListener("geometrychange", (event) => {
+                const rect = event.detail?.boundingRect;
+                if (rect) {
+                    keyboardHeight = Math.max(0, Math.ceil(rect.height));
+                } else {
+                    keyboardHeight = kb?.visible ? 300 : 0;
+                }
+                document.documentElement.style.setProperty("--keyboard-height", keyboardHeight + "px");
+            });
+        }
 
+        function openMathModal(mf) {
+            if (!mf) return;
+            activeTargetMf = mf;
+            modalMf.value = mf.value || "";
+            txtLatex.value = mf.value || "";
+            prevMf.value = mf.value || "";
+            chkInline.checked = true;
 
-    function handleKeyboardToggle(event) {
+            // BẬT CHẾ ĐỘ FULLSCREEN PORTAL TRÀN MÀN HÌNH
+            makeIframeFullscreen(true);
 
-        const visible =
-            event.detail?.visible;
+            modal.classList.add("open");
+            modal.setAttribute("aria-hidden", "false");
 
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    modalMf.focus();
+                }, 50);
+            });
+        }
 
-        if (!visible) {
+        function closeMathModal() {
+            const kb = getVirtualKeyboard();
+            try {
+                if (kb && kb.visible) kb.hide();
+            } catch (error) {}
 
             keyboardHeight = 0;
+            modal.classList.remove("open");
+            modal.setAttribute("aria-hidden", "true");
+            activeTargetMf = null;
 
-            document.documentElement
-                .style
-                .setProperty(
-                    "--keyboard-height",
-                    "20px"
-                );
-
+            // TẮT CHẾ ĐỘ FULLSCREEN PORTAL, TRẢ VỀ KHUNG BAN ĐẦU
+            makeIframeFullscreen(false);
+            syncHeightOnly();
         }
 
-
-        syncHeightOnly();
-    }
-
-
-    /* =========================================================
-       OPEN MATH MODAL
-       ========================================================= */
-
-    function openMathModal(mf) {
-
-        if (!mf) {
-            return;
-        }
-
-
-        activeTargetMf = mf;
-
-
-        /*
-         * Copy current LaTeX into the editing field.
-         */
-
-        modalMf.value =
-            mf.value || "";
-
-
-        txtLatex.value =
-            mf.value || "";
-
-
-        prevMf.value =
-            mf.value || "";
-
-
-        /*
-         * Preserve the inline/display checkbox.
-         */
-
-        chkInline.checked =
-            true;
-
-
-        /*
-         * Open only the modal.
-         *
-         * IMPORTANT:
-         * We do NOT modify the Streamlit iframe.
-         */
-
-        modal.classList.add(
-            "open"
-        );
-
-        modal.setAttribute(
-            "aria-hidden",
-            "false"
-        );
-
-
-        /*
-         * Wait for the modal to be visible before
-         * focusing the mathfield.
-         */
-
-        requestAnimationFrame(
-            () => {
-
-                setTimeout(
-                    () => {
-
-                        modalMf.focus();
-
-                        syncHeightOnly();
-
-                    },
-                    50
-                );
-            }
-        );
-    }
-
-
-    /* =========================================================
-       CLOSE MODAL
-       ========================================================= */
-
-    function closeMathModal() {
-
-        const kb =
-            getVirtualKeyboard();
-
-
-        /*
-         * Hide keyboard first.
-         */
-
-        try {
-
-            if (
-                kb &&
-                kb.visible
-            ) {
-
-                kb.hide();
-            }
-
-        } catch (error) {
-
-            console.warn(
-                "Could not hide virtual keyboard:",
-                error
-            );
-        }
-
-
-        keyboardHeight = 0;
-
-
-        modal.classList.remove(
-            "open"
-        );
-
-        modal.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-
-        activeTargetMf = null;
-
-
-        /*
-         * Return iframe to its natural Streamlit height.
-         */
-
-        syncHeightOnly();
-    }
-
-
-    /* =========================================================
-       SAVE MATH
-       ========================================================= */
-
-    function saveMathModal() {
-
-        if (!activeTargetMf) {
-
-            closeMathModal();
-
-            return;
-        }
-
-
-        suppressMathSync = true;
-
-
-        /*
-         * MathLive is the source of truth.
-         */
-
-        const latex =
-            modalMf.value || "";
-
-
-        activeTargetMf.value =
-            latex;
-
-
-        suppressMathSync = false;
-
-
-        /*
-         * Send updated editor contents to Streamlit.
-         */
-
-        syncWithStreamlit();
-
-
-        closeMathModal();
-    }
-
-
-    /* =========================================================
-       TOGGLE VIRTUAL KEYBOARD
-       ========================================================= */
-
-    function toggleModalKb() {
-
-        const kb =
-            getVirtualKeyboard();
-
-
-        if (!kb) {
-
-            console.warn(
-                "MathLive virtual keyboard is not available."
-            );
-
-            return;
-        }
-
-
-        /*
-         * Always restore focus to the editable mathfield.
-         */
-
-        modalMf.focus();
-
-
-        try {
-
-            if (kb.visible) {
-
-                kb.hide();
-
-            } else {
-
-                /*
-                 * Explicit show() is appropriate for the
-                 * dedicated keyboard button.
-                 */
-
-                kb.show();
-            }
-
-        } catch (error) {
-
-            console.error(
-                "MathLive keyboard error:",
-                error
-            );
-        }
-    }
-
-
-    /* =========================================================
-       MODAL MATHLIVE INPUT
-       ========================================================= */
-
-    modalMf.addEventListener(
-        "input",
-        () => {
-
-            if (suppressMathSync) {
+        function saveMathModal() {
+            if (!activeTargetMf) {
+                closeMathModal();
                 return;
             }
-
-
-            const latex =
-                modalMf.value || "";
-
-
-            /*
-             * MathLive → textarea
-             */
-
-            txtLatex.value =
-                latex;
-
-
-            /*
-             * MathLive → preview
-             */
-
-            prevMf.value =
-                latex;
-        }
-    );
-
-
-    /* =========================================================
-       LATEX TEXTAREA INPUT
-       ========================================================= */
-
-    txtLatex.addEventListener(
-        "input",
-        () => {
-
-            const latex =
-                txtLatex.value;
-
-
             suppressMathSync = true;
-
-
-            /*
-             * textarea → MathLive
-             */
-
-            modalMf.value =
-                latex;
-
-
-            /*
-             * textarea → preview
-             */
-
-            prevMf.value =
-                latex;
-
-
+            const latex = modalMf.value || "";
+            activeTargetMf.value = latex;
             suppressMathSync = false;
+            syncWithStreamlit();
+            closeMathModal();
         }
-    );
 
+        function toggleModalKb() {
+            const kb = getVirtualKeyboard();
+            if (!kb) return;
+            modalMf.focus();
+            try {
+                if (kb.visible) {
+                    kb.hide();
+                } else {
+                    kb.show();
+                }
+            } catch (error) {}
+        }
 
-    /* =========================================================
-       MODAL BUTTONS
-       ========================================================= */
+        modalMf.addEventListener("input", () => {
+            if (suppressMathSync) return;
+            const latex = modalMf.value || "";
+            txtLatex.value = latex;
+            prevMf.value = latex;
+        });
 
-    document
-        .getElementById("closeBtn")
-        .addEventListener(
-            "click",
-            closeMathModal
-        );
+        txtLatex.addEventListener("input", () => {
+            const latex = txtLatex.value;
+            suppressMathSync = true;
+            modalMf.value = latex;
+            prevMf.value = latex;
+            suppressMathSync = false;
+        });
 
+        document.getElementById("closeBtn").addEventListener("click", closeMathModal);
+        document.getElementById("cancelBtn").addEventListener("click", closeMathModal);
+        document.getElementById("saveBtn").addEventListener("click", saveMathModal);
+        document.getElementById("kbToggle").addEventListener("click", toggleModalKb);
 
-    document
-        .getElementById("cancelBtn")
-        .addEventListener(
-            "click",
-            closeMathModal
-        );
-
-
-    document
-        .getElementById("saveBtn")
-        .addEventListener(
-            "click",
-            saveMathModal
-        );
-
-
-    document
-        .getElementById("kbToggle")
-        .addEventListener(
-            "click",
-            toggleModalKb
-        );
-
-
-    /* =========================================================
-       ESCAPE KEY
-       ========================================================= */
-
-    document.addEventListener(
-        "keydown",
-        (event) => {
-
-            if (
-                event.key === "Escape" &&
-                modal.classList.contains("open")
-            ) {
-
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && modal.classList.contains("open")) {
                 closeMathModal();
             }
-        }
-    );
+        });
 
+        modal.addEventListener("mousedown", (event) => {
+            if (event.target === modal) closeMathModal();
+        });
 
-    /* =========================================================
-       CLICK OUTSIDE MODAL
-       ========================================================= */
+        function createInlineMathfield(latex) {
+            const mf = document.createElement("math-field");
+            mf.className = "inline-math-chip";
+            mf.readOnly = true;
+            mf.mathVirtualKeyboardPolicy = "manual";
+            mf.value = latex || "";
+            configureMathfield(mf, { readOnly: true, keyboardPolicy: "manual" });
 
-    modal.addEventListener(
-        "mousedown",
-        (event) => {
-
-            if (
-                event.target === modal
-            ) {
-
-                closeMathModal();
-            }
-        }
-    );
-
-
-    /* =========================================================
-       CREATE INLINE MATHFIELD
-       ========================================================= */
-
-    function createInlineMathfield(
-        latex
-    ) {
-
-        const mf =
-            document.createElement(
-                "math-field"
-            );
-
-
-        mf.className =
-            "inline-math-chip";
-
-
-        /*
-         * Inline formulas are display/edit triggers,
-         * not active editors.
-         */
-
-        mf.readOnly = true;
-
-        mf.mathVirtualKeyboardPolicy =
-            "manual";
-
-
-        mf.value =
-            latex || "";
-
-
-        configureMathfield(
-            mf,
-            {
-                readOnly: true,
-                keyboardPolicy: "manual"
-            }
-        );
-
-
-        /*
-         * Click opens the proper MathLive editor.
-         */
-
-        mf.addEventListener(
-            "click",
-            (event) => {
-
+            mf.addEventListener("click", (event) => {
                 event.preventDefault();
-
                 openMathModal(mf);
-            }
-        );
-
-
-        /*
-         * Keyboard focus can also open the editor.
-         * This makes the chip accessible.
-         */
-
-        mf.addEventListener(
-            "keydown",
-            (event) => {
-
-                if (
-                    event.key === "Enter" ||
-                    event.key === " "
-                ) {
-
+            });
+            mf.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-
                     openMathModal(mf);
                 }
-            }
-        );
-
-
-        return mf;
-    }
-
-
-    /* =========================================================
-       CREATE TEXT NODE
-       ========================================================= */
-
-    function createTextNode(
-        text
-    ) {
-
-        const span =
-            document.createElement(
-                "span"
-            );
-
-
-        span.className =
-            "plain-text";
-
-
-        span.contentEditable =
-            "true";
-
-
-        span.spellcheck =
-            false;
-
-
-        span.innerText =
-            text || "";
-
-
-        span.addEventListener(
-            "focus",
-            () => {
-
-                isUserEditing =
-                    true;
-            }
-        );
-
-
-        span.addEventListener(
-            "input",
-            () => {
-
-                isUserEditing =
-                    true;
-
-                syncHeightOnly();
-            }
-        );
-
-
-        span.addEventListener(
-            "blur",
-            () => {
-
-                isUserEditing =
-                    false;
-
-                syncWithStreamlit();
-            }
-        );
-
-
-        return span;
-    }
-
-
-    /* =========================================================
-       PARSE EDITOR CONTENT
-       ========================================================= */
-
-    function parseTokens(
-        rawText
-    ) {
-
-        /*
-         * Supports:
-         *
-         * $x^2$
-         *
-         * $$x^2$$
-         */
-
-        return rawText.split(
-            /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g
-        );
-    }
-
-
-    /* =========================================================
-       BUILD EDITOR
-       ========================================================= */
-
-    function buildEditor(
-        rawText
-    ) {
-
-        const container =
-            document.getElementById(
-                "editor"
-            );
-
-
-        if (!container) {
-            return;
+            });
+            return mf;
         }
 
-
-        /*
-         * Don't rebuild while the user is actively typing.
-         */
-
-        if (
-            isUserEditing &&
-            rawText !== currentText
-        ) {
-
-            return;
+        function createTextNode(text) {
+            const span = document.createElement("span");
+            span.className = "plain-text";
+            span.contentEditable = "true";
+            span.spellcheck = false;
+            span.innerText = text || "";
+            span.addEventListener("focus", () => { isUserEditing = true; });
+            span.addEventListener("input", () => { isUserEditing = true; syncHeightOnly(); });
+            span.addEventListener("blur", () => { isUserEditing = false; syncWithStreamlit(); });
+            return span;
         }
 
-
-        /*
-         * Store the value BEFORE rendering.
-         */
-
-        currentText =
-            rawText || "";
-
-
-        /*
-         * Remove only the editor's current children.
-         *
-         * The modal MathLive field lives OUTSIDE this
-         * container and therefore remains untouched.
-         */
-
-        while (
-            container.firstChild
-        ) {
-
-            container.removeChild(
-                container.firstChild
-            );
+        function parseTokens(rawText) {
+            return rawText.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g);
         }
 
+        function buildEditor(rawText) {
+            const container = document.getElementById("editor");
+            if (!container) return;
+            if (isUserEditing && rawText !== currentText) return;
 
-        const tokens =
-            parseTokens(
-                currentText
-            );
+            currentText = rawText || "";
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
 
-
-        let hasContent = false;
-
-
-        tokens.forEach(
-            (token) => {
-
-                if (!token) {
-                    return;
-                }
-
-
+            const tokens = parseTokens(currentText);
+            let hasContent = false;
+            tokens.forEach((token) => {
+                if (!token) return;
                 hasContent = true;
+                const isDisplayMath = token.startsWith("$$") && token.endsWith("$$");
+                const isInlineMath = token.startsWith("$") && token.endsWith("$");
 
-
-                const isDisplayMath =
-                    token.startsWith("$$") &&
-                    token.endsWith("$$");
-
-
-                const isInlineMath =
-                    token.startsWith("$") &&
-                    token.endsWith("$");
-
-
-                if (
-                    isDisplayMath ||
-                    isInlineMath
-                ) {
-
-                    /*
-                     * Both existing formats are preserved.
-                     *
-                     * $$...$$ is currently stored back as
-                     * $...$ because your original data model
-                     * uses $ delimiters in getFullText().
-                     */
-
-                    const latex =
-                        isDisplayMath
-                            ? token.slice(
-                                2,
-                                -2
-                            )
-                            : token.slice(
-                                1,
-                                -1
-                            );
-
-
-                    const mf =
-                        createInlineMathfield(
-                            latex
-                        );
-
-
-                    container.appendChild(
-                        mf
-                    );
-
+                if (isDisplayMath || isInlineMath) {
+                    const latex = isDisplayMath ? token.slice(2, -2) : token.slice(1, -1);
+                    const mf = createInlineMathfield(latex);
+                    container.appendChild(mf);
                 } else {
-
-                    container.appendChild(
-                        createTextNode(
-                            token
-                        )
-                    );
+                    container.appendChild(createTextNode(token));
                 }
+            });
+
+            if (!hasContent) {
+                container.appendChild(createTextNode(""));
             }
-        );
-
-
-        /*
-         * Empty editor still needs an editable target.
-         */
-
-        if (!hasContent) {
-
-            container.appendChild(
-                createTextNode("")
-            );
-        }
-
-
-        syncHeightOnly();
-    }
-
-
-    /* =========================================================
-       PASTE HANDLING
-       ========================================================= */
-
-    const container =
-        document.getElementById(
-            "editor"
-        );
-
-
-    if (container) {
-
-        container.addEventListener(
-            "paste",
-            (event) => {
-
-                /*
-                 * Only intercept paste when the target is the
-                 * editor itself / text area.
-                 *
-                 * Do not interfere with MathLive.
-                 */
-
-                const target =
-                    event.target;
-
-
-                if (
-                    target &&
-                    target.closest &&
-                    target.closest(
-                        "math-field"
-                    )
-                ) {
-
-                    return;
-                }
-
-
-                event.preventDefault();
-
-
-                const pastedText =
-                    (
-                        event.clipboardData ||
-                        window.clipboardData
-                    )
-                        .getData(
-                            "text/plain"
-                        );
-
-
-                const selection =
-                    window.getSelection();
-
-
-                if (
-                    selection &&
-                    selection.rangeCount
-                ) {
-
-                    const range =
-                        selection.getRangeAt(
-                            0
-                        );
-
-
-                    /*
-                     * Make sure the selection belongs to
-                     * the editor.
-                     */
-
-                    if (
-                        container.contains(
-                            range.commonAncestorContainer
-                        )
-                    ) {
-
-                        range.deleteContents();
-
-
-                        const textNode =
-                            document.createTextNode(
-                                pastedText
-                            );
-
-
-                        range.insertNode(
-                            textNode
-                        );
-
-
-                        range.setStartAfter(
-                            textNode
-                        );
-
-                        range.collapse(
-                            true
-                        );
-
-                    } else {
-
-                        container.appendChild(
-                            document.createTextNode(
-                                pastedText
-                            )
-                        );
-                    }
-
-                } else {
-
-                    container.appendChild(
-                        document.createTextNode(
-                            pastedText
-                        )
-                    );
-                }
-
-
-                isUserEditing =
-                    false;
-
-
-                currentText =
-                    getFullText();
-
-
-                buildEditor(
-                    currentText
-                );
-
-
-                syncWithStreamlit();
-            }
-        );
-    }
-
-
-    /* =========================================================
-       STREAMLIT RENDER
-       ========================================================= */
-
-    function onRender(event) {
-
-        try {
-
-            const args =
-                event?.detail?.args ||
-                event?.data?.args;
-
-
-            if (!args) {
-                return;
-            }
-
-
-            if (
-                args.height_mode !==
-                undefined
-            ) {
-
-                currentHeightMode =
-                    args.height_mode;
-            }
-
-
-            /*
-             * IMPORTANT:
-             *
-             * Don't rebuild the editor while a MathLive modal
-             * is open or while the user is editing.
-             */
-
-            const modalOpen =
-                modal.classList.contains(
-                    "open"
-                );
-
-
-            if (
-                args.text !== undefined &&
-                !isUserEditing &&
-                !modalOpen &&
-                args.text !== currentText
-            ) {
-
-                currentText =
-                    args.text || "";
-
-
-                buildEditor(
-                    currentText
-                );
-            }
-
-
             syncHeightOnly();
-
-        } catch (error) {
-
-            console.error(
-                "MathBank render error:",
-                error
-            );
-        }
-    }
-
-
-    /* =========================================================
-       INITIALIZATION
-       ========================================================= */
-
-    async function initialize() {
-
-        /*
-         * Wait until MathLive has registered <math-field>.
-         */
-
-        const ready =
-            await waitForMathLive();
-
-
-        if (!ready) {
-            return;
         }
 
-
-        /*
-         * Configure the static MathLive elements.
-         */
-
-        configureMathfield(
-            modalMf,
-            {
-                readOnly: false,
-                keyboardPolicy: "sandboxed"
-            }
-        );
-
-
-        configureMathfield(
-            prevMf,
-            {
-                readOnly: true,
-                keyboardPolicy: "manual"
-            }
-        );
-
-
-        /*
-         * Configure MathLive's iframe-aware keyboard.
-         */
-
-        configureVirtualKeyboard();
-
-
-        /*
-         * Streamlit events.
-         */
-
-        if (window.Streamlit) {
-
-            Streamlit.events.addEventListener(
-                Streamlit.RENDER_EVENT,
-                onRender
-            );
-
-            Streamlit.setComponentReady();
-
-        } else {
-
-            sendToStreamlit(
-                "streamlit:componentReady",
-                {
-                    apiVersion: 1
+        const editorContainer = document.getElementById("editor");
+        if (editorContainer) {
+            editorContainer.addEventListener("paste", (event) => {
+                const target = event.target;
+                if (target && target.closest && target.closest("math-field")) return;
+                event.preventDefault();
+                const pastedText = (event.clipboardData || window.clipboardData).getData("text/plain");
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount) {
+                    const range = selection.getRangeAt(0);
+                    if (editorContainer.contains(range.commonAncestorContainer)) {
+                        range.deleteContents();
+                        const textNode = document.createTextNode(pastedText);
+                        range.insertNode(textNode);
+                        range.setStartAfter(textNode);
+                        range.collapse(true);
+                    } else {
+                        editorContainer.appendChild(document.createTextNode(pastedText));
+                    }
+                } else {
+                    editorContainer.appendChild(document.createTextNode(pastedText));
                 }
-            );
+                isUserEditing = false;
+                currentText = getFullText();
+                buildEditor(currentText);
+                syncWithStreamlit();
+            });
         }
 
+        function onRender(event) {
+            try {
+                const args = event?.detail?.args || event?.data?.args;
+                if (!args) return;
+                if (args.height_mode !== undefined) {
+                    currentHeightMode = args.height_mode;
+                }
+                const modalOpen = modal.classList.contains("open");
+                if (args.text !== undefined && !isUserEditing && !modalOpen && args.text !== currentText) {
+                    currentText = args.text || "";
+                    buildEditor(currentText);
+                }
+                syncHeightOnly();
+            } catch (error) {}
+        }
 
-        editorInitialized =
-            true;
+        async function initialize() {
+            const ready = await waitForMathLive();
+            if (!ready) return;
 
+            configureMathfield(modalMf, { readOnly: false, keyboardPolicy: "sandboxed" });
+            configureMathfield(prevMf, { readOnly: true, keyboardPolicy: "manual" });
+            configureVirtualKeyboard();
 
-        syncHeightOnly();
-    }
+            if (window.Streamlit) {
+                Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
+                Streamlit.setComponentReady();
+            } else {
+                sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
+            }
+            syncHeightOnly();
+        }
 
-
-    /* =========================================================
-       STREAMLIT MESSAGE FALLBACK
-       ========================================================= */
-
-    window.addEventListener(
-        "message",
-        (event) => {
-
-            if (
-                event.data &&
-                event.data.type ===
-                "streamlit:render"
-            ) {
-
+        window.addEventListener("message", (event) => {
+            if (event.data && event.data.type === "streamlit:render") {
                 onRender(event);
             }
-        }
-    );
+        });
 
+        window.addEventListener("load", () => {
+            initialize();
+        });
 
-    /* =========================================================
-       WINDOW LOAD
-       ========================================================= */
-
-    window.addEventListener(
-        "load",
-        () => {
-
+        if (document.readyState === "complete") {
             initialize();
         }
-    );
-
-
-    /*
-     * In case the page is already loaded when this script runs.
-     */
-
-    if (
-        document.readyState ===
-        "complete"
-    ) {
-
-        initialize();
-    }
-
-</script>
-```
-
+    </script>
 </body>
 </html>
