@@ -33,7 +33,7 @@
         }
         .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
         
-        /* ĐỊNH DẠNG CÔNG THỨC DẠNG CHIP ĐỎ (THEO CHUẨN MATH-BUBBLE) */
+        /* ĐỊNH DẠNG CÔNG THỨC DẠNG CHIP ĐỎ */
         math-field.inline-math-chip { 
             display: inline-flex; 
             align-items: center; 
@@ -58,12 +58,16 @@
             box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
         }
 
-        /* NỔI BÀN PHÍM ẢO LÊN LỚP TRÊN CÙNG (CƠ CHẾ CHUẨN P_WORD_WEB) */
+        /* NỔI BÀN PHÍM ẢO LÊN LỚP TRÊN CÙNG */
         math-virtual-keyboard, 
         .ML__keyboard, 
         div[data-ml-keyboard] { 
             z-index: 9999999 !important; 
             --keyboard-zindex: 9999999 !important; 
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
         }
 
         /* POPUP MODAL BIÊN SOẠN CÔNG THỨC */
@@ -77,7 +81,18 @@
             justify-content: center; 
             align-items: center;
             padding: 16px;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
         }
+
+        /* KHI BÀN PHÍM BẬT: ĐẨY MODAL LÊN PHÍA TRÊN */
+        .modal-overlay.keyboard-open {
+            align-items: flex-start !important;
+            padding-top: 12px !important;
+            padding-bottom: 340px !important;
+            overflow-y: auto !important;
+        }
+
         .modal-content {
             background: #ffffff; 
             width: 100%; 
@@ -211,6 +226,19 @@
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
         }
 
+        /* KHỞI TẠO VÀ RÀNG BỘC BÀN PHÍM ẢO AN TOÀN */
+        function initMathVirtualKeyboard() {
+            if (window.mathVirtualKeyboard) {
+                try {
+                    window.mathVirtualKeyboard.container = document.body;
+                    window.mathVirtualKeyboard.removeEventListener("geometrychange", syncHeightOnly);
+                    window.mathVirtualKeyboard.removeEventListener("visibilitychange", syncHeightOnly);
+                    window.mathVirtualKeyboard.addEventListener("geometrychange", syncHeightOnly);
+                    window.mathVirtualKeyboard.addEventListener("visibilitychange", syncHeightOnly);
+                } catch(e) {}
+            }
+        }
+
         function getFullText() {
             const container = document.getElementById('editor');
             let fullText = "";
@@ -239,16 +267,28 @@
         }
 
         function syncHeightOnly() {
+            initMathVirtualKeyboard();
+
             let isKbVisible = false;
             try {
-                if (window.mathVirtualKeyboard && window.mathVirtualKeyboard.visible) {
+                if (window.mathVirtualKeyboard && (window.mathVirtualKeyboard.visible || (window.mathVirtualKeyboard.boundingRect && window.mathVirtualKeyboard.boundingRect.height > 0))) {
                     isKbVisible = true;
                 }
             } catch(e) {}
 
-            let isModalOpen = (document.getElementById('mathModal').style.display === 'flex');
+            const modalOverlay = document.getElementById('mathModal');
+            let isModalOpen = (modalOverlay.style.display === 'flex');
             let editorElem = document.getElementById('editor');
             
+            // Nếu bàn phím ảo bật, thêm class đẩy Modal lên phía trên
+            if (isModalOpen) {
+                if (isKbVisible) {
+                    modalOverlay.classList.add('keyboard-open');
+                } else {
+                    modalOverlay.classList.remove('keyboard-open');
+                }
+            }
+
             let targetHeight = 65;
             if (currentHeightMode === "large") {
                 targetHeight = 380;
@@ -257,9 +297,9 @@
             }
 
             if (isModalOpen) {
-                targetHeight = isKbVisible ? 860 : 640;
+                targetHeight = isKbVisible ? 920 : 640;
             } else if (isKbVisible) {
-                targetHeight = targetHeight + 340;
+                targetHeight = targetHeight + 350;
             }
 
             if (window.Streamlit) {
@@ -279,14 +319,6 @@
             syncHeightOnly(); 
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            if (window.mathVirtualKeyboard) {
-                window.mathVirtualKeyboard.container = document.body;
-                window.mathVirtualKeyboard.addEventListener("geometrychange", syncHeightOnly);
-                window.mathVirtualKeyboard.addEventListener("visibilitychange", syncHeightOnly);
-            }
-        });
-
         const modal = document.getElementById('mathModal');
         const modalMf = document.getElementById('modalMathField');
         const txtLatex = document.getElementById('txtLatex');
@@ -298,12 +330,21 @@
             txtLatex.value = mf.value;
             prevMf.value = mf.value;
             modal.style.display = 'flex';
-            syncHeightOnly();
-            setTimeout(() => modalMf.focus(), 100);
+            
+            initMathVirtualKeyboard();
+
+            setTimeout(() => {
+                modalMf.focus();
+                if (window.mathVirtualKeyboard) {
+                    window.mathVirtualKeyboard.show();
+                }
+                syncHeightOnly();
+            }, 100);
         }
 
         function closeMathModal() {
             modal.style.display = 'none';
+            modal.classList.remove('keyboard-open');
             activeTargetMf = null;
             if (window.mathVirtualKeyboard) {
                 window.mathVirtualKeyboard.hide();
@@ -320,6 +361,7 @@
         }
 
         function toggleModalKb() {
+            initMathVirtualKeyboard();
             if (window.mathVirtualKeyboard) {
                 modalMf.focus();
                 if (window.mathVirtualKeyboard.visible) {
@@ -327,7 +369,8 @@
                 } else {
                     window.mathVirtualKeyboard.show();
                 }
-                setTimeout(syncHeightOnly, 120);
+                setTimeout(syncHeightOnly, 100);
+                setTimeout(syncHeightOnly, 250);
             }
         }
 
@@ -365,7 +408,6 @@
                     mf.value = token.slice(1, -1);
                     mf.mathVirtualKeyboardPolicy = "manual";
                     
-                    /* Bấm vào chip đỏ để mở Popup Modal Sửa công thức */
                     mf.addEventListener('click', () => { openMathModal(mf); });
                     mf.addEventListener('change', syncWithStreamlit);
                     mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
@@ -429,6 +471,7 @@
         });
 
         window.addEventListener('load', () => { 
+            initMathVirtualKeyboard();
             sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); 
             syncHeightOnly();
         });
