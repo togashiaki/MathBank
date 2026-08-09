@@ -9,6 +9,10 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
         
+        :root {
+            --keyboard-zindex: 99999999 !important;
+        }
+
         * { box-sizing: border-box; }
         html, body { 
             margin: 0; padding: 2px; 
@@ -18,7 +22,7 @@
             width: 100%;
         }
 
-        /* KHUNG CHỨA VĂN BẢN VÀ CHIPS CÔNG THỨC */
+        /* KHUNG CHỨA VĂN BẢN TRÊN TRANG CHÍNH */
         .editor-container { 
             background-color: #faf8f5; 
             border: 1px solid #e2dbd0; 
@@ -33,7 +37,7 @@
         }
         .plain-text { outline: none; display: inline; color: #2c2825; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
         
-        /* ĐỊNH DẠNG CÔNG THỨC DẠNG CHIP ĐỎ */
+        /* CHIP CÔNG THỨC ĐỎ */
         math-field.inline-math-chip { 
             display: inline-flex; 
             align-items: center; 
@@ -58,7 +62,7 @@
             box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
         }
 
-        /* ÉP BÀN PHÍM ẢO NỔI LÊN LỚP TRÊN CÙNG Ở ĐÁY IFRAME */
+        /* ÉP BÀN PHÍM ẢO NỔI LÊN TRÊN CÙNG ĐÈ LÊN MỌI THỨ */
         math-virtual-keyboard, 
         .ML__keyboard, 
         div[data-ml-keyboard] { 
@@ -67,27 +71,26 @@
             position: fixed !important;
             bottom: 0 !important;
             left: 0 !important;
-            width: 100% !important;
+            width: 100vw !important;
         }
 
-        /* POPUP MODAL MỜ PHỦ KÍN VÙNG KHÔNG GIAN IFRAME */
+        /* POPUP MODAL MỜ PHỦ TOÀN MÀN HÌNH */
         .modal-overlay {
             display: none; 
             position: fixed; 
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(44, 40, 37, 0.55); 
             backdrop-filter: blur(4px);
-            z-index: 99999; 
+            z-index: 10000; 
             justify-content: center; 
             align-items: flex-start;
-            padding-top: 20px;
-            padding-bottom: 360px; /* Dành khoảng trống dưới chân cho bàn phím */
+            padding-top: 30px;
             overflow-y: auto;
         }
 
         .modal-content {
             background: #ffffff; 
-            width: 95%; 
+            width: 90%; 
             max-width: 620px; 
             border-radius: 20px; 
             padding: 22px 26px;
@@ -96,7 +99,7 @@
             position: relative; 
             border: 1px solid #e8c4b8;
             animation: popIn 0.22s ease-out;
-            margin-bottom: 20px;
+            margin-bottom: 320px; /* Tạo khoảng trống phía dưới cho bàn phím */
         }
         @keyframes popIn { 
             0% { opacity: 0; transform: scale(0.96) translateY(8px); }
@@ -123,9 +126,7 @@
             display: flex; align-items: center; justify-content: space-between; 
             padding: 6px 0; margin-bottom: 12px; font-size: 0.92rem; color: #2c2825; font-weight: 600; 
         }
-        .inline-check input[type="checkbox"] {
-            accent-color: #b8543f !important; width: 18px; height: 18px; cursor: pointer;
-        }
+        .inline-check input[type="checkbox"] { accent-color: #b8543f !important; width: 18px; height: 18px; cursor: pointer; }
         
         math-field.modal-mf { 
             width: 100%; min-height: 60px; font-size: 1.2rem; 
@@ -147,22 +148,11 @@
         }
         
         .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 22px; }
-        .btn-cancel { 
-            background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; 
-            padding: 9px 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
-        }
-        .btn-save { 
-            background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; 
-            padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; 
-            box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25);
-        }
+        .btn-cancel { background: #f0ebe1; color: #57524e; border: 1px solid #d8cfc4; border-radius: 10px; padding: 9px 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+        .btn-save { background: #b8543f !important; color: #ffffff !important; border: none; border-radius: 10px; padding: 9px 22px; font-weight: 600; cursor: pointer; font-size: 0.9rem; box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25); }
         .btn-save:hover { background: #a34834 !important; }
         
-        .btn-kb-toggle { 
-            background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; 
-            border-radius: 12px; padding: 5px 12px; font-size: 0.78rem; font-weight: 800; cursor: pointer; 
-            transition: all 0.2s;
-        }
+        .btn-kb-toggle { background: #faf0ec; color: #b8543f !important; border: 1px solid #e8c4b8 !important; border-radius: 12px; padding: 5px 12px; font-size: 0.78rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
         .btn-kb-toggle:hover { background: #b8543f !important; color: #ffffff !important; }
     </style>
 </head>
@@ -219,6 +209,43 @@
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
         }
 
+        /* PHÓNG TO IFRAME TRÀN CẢ MÀN HÌNH BÀN LÀM VIỆC */
+        function makeIframeFullscreen(enable) {
+            try {
+                let frame = window.frameElement;
+                if (!frame && window.parent && window.parent.document) {
+                    const iframes = window.parent.document.querySelectorAll('iframe');
+                    for (let i = 0; i < iframes.length; i++) {
+                        if (iframes[i].contentWindow === window) {
+                            frame = iframes[i];
+                            break;
+                        }
+                    }
+                }
+                if (frame) {
+                    if (enable) {
+                        frame.style.setProperty('position', 'fixed', 'important');
+                        frame.style.setProperty('top', '0px', 'important');
+                        frame.style.setProperty('left', '0px', 'important');
+                        frame.style.setProperty('width', '100vw', 'important');
+                        frame.style.setProperty('height', '100vh', 'important');
+                        frame.style.setProperty('z-index', '999999', 'important');
+                        frame.style.setProperty('background', 'transparent', 'important');
+                    } else {
+                        frame.style.removeProperty('position');
+                        frame.style.removeProperty('top');
+                        frame.style.removeProperty('left');
+                        frame.style.removeProperty('width');
+                        frame.style.removeProperty('height');
+                        frame.style.removeProperty('z-index');
+                        frame.style.removeProperty('background');
+                    }
+                }
+            } catch(e) {
+                console.warn("Cơ chế iframe bảo mật:", e);
+            }
+        }
+
         function setIframeHeight(height) {
             if (window.Streamlit) {
                 Streamlit.setFrameHeight(height);
@@ -242,17 +269,9 @@
         }
 
         function syncHeightOnly() {
-            const modal = document.getElementById('mathModal');
-            const isModalOpen = modal && (modal.style.display === 'flex');
-            
-            if (isModalOpen) {
-                // Ép Streamlit nới rộng khung iframe lên 920px để đủ diện tích hiện bàn phím
-                setIframeHeight(920);
-            } else {
-                let editorElem = document.getElementById('editor');
-                let targetHeight = (currentHeightMode === "large") ? 380 : Math.max(65, (editorElem ? editorElem.scrollHeight + 20 : 65));
-                setIframeHeight(targetHeight);
-            }
+            let editorElem = document.getElementById('editor');
+            let targetHeight = (currentHeightMode === "large") ? 380 : Math.max(65, (editorElem ? editorElem.scrollHeight + 20 : 65));
+            setIframeHeight(targetHeight);
         }
 
         function syncWithStreamlit() { 
@@ -275,20 +294,21 @@
             modalMf.value = mf.value;
             txtLatex.value = mf.value;
             prevMf.value = mf.value;
-            modal.style.display = 'flex';
-            
-            // Nới rộng iframe lập tức
-            syncHeightOnly();
 
-            // Focus và kích hoạt bàn phím ảo hiển thị
+            // 1. Phóng to iFrame tràn toàn bộ màn hình
+            makeIframeFullscreen(true);
+
+            // 2. Mở Popup Modal
+            modal.style.display = 'flex';
+
+            // 3. Focus ô nhập và kích hoạt bàn phím ảo MathLive ở đáy
             setTimeout(() => {
                 modalMf.focus();
                 try {
-                    if (window.mathVirtualKeyboard) {
-                        window.mathVirtualKeyboard.container = document.body;
-                        window.mathVirtualKeyboard.show();
-                    } else if (typeof mathVirtualKeyboard !== 'undefined') {
-                        mathVirtualKeyboard.show();
+                    const kb = window.mathVirtualKeyboard || (typeof mathVirtualKeyboard !== 'undefined' ? mathVirtualKeyboard : null);
+                    if (kb) {
+                        kb.container = document.body;
+                        kb.show();
                     }
                 } catch(e) {}
             }, 120);
@@ -297,13 +317,15 @@
         function closeMathModal() {
             modal.style.display = 'none';
             activeTargetMf = null;
+
+            // Ẩn Bàn phím ảo
             try {
-                if (window.mathVirtualKeyboard) {
-                    window.mathVirtualKeyboard.hide();
-                } else if (typeof mathVirtualKeyboard !== 'undefined') {
-                    mathVirtualKeyboard.hide();
-                }
+                const kb = window.mathVirtualKeyboard || (typeof mathVirtualKeyboard !== 'undefined' ? mathVirtualKeyboard : null);
+                if (kb) kb.hide();
             } catch(e) {}
+
+            // Thu nhỏ iFrame về lại khung ban đầu
+            makeIframeFullscreen(false);
             syncHeightOnly();
         }
 
