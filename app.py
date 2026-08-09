@@ -4,8 +4,8 @@ import time
 import random
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 from datetime import datetime
+from streamlit_mathlive import streamlit_mathlive
 from models import Question, QuestionType
 from exporter import export_questions_to_word
 from cloud_db import (
@@ -23,7 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# KHÓA MẬT KHẨU TRUY CẬP APP (NẾU CÓ TRONG SECRETS)
+# KHÓA MẬT KHẨU TRUY CẬP APP
 def check_password():
     if "APP_PASSWORD" not in st.secrets:
         return True
@@ -45,9 +45,11 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. KHỞI TẠO COMPONENT MATHLIVE TỪ THƯ MỤC MATHLIVE_COMPONENT
-COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
-interactive_math_editor = components.declare_component("interactive_math_editor", path=COMPONENT_DIR)
+# 2. HÀM BỌC KẾT NỐI STREAMLIT-MATHLIVE
+def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
+    """Gọi trực tiếp component streamlit-mathlive"""
+    val = streamlit_mathlive(value=text, key=key)
+    return val if val is not None else text
 
 # 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS
 all_questions = load_all_questions_from_cloud()
@@ -149,7 +151,7 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN CHÍNH & THANH TAB RỘNG RÃI CĂN GIỮA TOÀN TRANG
+# CSS GIAO DIỆN CHÍNH & LÀM THANH TAB TO RỘNG CĂN GIỮA TOÀN TRANG
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
@@ -324,11 +326,6 @@ st.markdown("""
         border-color: #d8cfc4 !important; 
         border-radius: 10px !important; 
         color: #2c2825 !important; 
-    }
-    iframe[title*="interactive_math_editor"] { 
-        width: 100% !important; 
-        border-radius: 12px !important; 
-        transition: height 0.15s ease !important; 
     }
 </style>
 """, unsafe_allow_html=True)
