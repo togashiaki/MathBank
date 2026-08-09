@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 import time
 import random
 import pandas as pd
@@ -24,7 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# KHÓA MẬT KHỦY TRUY CẬP APP (NẾU CÓ TRONG SECRETS)
+# KHÓA MẬT KHẨU TRUY CẬP APP (NẾU CÓ TRONG SECRETS)
 def check_password():
     if "APP_PASSWORD" not in st.secrets:
         return True
@@ -46,58 +45,20 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. KHỞI TẠO VÀ KẾT NỐI DUY NHẤT VỚI ST_MATHLIVE
-try:
-    from st_mathlive import mathfield
-except ImportError:
-    parent_dir = os.path.dirname(os.path.abspath(__file__))
-    if parent_dir not in sys.path:
-        sys.path.append(parent_dir)
-    try:
-        from st_mathlive import mathfield
-    except ImportError:
-        build_dir = os.path.join(parent_dir, "st_mathlive", "frontend", "build")
-        st_mathlive_comp = components.declare_component("st_mathlive", path=build_dir)
-        def mathfield(title="", value="", key=None):
-            res = st_mathlive_comp(title=title, value=value, default=[value, ""], key=key)
-            if isinstance(res, (list, tuple)):
-                return res[0] if len(res) > 0 else value, res[1] if len(res) > 1 else ""
-            return res or value, ""
+# 2. KHỞI TẠO COMPONENT MATHLIVE CHUẨN TỪ THƯ MỤC MATHLIVE_COMPONENT
+COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
+if not os.path.exists(COMPONENT_DIR):
+    os.makedirs(COMPONENT_DIR, exist_ok=True)
 
-def interactive_math_editor(key: str, text: str, **kwargs) -> str:
-    """Gọi trực tiếp mathfield của st_mathlive để kích hoạt bàn phím ảo đen chuẩn"""
-    try:
-        res = mathfield(title="", value=text, key=key)
-        if isinstance(res, (tuple, list)):
-            tex = res[0]
-        else:
-            tex = res
-        return tex if tex is not None and tex != "" else text
-    except Exception:
-        return text
+interactive_math_editor_comp = components.declare_component(
+    "interactive_math_editor",
+    path=COMPONENT_DIR
+)
 
-# POPUP DIALOG SỬA CÔNG THỨC BẰNG ST_MATHLIVE
-@st.dialog("Sửa công thức bằng st_mathlive", width="large")
-def show_formula_dialog(session_key: str, current_val: str):
-    st.caption("Nhập công thức toán học trực quan (Tự động mở Bàn phím ảo đen của `st_mathlive` khi bấm vào ô):")
-    
-    new_val = interactive_math_editor(key=f"dlg_mf_{session_key}", text=current_val)
-    
-    st.markdown("**Mã LaTeX tự động:**")
-    st.code(new_val if new_val else current_val, language="latex")
-    
-    st.markdown("**Xem trước MathJax:**")
-    st.latex(new_val if new_val else (current_val if current_val else r"\dots"))
-    
-    c_save, c_cancel = st.columns(2)
-    if c_save.button("💾 Lưu công thức", type="primary", use_container_width=True, key=f"dlg_save_{session_key}"):
-        st.session_state[session_key] = new_val if new_val else current_val
-        st.success("Đã lưu công thức thành công!")
-        time.sleep(0.4)
-        st.rerun()
-        
-    if c_cancel.button("Huỷ", use_container_width=True, key=f"dlg_cancel_{session_key}"):
-        st.rerun()
+def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
+    """Wrapper gọi bộ soạn thảo MathLive an toàn"""
+    val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text)
+    return val if val is not None else text
 
 # 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS
 all_questions = load_all_questions_from_cloud()
@@ -108,6 +69,7 @@ if "selected_questions" not in st.session_state:
 if "show_import_modal" not in st.session_state:
     st.session_state["show_import_modal"] = False
 
+# HÀM TẠO THƯ MỤC LƯU FILE WORD XUẤT RA
 def get_export_dir() -> str:
     today_str = datetime.now().strftime("%d-%m-%Y")
     export_dir = os.path.join(os.getcwd(), "exports", f"Đề tạo ngày {today_str}")
@@ -198,7 +160,7 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN CHÍNH & TỐI ƯU HIỂN THỊ CỦA ST_MATHLIVE
+# CSS GIAO DIỆN CHÍNH & THANH TAB RỘNG RÃI CĂN GIỮA NỔI BẬT
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
@@ -361,6 +323,7 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(44, 40, 37, 0.12) !important; 
     }
     
+    /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH */
     div[data-baseweb="tab-highlight-title"], 
     div[data-baseweb="tab-border"] { 
         display: none !important; 
@@ -374,12 +337,9 @@ st.markdown("""
         border-radius: 10px !important; 
         color: #2c2825 !important; 
     }
-
-    /* ĐẢM BẢO KHUNG IFRAME CỦA ST_MATHLIVE ĐỦ RỘNG ĐỂ BÀN PHÍM ẢO HIỂN THỊ ĐẸP MẮT */
-    iframe[title*="st_mathlive"], iframe[title*="mathfield"] { 
+    iframe[title*="interactive_math_editor"] { 
         width: 100% !important; 
         border-radius: 12px !important; 
-        min-height: 280px !important;
         transition: height 0.15s ease !important; 
     }
 </style>
@@ -517,13 +477,9 @@ def show_single_question_edit_dialog(q: Question):
 
     st.divider()
 
-    c_lbl1, c_btn1 = st.columns([4, 1])
-    c_lbl1.markdown("##### 📝 Chỉnh sửa đề bài (st_mathlive):")
-    if c_btn1.button("⌨️ Mở bàn phím Toán", key=f"btn_pop_content_{q.code}"):
-        show_formula_dialog(f"single_content_val_{q.code}", q.content)
-
-    updated_content = interactive_math_editor(key=f"editor_single_content_{q.code}", text=st.session_state.get(f"single_content_val_{q.code}", q.content))
-    if updated_content: q.content = updated_content
+    st.markdown("##### 📝 Chỉnh sửa đề bài (Sửa trực tiếp bằng MathLive):")
+    updated_content = interactive_math_editor(key=f"editor_single_content_{q.code}", text=q.content, height_mode="compact")
+    if updated_content is not None: q.content = updated_content
 
     if q.image_path:
         st.markdown("##### 🖼️ Ảnh đính kèm đề bài hiện tại:")
@@ -549,19 +505,19 @@ def show_single_question_edit_dialog(q: Question):
         opt_col1, opt_col2 = st.columns(2)
         with opt_col1:
             st.markdown("**Phương án A:**")
-            opt_a = interactive_math_editor(key=f"editor_single_opt_{q.code}_A", text=q.options.get('A', ''))
-            if opt_a: q.options['A'] = opt_a
+            opt_a = interactive_math_editor(key=f"editor_single_opt_{q.code}_A", text=q.options.get('A', ''), height_mode="compact")
+            if opt_a is not None: q.options['A'] = opt_a
             st.markdown("**Phương án B:**")
-            opt_b = interactive_math_editor(key=f"editor_single_opt_{q.code}_B", text=q.options.get('B', ''))
-            if opt_b: q.options['B'] = opt_b
+            opt_b = interactive_math_editor(key=f"editor_single_opt_{q.code}_B", text=q.options.get('B', ''), height_mode="compact")
+            if opt_b is not None: q.options['B'] = opt_b
 
         with opt_col2:
             st.markdown("**Phương án C:**")
-            opt_c = interactive_math_editor(key=f"editor_single_opt_{q.code}_C", text=q.options.get('C', ''))
-            if opt_c: q.options['C'] = opt_c
+            opt_c = interactive_math_editor(key=f"editor_single_opt_{q.code}_C", text=q.options.get('C', ''), height_mode="compact")
+            if opt_c is not None: q.options['C'] = opt_c
             st.markdown("**Phương án D:**")
-            opt_d = interactive_math_editor(key=f"editor_single_opt_{q.code}_D", text=q.options.get('D', ''))
-            if opt_d: q.options['D'] = opt_d
+            opt_d = interactive_math_editor(key=f"editor_single_opt_{q.code}_D", text=q.options.get('D', ''), height_mode="compact")
+            if opt_d is not None: q.options['D'] = opt_d
 
         q.answer = st.radio("🔑 Chọn đáp án đúng:", ['A', 'B', 'C', 'D'], index=['A', 'B', 'C', 'D'].index(q.answer) if q.answer in ['A', 'B', 'C', 'D'] else 0, horizontal=True)
 
@@ -574,8 +530,8 @@ def show_single_question_edit_dialog(q: Question):
             c_stmt, c_val = st.columns([4, 1])
             with c_stmt:
                 st.markdown(f"**Ý {label}):**")
-                updated_stmt = interactive_math_editor(key=f"editor_single_ds_{q.code}_{label}", text=clean_stmt_text)
-                stmt_text = updated_stmt if updated_stmt else clean_stmt_text
+                updated_stmt = interactive_math_editor(key=f"editor_single_ds_{q.code}_{label}", text=clean_stmt_text, height_mode="compact")
+                stmt_text = updated_stmt if updated_stmt is not None else clean_stmt_text
             with c_val:
                 val_choice = st.selectbox(f"Đ/S ({label})", ["Đúng", "Sai"], index=0 if raw_stmt_tuple[1] in ["Đúng", "D"] else 1, key=f"dialog_tf_val_{label}")
             new_tf.append((f"{label}) {stmt_text}", val_choice))
@@ -587,9 +543,9 @@ def show_single_question_edit_dialog(q: Question):
 
     st.divider()
 
-    st.markdown("##### 📝 Chỉnh sửa Lời giải chi tiết (st_mathlive):")
-    updated_sol = interactive_math_editor(key=f"editor_single_sol_{q.code}", text=q.solution if q.solution else "")
-    if updated_sol: q.solution = updated_sol
+    st.markdown("##### 📝 Chỉnh sửa Lời giải chi tiết (MathLive):")
+    updated_sol = interactive_math_editor(key=f"editor_single_sol_{q.code}", text=q.solution if q.solution else "", height_mode="compact")
+    if updated_sol is not None: q.solution = updated_sol
 
     sol_img_path = getattr(q, 'solution_image_path', None)
     if sol_img_path:
@@ -686,9 +642,9 @@ def show_import_modal(raw_text: str):
         with st.container():
             st.markdown(f"""<div class="edit-q-box"><b>Câu {idx + 1}</b> [{q.format.value}]</div>""", unsafe_allow_html=True)
             
-            st.markdown("<b>Sửa nội dung đề bài (st_mathlive):</b>", unsafe_allow_html=True)
-            updated_t3_content = interactive_math_editor(key=f"editor_t3_content_{idx}", text=q.content)
-            if updated_t3_content: q.content = updated_t3_content
+            st.markdown("<b>Sửa nội dung đề bài (MathLive):</b>", unsafe_allow_html=True)
+            updated_t3_content = interactive_math_editor(key=f"editor_t3_content_{idx}", text=q.content, height_mode="compact")
+            if updated_t3_content is not None: q.content = updated_t3_content
 
             uploaded_img = st.file_uploader(f"🖼️ Tải ảnh đính kèm đề bài (Câu {idx+1}):", type=["png", "jpg", "jpeg"], key=f"t3_img_{idx}")
             if uploaded_img:
@@ -724,15 +680,15 @@ def show_import_modal(raw_text: str):
                 if not q.options: q.options = {'A': '', 'B': '', 'C': '', 'D': ''}
                 t3_opt_col1, t3_opt_col2 = st.columns(2)
                 with t3_opt_col1:
-                    opt_a = interactive_math_editor(key=f"editor_t3_opt_{idx}_A", text=q.options.get('A', ''))
-                    if opt_a: q.options['A'] = opt_a
-                    opt_b = interactive_math_editor(key=f"editor_t3_opt_{idx}_B", text=q.options.get('B', ''))
-                    if opt_b: q.options['B'] = opt_b
+                    opt_a = interactive_math_editor(key=f"editor_t3_opt_{idx}_A", text=q.options.get('A', ''), height_mode="compact")
+                    if opt_a is not None: q.options['A'] = opt_a
+                    opt_b = interactive_math_editor(key=f"editor_t3_opt_{idx}_B", text=q.options.get('B', ''), height_mode="compact")
+                    if opt_b is not None: q.options['B'] = opt_b
                 with t3_opt_col2:
-                    opt_c = interactive_math_editor(key=f"editor_t3_opt_{idx}_C", text=q.options.get('C', ''))
-                    if opt_c: q.options['C'] = opt_c
-                    opt_d = interactive_math_editor(key=f"editor_t3_opt_{idx}_D", text=q.options.get('D', ''))
-                    if opt_d: q.options['D'] = opt_d
+                    opt_c = interactive_math_editor(key=f"editor_t3_opt_{idx}_C", text=q.options.get('C', ''), height_mode="compact")
+                    if opt_c is not None: q.options['C'] = opt_c
+                    opt_d = interactive_math_editor(key=f"editor_t3_opt_{idx}_D", text=q.options.get('D', ''), height_mode="compact")
+                    if opt_d is not None: q.options['D'] = opt_d
                 
                 ans_idx = ['A', 'B', 'C', 'D'].index(q.answer) if q.answer in ['A', 'B', 'C', 'D'] else 0
                 q.answer = st.radio(f"🔑 Chọn đáp án đúng (Câu {idx+1}):", ['A', 'B', 'C', 'D'], index=ans_idx, key=f"t3_tn_{idx}", horizontal=True)
@@ -745,8 +701,8 @@ def show_import_modal(raw_text: str):
                     clean_stmt_text = re.sub(r'^[a-d][\.\)\:-]\s*', '', raw_stmt_tuple[0], flags=re.IGNORECASE).strip()
                     c_txt, c_sel = st.columns([4, 1])
                     with c_txt:
-                        updated_stmt = interactive_math_editor(key=f"editor_t3_ds_{idx}_{label}", text=clean_stmt_text)
-                        stmt_input = updated_stmt if updated_stmt else clean_stmt_text
+                        updated_stmt = interactive_math_editor(key=f"editor_t3_ds_{idx}_{label}", text=clean_stmt_text, height_mode="compact")
+                        stmt_input = updated_stmt if updated_stmt is not None else clean_stmt_text
                     with c_sel:
                         choice = st.selectbox(f"Đ/S ({label})", ["Đúng", "Sai"], index=0 if raw_stmt_tuple[1] in ["Đúng", "D"] else 1, key=f"t3_ds_val_{idx}_{label}")
                     new_tf.append((f"{label}) {stmt_input}", choice))
@@ -756,9 +712,9 @@ def show_import_modal(raw_text: str):
             else:
                 q.answer = st.text_input(f"🔑 Nhập đáp án Trả lời ngắn (Câu {idx+1}):", value=q.answer, key=f"t3_tln_{idx}")
 
-            st.markdown("<b>Sửa lời giải chi tiết (st_mathlive):</b>", unsafe_allow_html=True)
-            updated_t3_sol = interactive_math_editor(key=f"editor_t3_sol_{idx}", text=q.solution if q.solution else "")
-            if updated_t3_sol: q.solution = updated_t3_sol
+            st.markdown("<b>Sửa lời giải chi tiết (MathLive):</b>", unsafe_allow_html=True)
+            updated_t3_sol = interactive_math_editor(key=f"editor_t3_sol_{idx}", text=q.solution if q.solution else "", height_mode="compact")
+            if updated_t3_sol is not None: q.solution = updated_t3_sol
 
             uploaded_sol_img = st.file_uploader(f"🖼️ Tải ảnh lời giải (Câu {idx+1}):", type=["png", "jpg", "jpeg"], key=f"t3_sol_img_{idx}")
             if uploaded_sol_img:
@@ -1033,12 +989,8 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
     if "tab3_input_text" not in st.session_state:
         st.session_state["tab3_input_text"] = sample_paste_text
 
-    col_txt, col_btn_dlg = st.columns([5, 1])
-    col_txt.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp:")
-    if col_btn_dlg.button("⌨️ Soạn công thức Pop-up", key="btn_dlg_tab3_main"):
-        show_formula_dialog("tab3_input_text", st.session_state["tab3_input_text"])
-
-    edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"])
+    st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
+    edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"], height_mode="large")
     if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
         st.session_state["tab3_input_text"] = edited_live_text
 
