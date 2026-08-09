@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- NHÚNG MATHLIVE NATIVE TỪ THƯ MỤC CỤC BỘ DIST -->
+    <!-- NHÚNG MATHLIVE NATIVE TỪ THƯ MỤC CỤC BỘ DIST HOẶC CDN -->
     <script defer src="./dist/mathlive.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
     
@@ -93,7 +93,7 @@
         .modal-content {
             background: #ffffff; 
             width: 90%; 
-            max-width: 640px; 
+            max-width: 620px; 
             border-radius: 20px; 
             padding: 22px 26px;
             box-shadow: 0 16px 40px rgba(44, 40, 37, 0.28); 
@@ -101,7 +101,7 @@
             position: relative; 
             border: 1px solid #e8c4b8;
             animation: popIn 0.22s ease-out;
-            margin-bottom: 350px; /* Chừa không gian bên dưới cho bàn phím */
+            margin-bottom: 380px; /* Chừa không gian bên dưới cho bàn phím */
         }
         @keyframes popIn { 
             0% { opacity: 0; transform: scale(0.96) translateY(8px); }
@@ -179,7 +179,7 @@
                     <span>NHẬP TRỰC QUAN BẰNG MATHLIVE</span>
                     <button class="btn-kb-toggle" id="btnToggleKb">Mở bàn phím Toán</button>
                 </div>
-                <math-field id="modalMathField" class="modal-mf" math-virtual-keyboard-policy="manual"></math-field>
+                <math-field id="modalMathField" class="modal-mf" virtual-keyboard-mode="manual"></math-field>
             </div>
             
             <div class="form-group">
@@ -211,7 +211,6 @@
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
         }
 
-        /* PHÓNG TO IFRAME TRÀN MÀN HÌNH TRÌNH DUYỆT */
         function makeIframeFullscreen(enable) {
             try {
                 let frame = window.frameElement;
@@ -289,7 +288,7 @@
         const txtLatex = document.getElementById('txtLatex');
         const prevMf = document.getElementById('previewMathField');
 
-        // KHỞI TẠO LAYOUT BÀN PHÍM TOÁN HỌC NATIVE ĐẦY ĐỦ
+        // CẤU HÌNH VIRTUAL KEYBOARD TRÊN DOM LOADED
         window.addEventListener('DOMContentLoaded', () => {
             if (window.mathVirtualKeyboard) {
                 window.mathVirtualKeyboard.layouts = ["numeric", "symbols", "greek", "alphabetic"];
@@ -312,7 +311,7 @@
                     window.mathVirtualKeyboard.target = modalMf;
                     window.mathVirtualKeyboard.show();
                 }
-            }, 100);
+            }, 120);
         }
 
         function closeMathModal() {
@@ -387,7 +386,7 @@
                     const mf = document.createElement('math-field'); 
                     mf.className = 'inline-math-chip'; 
                     mf.value = token.slice(1, -1);
-                    mf.mathVirtualKeyboardPolicy = "manual";
+                    mf.virtualKeyboardMode = "manual";
                     
                     mf.addEventListener('click', () => { openMathModal(mf); });
                     mf.addEventListener('change', syncWithStreamlit);
