@@ -56,8 +56,8 @@ interactive_math_editor_comp = components.declare_component(
 )
 
 def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
-    """Wrapper gọi bộ soạn thảo MathLive an toàn - Đã tăng kích thước khung dán Tab 3"""
-    h_val = 550 if height_mode == "large" else 180
+    """Wrapper gọi bộ soạn thảo MathLive an toàn - Mở rộng khung dán Tab 3 lên 600px"""
+    h_val = 600 if height_mode == "large" else 180
     val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text, height=h_val)
     return val if val is not None else text
 
@@ -267,34 +267,34 @@ st.markdown("""
 
     .stButton > button { 
         font-family: 'Google Sans', sans-serif !important;
-        border-radius: 12px !important; 
+        border-radius: 16px !important; 
         border: 1px solid #d8cfc4 !important; 
         background-color: #ffffff !important; 
         color: #2c2825 !important; 
         font-weight: 600 !important; 
-        padding: 10px 20px !important; 
-        min-height: 44px !important;
+        padding: 12px 20px !important; 
+        min-height: 48px !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important; 
-        box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
     }
     .stButton > button:hover { 
         border-color: #b8543f !important; 
         color: #b8543f !important; 
         background-color: #f7ece8 !important; 
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.12) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 16px rgba(184, 84, 63, 0.15) !important;
     }
     .stButton > button[kind="primary"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
         border: 1px solid #a34834 !important; 
-        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.2) !important;
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.25) !important;
     }
     .stButton > button[kind="primary"]:hover { 
         background-color: #a34834 !important; 
         color: #ffffff !important; 
-        box-shadow: 0 6px 16px rgba(184, 84, 63, 0.3) !important;
+        box-shadow: 0 8px 20px rgba(184, 84, 63, 0.35) !important;
     }
 
     .question-card { 
@@ -369,6 +369,11 @@ st.markdown("""
         background-color: #ffffff !important; 
         border-color: #d8cfc4 !important; 
         border-radius: 12px !important; 
+    }
+
+    iframe[title*="interactive_math_editor"] { 
+        width: 100% !important; 
+        border-radius: 16px !important; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1026,12 +1031,21 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
 
     st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
     
-    edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"], height_mode="large")
-    
+    # BỐ CỤC SONG SONG: CỘT TRÁI CHỨA KHUNG NHẬP LIỆU LỚN, CỘT PHẢI CHỨA NÚT BẤM BO TRÒN SANG TRỌNG
+    col_editor, col_action = st.columns([5, 1])
+
+    with col_editor:
+        edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"], height_mode="large")
+
+    with col_action:
+        st.write("")
+        st.write("")
+        btn_analyze = st.button("🔍 PHÂN TÍCH &\nMỞ POPUP", type="primary", use_container_width=True, key="btn_tab3_analyze")
+
     if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
         st.session_state["tab3_input_text"] = edited_live_text
 
-    if st.button("🔍 PHÂN TÍCH & MỞ POPUP ĐIỀU CHỈNH CHI TIẾT", type="primary", width="stretch"):
+    if btn_analyze:
         if not st.session_state["tab3_input_text"].strip():
             st.warning("Vui lòng dán văn bản câu hỏi trước khi nhấn phân tích!")
         else:
