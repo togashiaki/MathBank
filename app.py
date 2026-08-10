@@ -160,7 +160,7 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN HIỆN ĐẠI (FLUX DASHBOARD STYLE - BẢO TỒN BỘ MÀU CHUẨN)
+# CSS GIAO DIỆN HIỆN ĐẠI TỔNG THỂ + THANH TAB KÍNH MỜ TRONG SUỐT (iOS GLASSMORPHISM)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
@@ -187,7 +187,7 @@ st.markdown("""
         margin-bottom: 12px !important;
     }
 
-    /* THẺ CÂU HỎI FLOATING DASHBOARD CARD (NHƯ ẢNH 2) */
+    /* THẺ CÂU HỎI FLOATING DASHBOARD CARD */
     .question-card { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
@@ -322,29 +322,40 @@ st.markdown("""
         box-shadow: 0 6px 18px rgba(184, 84, 63, 0.35) !important; 
     }
 
-    /* THANH NỔI CHUYỂN TAB DẠNG PILL FLOATING BAR (GIỐNG ẢNH 2) */
+    /* --- HIỆU ỨNG THANH TAB NỔI KÍNH MỜ TRONG SUỐT PHONG CÁCH iOS (GLASSMORPHISM) --- */
     .stTabs [data-baseweb="tab-list"] { 
+        position: sticky !important;
+        top: 20px !important;
+        z-index: 9999 !important;
         display: flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 12px !important; 
-        background-color: #ffffff !important; 
-        padding: 8px 12px !important; 
+        gap: 8px !important; 
+        
+        /* Hiệu ứng kính mờ frosted glass */
+        background: rgba(247, 244, 237, 0.65) !important; 
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        
+        padding: 6px 10px !important; 
         border-radius: 999px !important; 
-        border: 1px solid #e8e2d8 !important; 
-        width: 100% !important;
-        max-width: 900px !important; 
-        margin: 12px auto 32px auto !important; 
-        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.06) !important; 
+        border: 1px solid rgba(255, 255, 255, 0.7) !important; 
+        
+        width: fit-content !important;
+        max-width: 90% !important; 
+        margin: 0 auto 36px auto !important; 
+        
+        box-shadow: 0 12px 32px rgba(44, 40, 37, 0.08), 
+                    inset 0 1px 1px rgba(255, 255, 255, 0.9) !important; 
     }
+
     .stTabs [data-baseweb="tab"] { 
-        height: 48px !important; 
-        flex: 1 !important;
+        height: 44px !important; 
         border-radius: 999px !important; 
         padding: 0px 24px !important; 
-        font-size: 0.98rem !important; 
+        font-size: 0.95rem !important; 
         font-weight: 700 !important; 
-        color: #78716c !important; 
+        color: #6b635b !important; 
         border: none !important; 
         background-color: transparent !important; 
         display: flex !important;
@@ -353,10 +364,11 @@ st.markdown("""
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
         cursor: pointer !important;
     }
+
     .stTabs [aria-selected="true"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
-        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.3) !important; 
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.35) !important; 
     }
     
     /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH CỦA STREAMLIT */
@@ -382,7 +394,7 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.15) !important;
     }
     
-    /* METRIC & EXPANDER THEO PHONG CÁCH MỚI */
+    /* METRIC & EXPANDER */
     div[data-testid="stExpander"] {
         background-color: #ffffff !important;
         border: 1px solid #e8e2d8 !important;
