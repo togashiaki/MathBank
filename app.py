@@ -160,7 +160,7 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN HIỆN ĐẠI TỔNG THỂ + THANH TAB KÍNH MỜ TRONG SUỐT (iOS GLASSMORPHISM)
+# CSS GIAO DIỆN CẢI TIẾN - THANH TAB TRÊN CÙNG CHÍNH GIỮA THEO STYLE ẢNH MỚI
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
@@ -174,17 +174,77 @@ st.markdown("""
         background-color: #f7f4ed !important; 
     }
     
+    /* ĐẨY NỘI DUNG CHÍNH XUỐNG DƯỚI ĐỂ KHÔNG BỊ THANH TAB CỐ ĐỊNH ĐÈ LÊN */
+    .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
+        padding-top: 4.8rem !important;
+    }
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        z-index: 99 !important;
+    }
+    
     /* SIDEBAR THANH BÊN BO TRÒN SANG TRỌNG */
     section[data-testid="stSidebar"] { 
         background-color: #f0ebe1 !important; 
         border-right: 1px solid #e2dbd0 !important; 
-        padding-top: 1rem;
+        padding-top: 1.5rem;
     }
-    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
-        font-size: 1.15rem !important;
-        font-weight: 700 !important;
-        color: #2c2825 !important;
-        margin-bottom: 12px !important;
+
+    /* --- CẤU TRÚC THANH TAB NỔI CỐ ĐỊNH Ở TRÊN CÙNG CHÍNH GIỮA (FLOATING HEADER TABS) --- */
+    .stTabs [data-baseweb="tab-list"] { 
+        position: fixed !important;
+        top: 14px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 999999 !important;
+        
+        display: flex !important; 
+        justify-content: center !important; 
+        align-items: center !important; 
+        gap: 6px !important; 
+        
+        /* Hiệu ứng kính mờ frosted glass nhẹ nhàng */
+        background: rgba(240, 235, 225, 0.85) !important; 
+        backdrop-filter: blur(16px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+        
+        padding: 5px 8px !important; 
+        border-radius: 16px !important; 
+        border: 1px solid rgba(226, 219, 208, 0.9) !important; 
+        
+        width: auto !important;
+        box-shadow: 0 10px 30px rgba(44, 40, 37, 0.1) !important; 
+    }
+
+    /* KIỂU DÁNG TỪNG TAB THƯỜNG */
+    .stTabs [data-baseweb="tab"] { 
+        height: 40px !important; 
+        border-radius: 12px !important; 
+        padding: 0px 22px !important; 
+        font-size: 0.92rem !important; 
+        font-weight: 700 !important; 
+        color: #57524e !important; 
+        border: none !important; 
+        background-color: transparent !important; 
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+    }
+
+    /* TAB DỰỢC CHỌN (ACTIVE TAB - KIỂU THẺ BẢNG VÀ GẠCH CHÂN NHƯ ẢNH MỚI) */
+    .stTabs [aria-selected="true"] { 
+        background-color: #ffffff !important; 
+        color: #b8543f !important; 
+        border-bottom: 3px solid #b8543f !important; 
+        box-shadow: 0 4px 12px rgba(44, 40, 37, 0.06) !important; 
+    }
+    
+    /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH CỦA STREAMLIT */
+    div[data-baseweb="tab-highlight-title"], 
+    div[data-baseweb="tab-border"] { 
+        display: none !important; 
     }
 
     /* THẺ CÂU HỎI FLOATING DASHBOARD CARD */
@@ -196,12 +256,10 @@ st.markdown("""
         margin-bottom: 22px !important; 
         box-shadow: 0 10px 28px rgba(44, 40, 37, 0.04) !important; 
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important; 
-        position: relative;
     }
     .question-card:hover {
         transform: translateY(-3px) !important;
         box-shadow: 0 16px 36px rgba(44, 40, 37, 0.08) !important;
-        border-color: #d8cebe !important;
     }
 
     /* NHÃN THẺ VIÊN THUỐC (PILL BADGES) */
@@ -215,7 +273,6 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace !important; 
         display: inline-flex !important;
         align-items: center !important;
-        box-shadow: 0 2px 8px rgba(184, 84, 63, 0.2) !important;
     }
     .badge-fmt { 
         background-color: #5e7a4e !important; 
@@ -227,10 +284,9 @@ st.markdown("""
         margin-right: 8px !important; 
         display: inline-flex !important;
         align-items: center !important;
-        box-shadow: 0 2px 8px rgba(94, 122, 78, 0.2) !important;
     }
 
-    /* THỐNG KÊ & KHUNG THÔNG TIN CẤU TRÚC DASHBOARD */
+    /* THỐNG KÊ & KHUNG THÔNG TIN */
     .stat-box { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
@@ -247,7 +303,6 @@ st.markdown("""
         border-bottom: 1px dashed #eae3d8 !important; 
         font-size: 0.88rem !important; 
         color: #57524e !important; 
-        font-weight: 500 !important;
     }
     .stat-number { 
         font-weight: 700 !important; 
@@ -267,7 +322,6 @@ st.markdown("""
         font-size: 0.88rem !important; 
         display: inline-block !important; 
         margin-top: 14px !important; 
-        box-shadow: 0 2px 6px rgba(168, 65, 44, 0.08) !important;
     }
     .header-info-bar { 
         background-color: #ffffff !important; 
@@ -280,15 +334,6 @@ st.markdown("""
         justify-content: space-between !important; 
         box-shadow: 0 8px 24px rgba(44, 40, 37, 0.03) !important; 
     }
-    .edit-q-box { 
-        background-color: #ffffff !important; 
-        border: 1px solid #e8e2d8 !important; 
-        border-radius: 18px !important; 
-        padding: 18px 22px !important; 
-        margin-bottom: 20px !important; 
-        color: #2c2825 !important; 
-        box-shadow: 0 4px 14px rgba(0,0,0,0.02) !important;
-    }
 
     /* NÚT BẤM STREAMLIT BO TRÒN NỔI HIỆN ĐẠI */
     .stButton>button { 
@@ -298,86 +343,24 @@ st.markdown("""
         color: #2c2825 !important; 
         font-weight: 600 !important; 
         padding: 10px 20px !important; 
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important; 
-        box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
+        transition: all 0.25s ease !important; 
     }
     .stButton>button:hover { 
         border-color: #b8543f !important; 
         color: #b8543f !important; 
         background-color: #f7ece8 !important; 
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.12) !important;
     }
     .stButton>button[kind="primary"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
         border: 1px solid #a34834 !important; 
-        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.25) !important;
     }
     .stButton>button[kind="primary"]:hover { 
         background-color: #a34834 !important; 
         color: #ffffff !important; 
-        border-color: #8f3a2b !important; 
-        transform: translateY(-1px) !important;
-        box-shadow: 0 6px 18px rgba(184, 84, 63, 0.35) !important; 
     }
 
-    /* --- HIỆU ỨNG THANH TAB NỔI KÍNH MỜ TRONG SUỐT PHONG CÁCH iOS (GLASSMORPHISM) --- */
-    .stTabs [data-baseweb="tab-list"] { 
-        position: sticky !important;
-        top: 20px !important;
-        z-index: 9999 !important;
-        display: flex !important; 
-        justify-content: center !important; 
-        align-items: center !important; 
-        gap: 8px !important; 
-        
-        /* Hiệu ứng kính mờ frosted glass */
-        background: rgba(247, 244, 237, 0.65) !important; 
-        backdrop-filter: blur(20px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-        
-        padding: 6px 10px !important; 
-        border-radius: 999px !important; 
-        border: 1px solid rgba(255, 255, 255, 0.7) !important; 
-        
-        width: fit-content !important;
-        max-width: 90% !important; 
-        margin: 0 auto 36px auto !important; 
-        
-        box-shadow: 0 12px 32px rgba(44, 40, 37, 0.08), 
-                    inset 0 1px 1px rgba(255, 255, 255, 0.9) !important; 
-    }
-
-    .stTabs [data-baseweb="tab"] { 
-        height: 44px !important; 
-        border-radius: 999px !important; 
-        padding: 0px 24px !important; 
-        font-size: 0.95rem !important; 
-        font-weight: 700 !important; 
-        color: #6b635b !important; 
-        border: none !important; 
-        background-color: transparent !important; 
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        cursor: pointer !important;
-    }
-
-    .stTabs [aria-selected="true"] { 
-        background-color: #b8543f !important; 
-        color: #ffffff !important; 
-        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.35) !important; 
-    }
-    
-    /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH CỦA STREAMLIT */
-    div[data-baseweb="tab-highlight-title"], 
-    div[data-baseweb="tab-border"] { 
-        display: none !important; 
-    }
-
-    /* Ô NHẬP LIỆU & SELECTBOX BO TRÒN MỀM MẠI */
+    /* Ô NHẬP LIỆU & SELECTBOX */
     div[data-baseweb="input"], 
     div[data-baseweb="select"], 
     div[data-baseweb="textarea"] { 
@@ -385,35 +368,11 @@ st.markdown("""
         border-color: #d8cfc4 !important; 
         border-radius: 14px !important; 
         color: #2c2825 !important; 
-        box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
-        transition: all 0.2s ease !important;
-    }
-    div[data-baseweb="input"]:focus-within, 
-    div[data-baseweb="select"]:focus-within {
-        border-color: #b8543f !important;
-        box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.15) !important;
-    }
-    
-    /* METRIC & EXPANDER */
-    div[data-testid="stExpander"] {
-        background-color: #ffffff !important;
-        border: 1px solid #e8e2d8 !important;
-        border-radius: 18px !important;
-        overflow: hidden !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
-    }
-    div[data-testid="stMetric"] {
-        background-color: #ffffff !important;
-        border: 1px solid #e8e2d8 !important;
-        border-radius: 18px !important;
-        padding: 16px 20px !important;
-        box-shadow: 0 6px 16px rgba(44, 40, 37, 0.03) !important;
     }
 
     iframe[title*="interactive_math_editor"] { 
         width: 100% !important; 
         border-radius: 14px !important; 
-        transition: height 0.15s ease !important; 
     }
 </style>
 """, unsafe_allow_html=True)
