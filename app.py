@@ -372,7 +372,7 @@ st.markdown("""
     }
         iframe[title*="interactive_math_editor"] { 
         width: 100% !important; 
-        height: 100% !important;
+        height: 1000% !important;
         border-radius: 14px !important; 
     }
 </style>
