@@ -160,186 +160,247 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN CHÍNH & THANH TAB RỘNG RÃI CĂN GIỮA NỔI BẬT
+# CSS GIAO DIỆN HIỆN ĐẠI (FLUX DASHBOARD STYLE - BẢO TỒN BỘ MÀU CHUẨN)
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
     
+    /* KHUNG NỀN TOÀN TRANG & TYPOGRAPHY */
     html, body, [class*="css"] { 
-        font-family: 'Plus Jakarta Sans', sans-serif !important; 
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
         color: #2c2825 !important; 
     }
     .stApp { 
         background-color: #f7f4ed !important; 
     }
+    
+    /* SIDEBAR THANH BÊN BO TRÒN SANG TRỌNG */
     section[data-testid="stSidebar"] { 
         background-color: #f0ebe1 !important; 
         border-right: 1px solid #e2dbd0 !important; 
+        padding-top: 1rem;
+    }
+    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
+        font-size: 1.15rem !important;
+        font-weight: 700 !important;
+        color: #2c2825 !important;
+        margin-bottom: 12px !important;
     }
 
+    /* THẺ CÂU HỎI FLOATING DASHBOARD CARD (NHƯ ẢNH 2) */
     .question-card { 
-        background-color: #faf8f5; 
-        border: 1px solid #e2dbd0; 
-        border-radius: 14px; 
-        padding: 22px; 
-        margin-bottom: 20px; 
-        box-shadow: 0 2px 8px rgba(44, 40, 37, 0.03); 
-        transition: all 0.25s ease; 
+        background-color: #ffffff !important; 
+        border: 1px solid #e8e2d8 !important; 
+        border-radius: 22px !important; 
+        padding: 24px !important; 
+        margin-bottom: 22px !important; 
+        box-shadow: 0 10px 28px rgba(44, 40, 37, 0.04) !important; 
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important; 
+        position: relative;
     }
+    .question-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 16px 36px rgba(44, 40, 37, 0.08) !important;
+        border-color: #d8cebe !important;
+    }
+
+    /* NHÃN THẺ VIÊN THUỐC (PILL BADGES) */
     .card-badge { 
-        background-color: #b8543f; 
-        color: #ffffff; 
-        padding: 4px 12px; 
-        border-radius: 8px; 
-        font-size: 0.82rem; 
-        font-weight: 600; 
-        font-family: 'JetBrains Mono', monospace; 
-        margin-bottom: 12px; 
-        display: inline-block; 
+        background-color: #b8543f !important; 
+        color: #ffffff !important; 
+        padding: 6px 16px !important; 
+        border-radius: 999px !important; 
+        font-size: 0.8rem !important; 
+        font-weight: 700 !important; 
+        font-family: 'JetBrains Mono', monospace !important; 
+        display: inline-flex !important;
+        align-items: center !important;
+        box-shadow: 0 2px 8px rgba(184, 84, 63, 0.2) !important;
     }
     .badge-fmt { 
-        background-color: #5e7a4e; 
-        color: #ffffff; 
-        padding: 4px 10px; 
-        border-radius: 8px; 
-        font-size: 0.76rem; 
-        font-weight: 600; 
-        margin-right: 8px; 
-        display: inline-block; 
+        background-color: #5e7a4e !important; 
+        color: #ffffff !important; 
+        padding: 6px 14px !important; 
+        border-radius: 999px !important; 
+        font-size: 0.78rem !important; 
+        font-weight: 700 !important; 
+        margin-right: 8px !important; 
+        display: inline-flex !important;
+        align-items: center !important;
+        box-shadow: 0 2px 8px rgba(94, 122, 78, 0.2) !important;
     }
 
+    /* THỐNG KÊ & KHUNG THÔNG TIN CẤU TRÚC DASHBOARD */
     .stat-box { 
-        background-color: #faf8f5; 
-        border: 1px solid #e2dbd0; 
-        border-radius: 12px; 
-        padding: 18px; 
-        margin-top: 18px; 
+        background-color: #ffffff !important; 
+        border: 1px solid #e8e2d8 !important; 
+        border-radius: 20px !important; 
+        padding: 20px !important; 
+        margin-top: 20px !important; 
+        box-shadow: 0 8px 20px rgba(44, 40, 37, 0.03) !important;
     }
     .stat-item { 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        padding: 9px 0; 
-        border-bottom: 1px dashed #e5dfd5; 
-        font-size: 0.9rem; 
-        color: #57524e; 
+        display: flex !important; 
+        justify-content: space-between !important; 
+        align-items: center !important; 
+        padding: 10px 0 !important; 
+        border-bottom: 1px dashed #eae3d8 !important; 
+        font-size: 0.88rem !important; 
+        color: #57524e !important; 
+        font-weight: 500 !important;
     }
     .stat-number { 
-        font-weight: 700; 
-        color: #b8543f; 
-        font-family: 'JetBrains Mono', monospace; 
+        font-weight: 700 !important; 
+        color: #b8543f !important; 
+        font-family: 'JetBrains Mono', monospace !important; 
+        background-color: #f7ece8 !important;
+        padding: 2px 10px !important;
+        border-radius: 999px !important;
     }
     .answer-box { 
-        background-color: #f7ece8; 
-        border: 1px solid #e8c4b8; 
-        color: #a8412c; 
-        padding: 8px 16px; 
-        border-radius: 10px; 
-        font-weight: 600; 
-        font-size: 0.9rem; 
-        display: inline-block; 
-        margin-top: 12px; 
+        background-color: #f7ece8 !important; 
+        border: 1px solid #e8c4b8 !important; 
+        color: #a8412c !important; 
+        padding: 10px 18px !important; 
+        border-radius: 14px !important; 
+        font-weight: 700 !important; 
+        font-size: 0.88rem !important; 
+        display: inline-block !important; 
+        margin-top: 14px !important; 
+        box-shadow: 0 2px 6px rgba(168, 65, 44, 0.08) !important;
     }
     .header-info-bar { 
-        background-color: #faf8f5; 
-        border: 1px solid #e2dbd0; 
-        border-radius: 14px; 
-        padding: 16px 24px; 
-        margin-bottom: 22px; 
-        display: flex; 
-        align-items: center; 
-        justify-content: space-between; 
-        box-shadow: 0 2px 6px rgba(44, 40, 37, 0.02); 
+        background-color: #ffffff !important; 
+        border: 1px solid #e8e2d8 !important; 
+        border-radius: 22px !important; 
+        padding: 20px 28px !important; 
+        margin-bottom: 24px !important; 
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: space-between !important; 
+        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.03) !important; 
     }
     .edit-q-box { 
-        background-color: #f0ebe1; 
-        border: 1px solid #dbd3c7; 
-        border-radius: 12px; 
-        padding: 16px 20px; 
-        margin-bottom: 18px; 
-        color: #2c2825; 
+        background-color: #ffffff !important; 
+        border: 1px solid #e8e2d8 !important; 
+        border-radius: 18px !important; 
+        padding: 18px 22px !important; 
+        margin-bottom: 20px !important; 
+        color: #2c2825 !important; 
+        box-shadow: 0 4px 14px rgba(0,0,0,0.02) !important;
     }
 
+    /* NÚT BẤM STREAMLIT BO TRÒN NỔI HIỆN ĐẠI */
     .stButton>button { 
-        border-radius: 10px !important; 
+        border-radius: 14px !important; 
         border: 1px solid #d8cfc4 !important; 
-        background-color: #faf8f5 !important; 
+        background-color: #ffffff !important; 
         color: #2c2825 !important; 
         font-weight: 600 !important; 
-        padding: 8px 16px !important; 
-        transition: all 0.25s ease !important; 
+        padding: 10px 20px !important; 
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important; 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
     }
     .stButton>button:hover { 
         border-color: #b8543f !important; 
         color: #b8543f !important; 
         background-color: #f7ece8 !important; 
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.12) !important;
     }
     .stButton>button[kind="primary"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
         border: 1px solid #a34834 !important; 
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.25) !important;
     }
     .stButton>button[kind="primary"]:hover { 
         background-color: #a34834 !important; 
         color: #ffffff !important; 
         border-color: #8f3a2b !important; 
-        box-shadow: 0 3px 10px rgba(184, 84, 63, 0.25) !important; 
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 18px rgba(184, 84, 63, 0.35) !important; 
     }
 
-    /* ĐIỀU CHỈNH THANH 3 TAB TO RỘNG, CĂN GIỮA TOÀN TRANG SANG TRỌNG */
+    /* THANH NỔI CHUYỂN TAB DẠNG PILL FLOATING BAR (GIỐNG ẢNH 2) */
     .stTabs [data-baseweb="tab-list"] { 
         display: flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 16px !important; 
-        background-color: #eae5da !important; 
-        padding: 10px 16px !important; 
-        border-radius: 20px !important; 
-        border: 1px solid #d8cfc4 !important; 
+        gap: 12px !important; 
+        background-color: #ffffff !important; 
+        padding: 8px 12px !important; 
+        border-radius: 999px !important; 
+        border: 1px solid #e8e2d8 !important; 
         width: 100% !important;
-        max-width: 960px !important; 
-        margin: 10px auto 36px auto !important; 
-        box-shadow: 0 4px 18px rgba(44, 40, 37, 0.08) !important; 
+        max-width: 900px !important; 
+        margin: 12px auto 32px auto !important; 
+        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.06) !important; 
     }
     .stTabs [data-baseweb="tab"] { 
-        height: 56px !important; 
+        height: 48px !important; 
         flex: 1 !important;
-        border-radius: 14px !important; 
-        padding: 0px 28px !important; 
-        font-size: 1.05rem !important; 
+        border-radius: 999px !important; 
+        padding: 0px 24px !important; 
+        font-size: 0.98rem !important; 
         font-weight: 700 !important; 
-        color: #6b635b !important; 
+        color: #78716c !important; 
         border: none !important; 
         background-color: transparent !important; 
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        transition: all 0.25s ease !important;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
         cursor: pointer !important;
     }
     .stTabs [aria-selected="true"] { 
-        background-color: #ffffff !important; 
-        color: #b8543f !important; 
-        box-shadow: 0 4px 12px rgba(44, 40, 37, 0.12) !important; 
+        background-color: #b8543f !important; 
+        color: #ffffff !important; 
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.3) !important; 
     }
     
-    /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH */
+    /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH CỦA STREAMLIT */
     div[data-baseweb="tab-highlight-title"], 
     div[data-baseweb="tab-border"] { 
         display: none !important; 
     }
 
+    /* Ô NHẬP LIỆU & SELECTBOX BO TRÒN MỀM MẠI */
     div[data-baseweb="input"], 
     div[data-baseweb="select"], 
     div[data-baseweb="textarea"] { 
-        background-color: #faf8f5 !important; 
+        background-color: #ffffff !important; 
         border-color: #d8cfc4 !important; 
-        border-radius: 10px !important; 
+        border-radius: 14px !important; 
         color: #2c2825 !important; 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
+        transition: all 0.2s ease !important;
     }
+    div[data-baseweb="input"]:focus-within, 
+    div[data-baseweb="select"]:focus-within {
+        border-color: #b8543f !important;
+        box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.15) !important;
+    }
+    
+    /* METRIC & EXPANDER THEO PHONG CÁCH MỚI */
+    div[data-testid="stExpander"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e8e2d8 !important;
+        border-radius: 18px !important;
+        overflow: hidden !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+    }
+    div[data-testid="stMetric"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e8e2d8 !important;
+        border-radius: 18px !important;
+        padding: 16px 20px !important;
+        box-shadow: 0 6px 16px rgba(44, 40, 37, 0.03) !important;
+    }
+
     iframe[title*="interactive_math_editor"] { 
         width: 100% !important; 
-        border-radius: 12px !important; 
+        border-radius: 14px !important; 
         transition: height 0.15s ease !important; 
     }
 </style>
@@ -784,11 +845,11 @@ with tab1:
     st.markdown(f"""
     <div class="header-info-bar">
         <div>
-            <span style="font-size:1.25rem; font-weight:700; color:#2c2825;">NGÂN HÀNG CÂU HỎI </span>
-            <span style="margin-left:12px; font-size:0.88rem; color:#78716c; background-color:#f0ebe1; padding:4px 10px; border-radius:6px;">MÔN TOÁN GDPT 2018</span>
+            <span style="font-size:1.25rem; font-weight:800; color:#2c2825; letter-spacing: -0.02em;">NGÂN HÀNG CÂU HỎI </span>
+            <span style="margin-left:12px; font-size:0.85rem; color:#78716c; background-color:#f0ebe1; padding:6px 14px; border-radius:999px; font-weight:600;">MÔN TOÁN GDPT 2018</span>
         </div>
         <div>
-            <span style="background-color:#f7ece8; color:#a8412c; border:1px solid #e8c4b8; padding:6px 16px; border-radius:20px; font-weight:600; font-size:0.88rem;">
+            <span style="background-color:#f7ece8; color:#a8412c; border:1px solid #e8c4b8; padding:8px 20px; border-radius:999px; font-weight:700; font-size:0.88rem; box-shadow:0 2px 8px rgba(184,84,63,0.08);">
                 📌 Số câu hiện có: <b>{cnt_total}</b> câu [TN: {cnt_tn} | ĐS: {cnt_ds} | TLN: {cnt_tln}]
             </span>
         </div>
@@ -831,7 +892,7 @@ with tab1:
         with grid_cols[idx % 2]:
             st.markdown(f"""
             <div class="question-card">
-                <div>
+                <div style="margin-bottom:12px;">
                     <span class="badge-fmt">{q.format.value}</span>
                     <span class="card-badge">Câu {idx + 1} | {q.code}</span>
                 </div>
