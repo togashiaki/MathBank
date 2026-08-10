@@ -190,7 +190,7 @@ def reindex_all_database_ids() -> int:
     save_questions_to_cloud(updated_questions)
     return len(updated_questions)
 
-# CSS ĐỒNG BỘ GOOGLE SANS, CAN GIỮA TABS TUYỆT ĐỐI VÀ THANH TRƯỢT THẬT CHO TAB 3
+# CSS ĐỒNG BỘ GOOGLE SANS, CAN GIỮA TABS TUYỆT ĐỐI VÀ THANH TRUỢT CHO TAB 3
 st.markdown("""
 <style>
     @import url('https://fonts.cdnfonts.com/css/google-sans');
@@ -226,7 +226,7 @@ st.markdown("""
         gap: 10px !important; 
         
         background-color: #ffffff !important; 
-        padding: 8px 12px !important; 
+        padding: 8px 14px !important; 
         border-radius: 999px !important; 
         border: 1px solid #e2dbd0 !important; 
         
@@ -270,35 +270,31 @@ st.markdown("""
         display: none !important; 
     }
 
-    /* KHUNG BỌC MỞ RỘNG & TẠO THANH TRƯỢT DỌC THẬT CHO TAB 3 */
-    .scrollable-editor-container {
-        width: 100% !important;
-        height: 450px !important;
-        max-height: 450px !important;
-        overflow-y: scroll !important;
-        border: 2px solid #d8cfc4 !important;
+    /* CẤU HÌNH TOÀN BỘ COMPONENT MATHLIVE VÀ KHUNG DÁN TAB 3 ĐỂ CÓ THANH TRƯỢT VÀ MỞ RỘNG ChiỀU CAO */
+    div[data-testid="stCustomComponentV1"] {
+        max-height: 480px !important;
+        overflow-y: auto !important;
+        border: 1px solid #d8cfc4 !important;
         border-radius: 16px !important;
-        background-color: #ffffff !important;
-        padding: 10px !important;
-        box-shadow: inset 0 2px 6px rgba(0,0,0,0.03), 0 4px 16px rgba(44,40,37,0.04) !important;
-        margin-bottom: 20px !important;
+        background-color: #faf8f5 !important;
+        padding: 6px !important;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.02) !important;
     }
 
-    /* BỘ TÙY CHỈNH THANH TRƯỢT (CUSTOM SCROLLBAR) DỄ NHÌN */
-    .scrollable-editor-container::-webkit-scrollbar {
-        width: 10px !important;
+    /* THANH TRƯỢT DỌC SANG TRỌNG CHO BỘ SOẠN THẢO */
+    div[data-testid="stCustomComponentV1"]::-webkit-scrollbar {
+        width: 8px;
     }
-    .scrollable-editor-container::-webkit-scrollbar-track {
-        background: #f0ebe1 !important;
-        border-radius: 10px !important;
+    div[data-testid="stCustomComponentV1"]::-webkit-scrollbar-track {
+        background: #f0ebe1;
+        border-radius: 8px;
     }
-    .scrollable-editor-container::-webkit-scrollbar-thumb {
-        background: #b8543f !important;
-        border-radius: 10px !important;
-        border: 2px solid #f0ebe1 !important;
+    div[data-testid="stCustomComponentV1"]::-webkit-scrollbar-thumb {
+        background: #b8543f;
+        border-radius: 8px;
     }
-    .scrollable-editor-container::-webkit-scrollbar-thumb:hover {
-        background: #a34834 !important;
+    div[data-testid="stCustomComponentV1"]::-webkit-scrollbar-thumb:hover {
+        background: #a34834;
     }
 
     /* NÚT BẤM GOOGLE SANS DỄ CLICK */
@@ -1069,10 +1065,7 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
 
     st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
     
-    # BỌC TRỰC TIẾP LỚP CONTAINER ĐỂ TẠO THANH TRƯỢT THẬT
-    st.markdown('<div class="scrollable-editor-container">', unsafe_allow_html=True)
     edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"], height_mode="large")
-    st.markdown('</div>', unsafe_allow_html=True)
     
     if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
         st.session_state["tab3_input_text"] = edited_live_text
