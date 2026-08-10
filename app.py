@@ -373,7 +373,7 @@ st.markdown("""
 
     iframe[title*="interactive_math_editor"] { 
         width: 100% !important; 
-        border-radius: 14px !important; 
+        border-radius: 20px !important; 
     }
 </style>
 """, unsafe_allow_html=True)
