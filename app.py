@@ -71,9 +71,26 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             border-radius: 12px; 
             padding: 14px 16px; 
             min-height: 180px; 
+            max-height: 480px;
+            overflow-y: auto !important;
             line-height: 1.8; 
             outline: none; 
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+        }
+        /* THANH TRƯỢT TÙY CHỈNH CHO EDITOR */
+        .editor-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .editor-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+        .editor-container::-webkit-scrollbar-thumb {
+            background: #b8543f;
+            border-radius: 8px;
+        }
+        .editor-container::-webkit-scrollbar-thumb:hover {
+            background: #a34834;
         }
         .plain-text { outline: none; display: inline; color: #2c2825; font-size: 1rem; white-space: pre-wrap; }
         math-field.inline-math-chip { 
@@ -172,7 +189,7 @@ interactive_math_editor_comp = components.declare_component(
 
 def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
     """Wrapper gọi bộ soạn thảo MathLive chuẩn kích thước"""
-    h_val = 420 if height_mode == "large" else 220
+    h_val = 500 if height_mode == "large" else 220
     val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text, height=h_val)
     return val if val is not None else text
 
@@ -325,7 +342,7 @@ st.markdown("""
         padding-top: 1rem;
     }
 
-    /* ÉP THẺ CHA TABS CĂN GIỮA TOÀN TRANG HÌNH */
+    /* ÉP THẺ CHA TABS CĂN GIỮA TOÀN TRANG HÌNH & GIỮ NỘI DUNG MỞ RỘNG 100% */
     div[data-testid="stTabs"] {
         display: flex !important;
         flex-direction: column !important;
@@ -334,31 +351,36 @@ st.markdown("""
         background: transparent !important;
     }
 
+    div[data-testid="stTabs"] > div[role="tabpanel"],
+    div[data-testid="stTabPanel"] {
+        width: 100% !important;
+    }
+
     div[data-testid="stTabs"] > div[data-baseweb="tab-list"],
     div[data-baseweb="tab-list"] { 
         display: inline-flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 10px !important; 
+        gap: 16px !important; 
         
         background-color: #ffffff !important; 
-        padding: 8px 12px !important; 
+        padding: 10px 16px !important; 
         border-radius: 999px !important; 
         border: 1px solid #e2dbd0 !important; 
         
         width: fit-content !important;
-        margin: 0 auto 28px auto !important; 
-        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.08) !important; 
+        margin: 0 auto 32px auto !important; 
+        box-shadow: 0 10px 28px rgba(44, 40, 37, 0.09) !important; 
     }
 
-    /* NÚT TAB BO TRÒN CAPSULE TO NỔI BẬT */
+    /* NÚT TAB BO TRÒN CAPSULE LỚN VÀ NỔI BẬT */
     button[data-baseweb="tab"] { 
-        height: 52px !important; 
-        min-width: 220px !important; 
+        height: 62px !important; 
+        min-width: 280px !important; 
         border-radius: 999px !important; 
-        padding: 0px 32px !important; 
+        padding: 0px 36px !important; 
         font-family: 'Google Sans', sans-serif !important;
-        font-size: 1.05rem !important; 
+        font-size: 1.2rem !important; 
         font-weight: 700 !important; 
         color: #57524e !important; 
         border: none !important; 
@@ -378,7 +400,7 @@ st.markdown("""
     button[data-baseweb="tab"][aria-selected="true"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
-        box-shadow: 0 4px 16px rgba(184, 84, 63, 0.35) !important; 
+        box-shadow: 0 6px 20px rgba(184, 84, 63, 0.38) !important; 
     }
     
     div[data-baseweb="tab-highlight-title"], 
