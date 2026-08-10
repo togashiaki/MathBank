@@ -190,7 +190,7 @@ def reindex_all_database_ids() -> int:
     save_questions_to_cloud(updated_questions)
     return len(updated_questions)
 
-# CSS ĐỒNG BỘ GOOGLE SANS & FIX CĂN GIỮA TUYỆT ĐỐI CHO THANH TABS
+# CSS ĐỒNG BỘ GOOGLE SANS, CAN GIỮA TABS VÀ MỞ RỘNG Ô DÁN TAB 3 CÓ THANH TRUỢT
 st.markdown("""
 <style>
     @import url('https://fonts.cdnfonts.com/css/google-sans');
@@ -209,7 +209,7 @@ st.markdown("""
         padding-top: 1rem;
     }
 
-    /* --- ÉP THẺ CHA CỦA TABS CĂN GIỮA TUYỆT ĐỐI TRÊN KHUNG HÌNH CHÍNH --- */
+    /* ÉP THẺ CHA CỦA TABS CĂN GIỮA TUYỆT ĐỐI */
     div[data-testid="stTabs"] {
         display: flex !important;
         flex-direction: column !important;
@@ -235,7 +235,7 @@ st.markdown("""
         box-shadow: 0 8px 24px rgba(44, 40, 37, 0.08) !important; 
     }
 
-    /* THIẾT KẾ MỖI NÚT TAB THÀNH DẠNG VIÊN THUỐC (CAPSULE) TO, RÕ, ĐẸP MẮT */
+    /* TABS DẠNG CAPSULE TO, RÕ */
     button[data-baseweb="tab"] { 
         height: 50px !important; 
         min-width: 220px !important; 
@@ -258,20 +258,18 @@ st.markdown("""
         color: #b8543f !important;
     }
 
-    /* TRẠNG THÁI TAB ACTIVE (MÀU ĐẤT NƯỚC BỘ MÀU GỐC) */
     button[data-baseweb="tab"][aria-selected="true"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
         box-shadow: 0 4px 16px rgba(184, 84, 63, 0.32) !important; 
     }
     
-    /* TRIỆT TIÊU VỆT VẠCH CHÂN ĐỎ THỪA CỦA STREAMLIT MẶC ĐỊNH */
     div[data-baseweb="tab-highlight-title"], 
     div[data-baseweb="tab-border"] { 
         display: none !important; 
     }
 
-    /* TỐI ƯU HÓA TOÀN BỘ NÚT BẤM (BUTTONS) TRONG APP - PHÔNG GOOGLE SANS, DỄ BẤM */
+    /* TOÀN BỘ NÚT BẤM (BUTTONS) TRONG APP */
     .stButton > button { 
         font-family: 'Google Sans', sans-serif !important;
         border-radius: 12px !important; 
@@ -304,7 +302,7 @@ st.markdown("""
         box-shadow: 0 6px 16px rgba(184, 84, 63, 0.3) !important;
     }
 
-    /* CARD CÂU HỎI & CÁC THÀNH PHẦN KHÁC */
+    /* CARD CÂU HỎI & CÁC THÀNH PHẦN BẢNG THỐNG KÊ */
     .question-card { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
@@ -382,6 +380,21 @@ st.markdown("""
     iframe[title*="interactive_math_editor"] { 
         width: 100% !important; 
         border-radius: 14px !important; 
+    }
+
+    /* --- CẤU HÌNH BỘ BỌC MỞ RỘNG VÀ THÊM THANH TRUỢT TẠI TAB 3 --- */
+    .tab3-editor-box {
+        width: 100% !important;
+        margin-bottom: 16px !important;
+    }
+
+    .tab3-editor-box iframe[title*="interactive_math_editor"] {
+        height: 460px !important;
+        max-height: 600px !important;
+        overflow-y: auto !important;
+        border: 1px solid #d8cfc4 !important;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.02), 0 4px 16px rgba(44,40,37,0.04) !important;
+        background-color: #faf8f5 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1038,7 +1051,12 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
         st.session_state["tab3_input_text"] = sample_paste_text
 
     st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
+    
+    # BỌC BỞI HTML CONTAINER ĐỂ ÁP CSS MỞ RỘNG VÀ THÊM THANH TRUỢT
+    st.markdown('<div class="tab3-editor-box">', unsafe_allow_html=True)
     edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"], height_mode="large")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
     if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
         st.session_state["tab3_input_text"] = edited_live_text
 
