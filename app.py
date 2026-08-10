@@ -45,10 +45,184 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. KHỞI TẠO COMPONENT MATHLIVE CHUẨN NGUYÊN BẢN
+# 2. KHỞI TẠO VÀ TỰ ĐỘNG CẬP NHẬT FILE INDEX.HTML CỦA MATHLIVE COMPONENT
 COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
-if not os.path.exists(COMPONENT_DIR):
-    os.makedirs(COMPONENT_DIR, exist_ok=True)
+os.makedirs(COMPONENT_DIR, exist_ok=True)
+INDEX_HTML_PATH = os.path.join(COMPONENT_DIR, "index.html")
+
+MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://unpkg.com/mathlive"></script>
+    <style>
+        @import url('https://fonts.cdnfonts.com/css/google-sans');
+        html, body { 
+            font-family: 'Google Sans', -apple-system, sans-serif; 
+            margin: 0; 
+            padding: 4px; 
+            background-color: transparent; 
+            color: #2c2825; 
+        }
+        
+        .editor-container { 
+            background-color: #ffffff; 
+            border: 1px solid #d8cfc4; 
+            border-radius: 14px; 
+            padding: 16px; 
+            min-height: 140px; 
+            box-sizing: border-box;
+            line-height: 1.8; 
+            outline: none; 
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        /* THANH TRƯỢT DỌC TỐI GIẢN BO TRÒN */
+        .editor-container::-webkit-scrollbar {
+            width: 7px;
+        }
+        .editor-container::-webkit-scrollbar-track {
+            background: #f0ebe1;
+            border-radius: 10px;
+        }
+        .editor-container::-webkit-scrollbar-thumb {
+            background: #b8543f;
+            border-radius: 10px;
+        }
+        .editor-container::-webkit-scrollbar-thumb:hover {
+            background: #a34834;
+        }
+
+        .plain-text { outline: none; display: inline; color: #2c2825; font-size: 1rem; white-space: pre-wrap; }
+        math-field.inline-math-chip { 
+            display: inline-block; 
+            vertical-align: middle; 
+            background-color: #faf0ec !important; 
+            border: 1px solid #e8c4b8 !important; 
+            color: #a8412c !important; 
+            border-radius: 8px !important; 
+            padding: 2px 8px !important; 
+            margin: 2px 4px !important; 
+            font-size: 1.15rem !important; 
+            outline: none !important; 
+            cursor: pointer; 
+        }
+        math-field.inline-math-chip:focus-within { 
+            border-color: #b8543f !important; 
+            background-color: #ffffff !important; 
+            box-shadow: 0 0 0 3px rgba(184, 84, 63, 0.2) !important; 
+        }
+    </style>
+</head>
+<body>
+    <div id="editor" class="editor-container" contenteditable="true"></div>
+    <script>
+        let currentText = "";
+        let isUserEditing = false;
+        let heightMode = "compact";
+
+        function sendToStreamlit(type, data) { 
+            window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*"); 
+        }
+
+        function getFullText() {
+            const container = document.getElementById('editor');
+            let fullText = "";
+            container.childNodes.forEach(node => {
+                if (node.nodeName && node.nodeName.toLowerCase() === 'math-field') { fullText += '$' + node.value + '$'; }
+                else if (node.nodeType === Node.ELEMENT_NODE) { fullText += node.innerText; }
+                else if (node.nodeType === Node.TEXT_NODE) { fullText += node.textContent; }
+            });
+            return fullText;
+        }
+
+        function updateFrameHeight() {
+            const container = document.getElementById('editor');
+            if (heightMode === "large") {
+                container.style.height = "500px";
+                container.style.overflowY = "auto";
+                sendToStreamlit("streamlit:setFrameHeight", { height: 540 });
+            } else {
+                container.style.height = "auto";
+                container.style.overflowY = "visible";
+                const h = Math.max(160, document.body.scrollHeight + 15);
+                sendToStreamlit("streamlit:setFrameHeight", { height: h });
+            }
+        }
+
+        function syncWithStreamlit() { 
+            currentText = getFullText(); 
+            sendToStreamlit("streamlit:setComponentValue", { value: currentText }); 
+            updateFrameHeight();
+        }
+
+        function buildEditor(rawText) {
+            const container = document.getElementById('editor');
+            container.innerHTML = "";
+            if (!rawText) {
+                const span = document.createElement('span'); span.className = 'plain-text'; span.contentEditable = "true"; span.innerText = "";
+                span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
+                span.addEventListener('focus', () => { isUserEditing = true; });
+                container.appendChild(span); 
+                updateFrameHeight(); 
+                return;
+            }
+            const tokens = rawText.split(/(\$\$.*?\$\$|\$.*?\$)/g);
+            tokens.forEach((token) => {
+                if (!token) return;
+                if ((token.startsWith('$$') && token.endsWith('$$')) || (token.startsWith('$') && token.endsWith('$'))) {
+                    const mf = document.createElement('math-field'); mf.className = 'inline-math-chip'; mf.value = token.slice(1, -1);
+                    mf.addEventListener('change', syncWithStreamlit);
+                    mf.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
+                    mf.addEventListener('focus', () => { isUserEditing = true; });
+                    container.appendChild(mf);
+                } else {
+                    const span = document.createElement('span'); span.className = 'plain-text'; span.contentEditable = "true"; span.innerText = token;
+                    span.addEventListener('blur', () => { isUserEditing = false; syncWithStreamlit(); });
+                    span.addEventListener('focus', () => { isUserEditing = true; });
+                    container.appendChild(span);
+                }
+            });
+            updateFrameHeight();
+        }
+
+        const container = document.getElementById('editor');
+        container.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
+            const sel = window.getSelection();
+            if (sel.rangeCount) { const range = sel.getRangeAt(0); range.deleteContents(); range.insertNode(document.createTextNode(pastedText)); }
+            else { container.appendChild(document.createTextNode(pastedText)); }
+            isUserEditing = false; currentText = getFullText(); buildEditor(currentText); syncWithStreamlit();
+        });
+
+        window.addEventListener("message", function(event) {
+            if (event.data && event.data.type === "streamlit:render") {
+                const args = event.data.args;
+                if (args) {
+                    if (args.height_mode) {
+                        heightMode = args.height_mode;
+                    }
+                    if (args.text !== undefined && !isUserEditing && args.text !== currentText) { 
+                        currentText = args.text; 
+                        buildEditor(args.text); 
+                    } else {
+                        updateFrameHeight();
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('load', () => { 
+            sendToStreamlit("streamlit:componentReady", { apiVersion: 1 }); 
+            updateFrameHeight();
+        });
+    </script>
+</body>
+</html>"""
+
+with open(INDEX_HTML_PATH, "w", encoding="utf-8") as f:
+    f.write(MATHLIVE_HTML_CONTENT)
 
 interactive_math_editor_comp = components.declare_component(
     "interactive_math_editor",
@@ -56,8 +230,8 @@ interactive_math_editor_comp = components.declare_component(
 )
 
 def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
-    """Wrapper gọi bộ soạn thảo MathLive an toàn - Mở rộng khung dán Tab 3 lên 600px"""
-    h_val = 600 if height_mode == "large" else 180
+    """Wrapper gọi bộ soạn thảo MathLive an toàn"""
+    h_val = 540 if height_mode == "large" else 200
     val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text, height=h_val)
     return val if val is not None else text
 
@@ -191,7 +365,7 @@ def reindex_all_database_ids() -> int:
     save_questions_to_cloud(updated_questions)
     return len(updated_questions)
 
-# CSS ĐỒNG BỘ GOOGLE SANS VÀ CAN GIỮA TABS
+# CSS ĐỒNG BỘ GOOGLE SANS VÀ CAN GIỮA TABS TUYỆT ĐỐI
 st.markdown("""
 <style>
     @import url('https://fonts.cdnfonts.com/css/google-sans');
@@ -267,7 +441,7 @@ st.markdown("""
 
     .stButton > button { 
         font-family: 'Google Sans', sans-serif !important;
-        border-radius: 16px !important; 
+        border-radius: 14px !important; 
         border: 1px solid #d8cfc4 !important; 
         background-color: #ffffff !important; 
         color: #2c2825 !important; 
@@ -1031,7 +1205,6 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
 
     st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
     
-    # BỐ CỤC SONG SONG: CỘT TRÁI CHỨA KHUNG NHẬP LIỆU LỚN, CỘT PHẢI CHỨA NÚT BẤM BO TRÒN SANG TRỌNG
     col_editor, col_action = st.columns([5, 1])
 
     with col_editor:
