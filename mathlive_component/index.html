@@ -26,15 +26,12 @@
             overflow-x: hidden;
         }
 
-        /* =========================================================
-            MAIN EDITOR
-            ========================================================= */
-
+        /* MAIN EDITOR */
         .editor-container {
             background-color: #faf8f5;
             border: 1px solid #e2dbd0;
             border-radius: 12px;
-            padding: 10px 14px;
+            padding: 12px 16px;
             line-height: 1.8;
             box-shadow: 0 1px 4px rgba(44, 40, 37, 0.03);
             outline: none;
@@ -42,6 +39,22 @@
             min-height: 56px;
             word-wrap: break-word;
             overflow-wrap: break-word;
+            box-sizing: border-box;
+        }
+
+        /* THANH TRƯỢT BO TRÒN TỐI GIẢN TƯƠNG TỰ ẢNH MẪU */
+        .editor-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .editor-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .editor-container::-webkit-scrollbar-thumb {
+            background: #d0d5dd;
+            border-radius: 999px;
+        }
+        .editor-container::-webkit-scrollbar-thumb:hover {
+            background: #b8543f;
         }
 
         .plain-text {
@@ -53,10 +66,7 @@
             word-break: break-word;
         }
 
-        /* =========================================================
-            INLINE MATH CHIP
-            ========================================================= */
-
+        /* INLINE MATH CHIP */
         math-field.inline-math-chip {
             display: inline-flex;
             align-items: center;
@@ -88,10 +98,6 @@
             box-shadow: 0 4px 12px rgba(184, 84, 63, 0.18);
         }
 
-        /* =========================================================
-            MATHLIVE VIRTUAL KEYBOARD STACKING
-            ========================================================= */
-
         :root {
             --keyboard-zindex: 2147483647 !important;
         }
@@ -103,10 +109,7 @@
             --keyboard-zindex: 2147483647 !important;
         }
 
-        /* =========================================================
-            MODAL TRÀN MÀN HÌNH (FULLSCREEN PORTAL)
-            ========================================================= */
-
+        /* MODAL PORTAL FULLSCREEN */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -155,10 +158,6 @@
                 transform: scale(1) translateY(0);
             }
         }
-
-        /* =========================================================
-            HEADER & FORM ELEMENTS
-            ========================================================= */
 
         .modal-header {
             display: flex;
@@ -398,7 +397,6 @@
             window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, data), "*");
         }
 
-        /* HÀM PHÓNG TO IFRAME TRÀN TRỌN MÀN HÌNH TRÌNH DUYỆT (FULLSCREEN PORTAL) */
         function makeIframeFullscreen(enable) {
             try {
                 let frame = window.frameElement;
@@ -446,11 +444,21 @@
             const editor = document.getElementById("editor");
             if (!editor) return;
             const modalOpen = document.getElementById("mathModal")?.classList.contains("open");
-            if (modalOpen) return; // Nếu modal mở thì iframe đang fullscreen portal 100vw x 100vh rồi
+            if (modalOpen) return;
 
-            const editorHeight = editor.scrollHeight + 20;
-            const baseHeight = currentHeightMode === "large" ? 380 : Math.max(65, editorHeight);
-            setIframeHeight(baseHeight);
+            /* XỬ LÝ KHUNG NHẬP LIỆU LỚN TẠI TAB 3 */
+            if (currentHeightMode === "large") {
+                editor.style.height = "520px";
+                editor.style.maxHeight = "520px";
+                editor.style.overflowY = "auto";
+                setIframeHeight(540);
+            } else {
+                editor.style.height = "auto";
+                editor.style.maxHeight = "none";
+                editor.style.overflowY = "visible";
+                const editorHeight = editor.scrollHeight + 20;
+                setIframeHeight(Math.max(65, editorHeight));
+            }
         }
 
         function getFullText() {
@@ -542,7 +550,6 @@
             prevMf.value = mf.value || "";
             chkInline.checked = true;
 
-            // BẬT CHẾ ĐỘ FULLSCREEN PORTAL TRÀN MÀN HÌNH
             makeIframeFullscreen(true);
 
             modal.classList.add("open");
@@ -566,7 +573,6 @@
             modal.setAttribute("aria-hidden", "true");
             activeTargetMf = null;
 
-            // TẮT CHẾ ĐỘ FULLSCREEN PORTAL, TRẢ VỀ KHUNG BAN ĐẦU
             makeIframeFullscreen(false);
             syncHeightOnly();
         }
