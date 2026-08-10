@@ -60,7 +60,7 @@ def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -
     val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text)
     return val if val is not None else text
 
-# 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS
+# 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS / CLOUD
 all_questions = load_all_questions_from_cloud()
 
 if "selected_questions" not in st.session_state:
@@ -160,12 +160,41 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS THIẾT KẾ MỚI: ĐẨY TAB LÊN TRÊN CÙNG CHÍNH GIỮA, TO RÕ VÀ BO TRÒN THEO MŨI TÊN
+# HÀM CHUẨN HÓA VÀ ĐÁNH LAI MÃ ID CHO TOÀN BỘ NGÂN HÀNG (RESTORED FUNCTION)
+def reindex_all_database_ids() -> int:
+    questions = load_all_questions_from_cloud()
+    if not questions: return 0
+
+    grade_chap_groups = {}
+    for q in questions:
+        key = (q.grade, q.chapter)
+        grade_chap_groups.setdefault(key, []).append(q)
+
+    updated_questions = []
+
+    for (g, c), gc_questions in grade_chap_groups.items():
+        distinct_topics = get_chapter_topics(questions, g, c)
+        topic_groups = {}
+        for q in gc_questions:
+            topic_groups.setdefault(q.topic, []).append(q)
+
+        for top, q_list in topic_groups.items():
+            d_num = extract_topic_num_for_chapter(top, distinct_topics)
+            prefix = f"TOAN{g}_CH{c}_D{d_num}_"
+            
+            for idx, q in enumerate(q_list, start=1):
+                new_code = f"{prefix}{idx:04d}"
+                q.code = new_code
+                updated_questions.append(q)
+
+    save_questions_to_cloud(updated_questions)
+    return len(updated_questions)
+
+# CSS TỐI ƯU CỰC ĐẠI - ĐẢM BẢO TẤT CẢ NÚT BẤM DỄ DÀNG, RÕ RÀNG VÀ CHUẨN ĐẸP
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
     
-    /* TOÀN BỘ PHÔNG CHỮ & NỀN MẶC ĐỊNH */
     html, body, [class*="css"] { 
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
         color: #2c2825 !important; 
@@ -174,49 +203,35 @@ st.markdown("""
         background-color: #f7f4ed !important; 
     }
     
-    /* GIẢM PADDING ĐỈNH TRANG ĐỂ ĐẨY TABS NẰM SÁT LÊN VÙNG TRỐNG TRÊN CÙNG */
-    .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
-        padding-top: 1rem !important;
-    }
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        height: 0px !important;
-    }
-    
     /* SIDEBAR THANH BÊN */
     section[data-testid="stSidebar"] { 
         background-color: #f0ebe1 !important; 
         border-right: 1px solid #e2dbd0 !important; 
-        padding-top: 1.5rem;
+        padding-top: 1rem;
     }
 
-    /* --- CẤU TRÚC TABS TO NỔI NẰM NGAY ĐỈNH CHÍNH GIỮA --- */
-    div[data-testid="stTabs"] {
-        background: transparent !important;
-    }
-
-    div[data-baseweb="tab-list"] { 
+    /* THANH TAB CỦA APP - DẠNG NỔI CAPSULE CĂN GIỮA NỔI BẬT DỄ BẤM */
+    .stTabs [data-baseweb="tab-list"] { 
         display: flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 10px !important; 
+        gap: 8px !important; 
         
         background-color: #ffffff !important; 
-        padding: 8px 12px !important; 
-        border-radius: 20px !important; 
+        padding: 6px 10px !important; 
+        border-radius: 999px !important; 
         border: 1px solid #e2dbd0 !important; 
         
         width: fit-content !important;
-        margin: 0 auto 28px auto !important; 
-        box-shadow: 0 10px 28px rgba(44, 40, 37, 0.08) !important; 
+        margin: 0 auto 24px auto !important; 
+        box-shadow: 0 4px 16px rgba(44, 40, 37, 0.06) !important; 
     }
 
-    /* ĐIỀU CHỈNH TAB TO LÊN (NỔI BẬT, DỄ BẤM) */
-    button[data-baseweb="tab"], div[data-baseweb="tab"] { 
-        height: 52px !important; 
-        border-radius: 14px !important; 
-        padding: 0px 32px !important; 
-        font-size: 1.08rem !important; 
+    .stTabs [data-baseweb="tab"] { 
+        height: 46px !important; 
+        border-radius: 999px !important; 
+        padding: 0px 28px !important; 
+        font-size: 0.98rem !important; 
         font-weight: 700 !important; 
         color: #57524e !important; 
         border: none !important; 
@@ -224,30 +239,59 @@ st.markdown("""
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        transition: all 0.2s ease !important;
         cursor: pointer !important;
+        transition: all 0.2s ease !important;
     }
 
-    /* HIỆU ỨNG HOVER KHI RÊ CHUỘT VÀO TAB */
-    button[data-baseweb="tab"]:hover {
+    .stTabs [data-baseweb="tab"]:hover {
         background-color: #f7ece8 !important;
         color: #b8543f !important;
     }
 
-    /* TRẠNG THÁI TAB ACTIVE (MÀU ĐẤT NƯỚC CHUẨN) */
-    button[data-baseweb="tab"][aria-selected="true"], div[data-baseweb="tab"][aria-selected="true"] { 
+    .stTabs [aria-selected="true"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
-        box-shadow: 0 4px 16px rgba(184, 84, 63, 0.32) !important; 
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.28) !important; 
     }
     
-    /* ẨN VỆT GẠCH CHÂN MẶC ĐỊNH CỦA STREAMLIT */
     div[data-baseweb="tab-highlight-title"], 
     div[data-baseweb="tab-border"] { 
         display: none !important; 
     }
 
-    /* THẺ CÂU HỎI & CÁC THÀNH PHẦN KHÁC */
+    /* TỐI ƯU HÓA TOÀN BỘ NÚT BẤM (BUTTONS) - RỘNG RÃI, DỄ CLICK */
+    .stButton > button { 
+        border-radius: 12px !important; 
+        border: 1px solid #d8cfc4 !important; 
+        background-color: #ffffff !important; 
+        color: #2c2825 !important; 
+        font-weight: 600 !important; 
+        padding: 10px 20px !important; 
+        min-height: 44px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important; 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
+    }
+    .stButton > button:hover { 
+        border-color: #b8543f !important; 
+        color: #b8543f !important; 
+        background-color: #f7ece8 !important; 
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.12) !important;
+    }
+    .stButton > button[kind="primary"] { 
+        background-color: #b8543f !important; 
+        color: #ffffff !important; 
+        border: 1px solid #a34834 !important; 
+        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.2) !important;
+    }
+    .stButton > button[kind="primary"]:hover { 
+        background-color: #a34834 !important; 
+        color: #ffffff !important; 
+        box-shadow: 0 6px 16px rgba(184, 84, 63, 0.3) !important;
+    }
+
+    /* CARD CÂU HỎI & CÁC THÀNH PHẦN KHÁC */
     .question-card { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
@@ -315,28 +359,16 @@ st.markdown("""
         justify-content: space-between !important; 
         box-shadow: 0 6px 18px rgba(44, 40, 37, 0.03) !important; 
     }
-    .stButton>button { 
-        border-radius: 12px !important; 
-        border: 1px solid #d8cfc4 !important; 
-        background-color: #ffffff !important; 
-        color: #2c2825 !important; 
-        font-weight: 600 !important; 
-        padding: 8px 18px !important; 
-    }
-    .stButton>button:hover { 
-        border-color: #b8543f !important; 
-        color: #b8543f !important; 
-        background-color: #f7ece8 !important; 
-    }
-    .stButton>button[kind="primary"] { 
-        background-color: #b8543f !important; 
-        color: #ffffff !important; 
-        border: 1px solid #a34834 !important; 
-    }
-    div[data-baseweb="input"], div[data-baseweb="select"] { 
+
+    div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { 
         background-color: #ffffff !important; 
         border-color: #d8cfc4 !important; 
         border-radius: 12px !important; 
+    }
+
+    iframe[title*="interactive_math_editor"] { 
+        width: 100% !important; 
+        border-radius: 14px !important; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -776,6 +808,13 @@ with tab1:
         <div class="stat-item" style="font-weight:700; color:#2c2825; border-top:1px solid #e2dbd0; margin-top:6px; padding-top:8px;"><span>TỔNG SỐ CÂU:</span><span style="color:#5e7a4e; font-size:1.05rem;">{cnt_total}</span></div>
     </div>
     """, unsafe_allow_html=True)
+
+    st.sidebar.markdown("<br>", unsafe_allow_html=True)
+    if st.sidebar.button("🔄 Chuẩn hóa & Đánh lại mã ID", width="stretch"):
+        count_reindexed = reindex_all_database_ids()
+        st.sidebar.success(f"🎉 Đã đánh lại mã ID liên tục cho {count_reindexed} câu hỏi!")
+        time.sleep(1)
+        st.rerun()
 
     st.markdown(f"""
     <div class="header-info-bar">
