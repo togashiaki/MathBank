@@ -45,7 +45,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. KHỞI TẠO VÀ TỰ ĐỘNG CẬP NHẬT FILE INDEX.HTML CHO COMPONENT MATHLIVE
+# 2. KHỞI TẠO VÀ TỰ ĐỘNG CẬP NHẬT FILE INDEX.HTML CHO COMPONENT MATHLIVE (GIỮ NGUYÊN 100% CODE GỐC)
 COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
 os.makedirs(COMPONENT_DIR, exist_ok=True)
 INDEX_HTML_PATH = os.path.join(COMPONENT_DIR, "index.html")
@@ -71,26 +71,9 @@ MATHLIVE_HTML_CONTENT = """<!DOCTYPE html>
             border-radius: 12px; 
             padding: 14px 16px; 
             min-height: 180px; 
-            max-height: 480px;
-            overflow-y: auto !important;
             line-height: 1.8; 
             outline: none; 
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
-        }
-        /* THANH TRƯỢT TÙY CHỈNH CHO EDITOR */
-        .editor-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        .editor-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 8px;
-        }
-        .editor-container::-webkit-scrollbar-thumb {
-            background: #b8543f;
-            border-radius: 8px;
-        }
-        .editor-container::-webkit-scrollbar-thumb:hover {
-            background: #a34834;
         }
         .plain-text { outline: none; display: inline; color: #2c2825; font-size: 1rem; white-space: pre-wrap; }
         math-field.inline-math-chip { 
@@ -189,7 +172,7 @@ interactive_math_editor_comp = components.declare_component(
 
 def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
     """Wrapper gọi bộ soạn thảo MathLive chuẩn kích thước"""
-    h_val = 500 if height_mode == "large" else 220
+    h_val = 420 if height_mode == "large" else 220
     val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text, height=h_val)
     return val if val is not None else text
 
