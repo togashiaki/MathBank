@@ -160,12 +160,12 @@ def generate_standard_code(questions: list, grade: int, chapter: int, topic: str
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# CSS GIAO DIỆN CẢI TIẾN - THANH TAB TRÊN CÙNG CHÍNH GIỮA THEO STYLE ẢNH MỚI
+# CSS TỐI ƯU GIAO DIỆN & ĐẨY THANH TAB LÊN TRÊN CÙNG SÁT NÓC (MÔ PHỎNG MŨI TÊN CHỈ)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
     
-    /* KHUNG NỀN TOÀN TRANG & TYPOGRAPHY */
+    /* TOÀN BỘ PHÔNG CHỮ & NỀN */
     html, body, [class*="css"] { 
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
         color: #2c2825 !important; 
@@ -174,26 +174,22 @@ st.markdown("""
         background-color: #f7f4ed !important; 
     }
     
-    /* ĐẨY NỘI DUNG CHÍNH XUỐNG DƯỚI ĐỂ KHÔNG BỊ THANH TAB CỐ ĐỊNH ĐÈ LÊN */
+    /* THU GỌN KHOẢNG TRỐNG SÁT ĐỈNH TRANG ĐỂ NỘI DUNG VÀ TABS VỪA VẶN SANG TRỌNG */
     .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
         padding-top: 4.8rem !important;
     }
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        z-index: 99 !important;
-    }
     
-    /* SIDEBAR THANH BÊN BO TRÒN SANG TRỌNG */
+    /* SIDEBAR THANH BÊN */
     section[data-testid="stSidebar"] { 
         background-color: #f0ebe1 !important; 
         border-right: 1px solid #e2dbd0 !important; 
-        padding-top: 1.5rem;
+        padding-top: 1.2rem;
     }
 
-    /* --- CẤU TRÚC THANH TAB NỔI CỐ ĐỊNH Ở TRÊN CÙNG CHÍNH GIỮA (FLOATING HEADER TABS) --- */
+    /* --- TỐI ƯU CỰC ĐẠI THANH 3 TAB LÊN VỊ TRÍ TRÊN CÙNG CHÍNH GIỮA (FLOATING HEADER BAR) --- */
     .stTabs [data-baseweb="tab-list"] { 
         position: fixed !important;
-        top: 14px !important;
+        top: 10px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         z-index: 999999 !important;
@@ -201,27 +197,27 @@ st.markdown("""
         display: flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 6px !important; 
+        gap: 8px !important; 
         
-        /* Hiệu ứng kính mờ frosted glass nhẹ nhàng */
-        background: rgba(240, 235, 225, 0.85) !important; 
-        backdrop-filter: blur(16px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+        /* Hiệu ứng nền trắng kem mờ kính sang trọng */
+        background: rgba(255, 255, 255, 0.92) !important; 
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
         
-        padding: 5px 8px !important; 
-        border-radius: 16px !important; 
-        border: 1px solid rgba(226, 219, 208, 0.9) !important; 
+        padding: 6px 10px !important; 
+        border-radius: 20px !important; 
+        border: 1px solid #e2dbd0 !important; 
         
         width: auto !important;
-        box-shadow: 0 10px 30px rgba(44, 40, 37, 0.1) !important; 
+        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.08) !important; 
     }
 
-    /* KIỂU DÁNG TỪNG TAB THƯỜNG */
+    /* ĐIỀU CHỈNH KÍCH THƯỚC TAB TO, RÕ RÀNG VÀ BO TRÒN MỀM MẠI */
     .stTabs [data-baseweb="tab"] { 
-        height: 40px !important; 
-        border-radius: 12px !important; 
-        padding: 0px 22px !important; 
-        font-size: 0.92rem !important; 
+        height: 48px !important; 
+        border-radius: 14px !important; 
+        padding: 0px 28px !important; 
+        font-size: 1.02rem !important; 
         font-weight: 700 !important; 
         color: #57524e !important; 
         border: none !important; 
@@ -229,121 +225,98 @@ st.markdown("""
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.22s ease-in-out !important;
         cursor: pointer !important;
     }
 
-    /* TAB DỰỢC CHỌN (ACTIVE TAB - KIỂU THẺ BẢNG VÀ GẠCH CHÂN NHƯ ẢNH MỚI) */
+    /* TRẠNG THÁI TAB ĐƯỢC CHỌN (ACTIVE) - MÀU ĐẤT NƯỚC BỘ MÀU GỐC */
     .stTabs [aria-selected="true"] { 
-        background-color: #ffffff !important; 
-        color: #b8543f !important; 
-        border-bottom: 3px solid #b8543f !important; 
-        box-shadow: 0 4px 12px rgba(44, 40, 37, 0.06) !important; 
+        background-color: #b8543f !important; 
+        color: #ffffff !important; 
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.3) !important; 
     }
     
-    /* XÓA VỆT GẠCH CHÂN ĐỎ MẶC ĐỊNH CỦA STREAMLIT */
+    /* ẨN VỆT GẠCH CHÂN MẶC ĐỊNH CỦA STREAMLIT */
     div[data-baseweb="tab-highlight-title"], 
     div[data-baseweb="tab-border"] { 
         display: none !important; 
     }
 
-    /* THẺ CÂU HỎI FLOATING DASHBOARD CARD */
+    /* CARD CÂU HỎI & CÁC THÀNH PHẦN KHÁC */
     .question-card { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
-        border-radius: 22px !important; 
-        padding: 24px !important; 
-        margin-bottom: 22px !important; 
-        box-shadow: 0 10px 28px rgba(44, 40, 37, 0.04) !important; 
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important; 
+        border-radius: 20px !important; 
+        padding: 22px !important; 
+        margin-bottom: 20px !important; 
+        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.04) !important; 
     }
-    .question-card:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 16px 36px rgba(44, 40, 37, 0.08) !important;
-    }
-
-    /* NHÃN THẺ VIÊN THUỐC (PILL BADGES) */
     .card-badge { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
-        padding: 6px 16px !important; 
+        padding: 6px 14px !important; 
         border-radius: 999px !important; 
         font-size: 0.8rem !important; 
         font-weight: 700 !important; 
         font-family: 'JetBrains Mono', monospace !important; 
-        display: inline-flex !important;
-        align-items: center !important;
     }
     .badge-fmt { 
         background-color: #5e7a4e !important; 
         color: #ffffff !important; 
-        padding: 6px 14px !important; 
+        padding: 6px 12px !important; 
         border-radius: 999px !important; 
         font-size: 0.78rem !important; 
         font-weight: 700 !important; 
         margin-right: 8px !important; 
-        display: inline-flex !important;
-        align-items: center !important;
     }
-
-    /* THỐNG KÊ & KHUNG THÔNG TIN */
     .stat-box { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
-        border-radius: 20px !important; 
-        padding: 20px !important; 
-        margin-top: 20px !important; 
-        box-shadow: 0 8px 20px rgba(44, 40, 37, 0.03) !important;
+        border-radius: 18px !important; 
+        padding: 18px !important; 
+        margin-top: 18px !important; 
     }
     .stat-item { 
         display: flex !important; 
         justify-content: space-between !important; 
         align-items: center !important; 
-        padding: 10px 0 !important; 
+        padding: 8px 0 !important; 
         border-bottom: 1px dashed #eae3d8 !important; 
         font-size: 0.88rem !important; 
-        color: #57524e !important; 
     }
     .stat-number { 
         font-weight: 700 !important; 
         color: #b8543f !important; 
         font-family: 'JetBrains Mono', monospace !important; 
-        background-color: #f7ece8 !important;
-        padding: 2px 10px !important;
-        border-radius: 999px !important;
     }
     .answer-box { 
         background-color: #f7ece8 !important; 
         border: 1px solid #e8c4b8 !important; 
         color: #a8412c !important; 
-        padding: 10px 18px !important; 
-        border-radius: 14px !important; 
+        padding: 8px 16px !important; 
+        border-radius: 12px !important; 
         font-weight: 700 !important; 
-        font-size: 0.88rem !important; 
         display: inline-block !important; 
-        margin-top: 14px !important; 
+        margin-top: 12px !important; 
     }
     .header-info-bar { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
-        border-radius: 22px !important; 
-        padding: 20px 28px !important; 
-        margin-bottom: 24px !important; 
+        border-radius: 20px !important; 
+        padding: 18px 24px !important; 
+        margin-bottom: 22px !important; 
         display: flex !important; 
         align-items: center !important; 
         justify-content: space-between !important; 
-        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.03) !important; 
+        box-shadow: 0 6px 18px rgba(44, 40, 37, 0.03) !important; 
     }
-
-    /* NÚT BẤM STREAMLIT BO TRÒN NỔI HIỆN ĐẠI */
     .stButton>button { 
-        border-radius: 14px !important; 
+        border-radius: 12px !important; 
         border: 1px solid #d8cfc4 !important; 
         background-color: #ffffff !important; 
         color: #2c2825 !important; 
         font-weight: 600 !important; 
-        padding: 10px 20px !important; 
-        transition: all 0.25s ease !important; 
+        padding: 8px 18px !important; 
     }
     .stButton>button:hover { 
         border-color: #b8543f !important; 
@@ -355,24 +328,10 @@ st.markdown("""
         color: #ffffff !important; 
         border: 1px solid #a34834 !important; 
     }
-    .stButton>button[kind="primary"]:hover { 
-        background-color: #a34834 !important; 
-        color: #ffffff !important; 
-    }
-
-    /* Ô NHẬP LIỆU & SELECTBOX */
-    div[data-baseweb="input"], 
-    div[data-baseweb="select"], 
-    div[data-baseweb="textarea"] { 
+    div[data-baseweb="input"], div[data-baseweb="select"] { 
         background-color: #ffffff !important; 
         border-color: #d8cfc4 !important; 
-        border-radius: 14px !important; 
-        color: #2c2825 !important; 
-    }
-
-    iframe[title*="interactive_math_editor"] { 
-        width: 100% !important; 
-        border-radius: 14px !important; 
+        border-radius: 12px !important; 
     }
 </style>
 """, unsafe_allow_html=True)
