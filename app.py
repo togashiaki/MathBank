@@ -370,6 +370,11 @@ st.markdown("""
         border-color: #d8cfc4 !important; 
         border-radius: 12px !important; 
     }
+        iframe[title*="interactive_math_editor"] { 
+        width: 100% !important; 
+        height: 100% !important;
+        border-radius: 14px !important; 
+    }
 </style>
 """, unsafe_allow_html=True)
 
