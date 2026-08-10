@@ -190,16 +190,15 @@ def reindex_all_database_ids() -> int:
     save_questions_to_cloud(updated_questions)
     return len(updated_questions)
 
-# CSS TỐI ƯU TOÀN DIỆN - THANH TAB CAPSULE TO DÀI TỰ CĂN GIỮA MƯỢT MÀ & DỄ BẤM 100%
+# CSS ĐỒNG BỘ GOOGLE SANS & FIX CĂN GIỮA TUYỆT ĐỐI CHO THANH TABS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+    @import url('https://fonts.cdnfonts.com/css/google-sans');
     
-    html, body, [class*="css"] { 
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
+    /* ĐỒNG BỘ PHÔNG CHỮ GOOGLE SANS TOÀN BỘ ỨNG DỤNG */
+    html, body, [class*="css"], .stApp { 
+        font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
         color: #2c2825 !important; 
-    }
-    .stApp { 
         background-color: #f7f4ed !important; 
     }
     
@@ -210,31 +209,36 @@ st.markdown("""
         padding-top: 1rem;
     }
 
-    /* --- THANH TABS CAPSULE CAO CẤP: TO, DÀI, NỔI BẬT & TỰ ĐỘNG CĂN GIỮA KHI ĐỔI KÍCH THƯỚC SIDEBAR --- */
-    .stTabs [data-baseweb="tab-list"] { 
-        display: flex !important; 
+    /* --- ÉP THẺ CHA CỦA TABS CĂN GIỮA TUYỆT ĐỐI TRÊN KHUNG HÌNH CHÍNH --- */
+    div[data-testid="stTabs"] {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        width: 100% !important;
+        background: transparent !important;
+    }
+
+    div[data-testid="stTabs"] > div[data-baseweb="tab-list"],
+    div[data-baseweb="tab-list"] { 
+        display: inline-flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 12px !important; 
+        gap: 10px !important; 
         
         background-color: #ffffff !important; 
-        padding: 8px 14px !important; 
+        padding: 8px 12px !important; 
         border-radius: 999px !important; 
         border: 1px solid #e2dbd0 !important; 
         
         width: fit-content !important;
-        max-width: 100% !important;
-        margin: 4px auto 32px auto !important; 
-        box-shadow: 0 10px 30px rgba(44, 40, 37, 0.07) !important; 
-        
-        /* Hiệu ứng chuyển động tự động di chuyển mượt mà khi bật/tắt Sidebar */
-        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        margin: 0 auto 28px auto !important; 
+        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.08) !important; 
     }
 
-    /* NÚT TAB: TO HƠN, RỘNG HƠN (MIN-WIDTH 200PX) VÀ HIỆU ỨNG CHỌN SANG TRỌNG */
-    .stTabs [data-baseweb="tab"] { 
-        height: 52px !important; 
-        min-width: 210px !important; 
+    /* THIẾT KẾ MỖI NÚT TAB THÀNH DẠNG VIÊN THUỐC (CAPSULE) TO, RÕ, ĐẸP MẮT */
+    button[data-baseweb="tab"] { 
+        height: 50px !important; 
+        min-width: 220px !important; 
         border-radius: 999px !important; 
         padding: 0px 32px !important; 
         font-size: 1.05rem !important; 
@@ -246,29 +250,30 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
         cursor: pointer !important;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        transition: all 0.22s ease-in-out !important;
     }
 
-    .stTabs [data-baseweb="tab"]:hover {
+    button[data-baseweb="tab"]:hover {
         background-color: #f7ece8 !important;
         color: #b8543f !important;
     }
 
-    /* TRẠNG THÁI TAB ACTIVE: MÀU ĐẤT NƯỚC BỘ MÀU GỐC (#b8543f) NỔI BẬT */
-    .stTabs [aria-selected="true"] { 
+    /* TRẠNG THÁI TAB ACTIVE (MÀU ĐẤT NƯỚC BỘ MÀU GỐC) */
+    button[data-baseweb="tab"][aria-selected="true"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
-        box-shadow: 0 6px 20px rgba(184, 84, 63, 0.35) !important; 
-        transform: scale(1.02) !important;
+        box-shadow: 0 4px 16px rgba(184, 84, 63, 0.32) !important; 
     }
     
+    /* TRIỆT TIÊU VỆT VẠCH CHÂN ĐỎ THỪA CỦA STREAMLIT MẶC ĐỊNH */
     div[data-baseweb="tab-highlight-title"], 
     div[data-baseweb="tab-border"] { 
         display: none !important; 
     }
 
-    /* TỐI ƯU KHẢ NĂNG CLICK (CLICKABILITY) CHO TOÀN BỘ NÚT BẤM CỦA APP */
+    /* TỐI ƯU HÓA TOÀN BỘ NÚT BẤM (BUTTONS) TRONG APP - PHÔNG GOOGLE SANS, DỄ BẤM */
     .stButton > button { 
+        font-family: 'Google Sans', sans-serif !important;
         border-radius: 12px !important; 
         border: 1px solid #d8cfc4 !important; 
         background-color: #ffffff !important; 
@@ -299,7 +304,7 @@ st.markdown("""
         box-shadow: 0 6px 16px rgba(184, 84, 63, 0.3) !important;
     }
 
-    /* THẺ CÂU HỎI & CÁC KHUNG KHÁC */
+    /* CARD CÂU HỎI & CÁC THÀNH PHẦN KHÁC */
     .question-card { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
