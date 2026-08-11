@@ -83,6 +83,43 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
     st.markdown("### ⚙️ Cấu hình định dạng file Word")
     st.caption(f"Đang chuẩn bị xuất **{len(questions_to_export)}** câu hỏi sang định dạng Word (.docx)")
 
+    st.markdown("#### 📋 Cấu hình bảng tiêu đề đề thi (Header 2x2)")
+    col_h1, col_h2 = st.columns(2)
+    with col_h1:
+        school_name = st.text_input(
+            "Tên trường / Trung tâm (Ô trái - Trên):",
+            value="TRUNG TÂM BỒI DƯỠNG VĂN HÓA MHĐ",
+            key=f"hdr_school_{test_code}"
+        )
+        sub_title = st.text_input(
+            "Ghi chú / Môn học (Ô trái - Dưới, tùy chọn):",
+            value="MÔN TOÁN LỚP 12",
+            key=f"hdr_sub_{test_code}"
+        )
+    with col_h2:
+        exam_title = st.text_input(
+            "Tên đề / Kỳ thi (Ô phải - Trên):",
+            value="KIỂM TRA THÁNG 6 + 7: ỨNG DỤNG ĐẠO HÀM ĐỂ KHẢO SÁT ĐỒ THỊ HÀM SỐ",
+            key=f"hdr_title_{test_code}"
+        )
+        duration = st.number_input(
+            "Thời gian làm bài (Phút - Ô phải - Dưới):",
+            min_value=1,
+            max_value=300,
+            value=90,
+            step=5,
+            key=f"hdr_duration_{test_code}"
+        )
+
+    header_info = {
+        "school_name": school_name,
+        "exam_title": exam_title,
+        "sub_title": sub_title,
+        "duration": duration
+    }
+
+    st.divider()
+
     col1, col2 = st.columns(2)
     with col1:
         ds_fmt_choice = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0)
@@ -98,16 +135,16 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
 
     if st.button("🚀 BẮT ĐẦU TẠO CÁC FILE WORD", type="primary", width="stretch"):
         path_degoc = os.path.join(export_dir, f"1_De_Thi_Goc{file_suffix}.docx")
-        export_questions_to_word(questions_to_export, path_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code)
+        export_questions_to_word(questions_to_export, path_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         path_dongchua = os.path.join(export_dir, f"2_De_Co_Dong_Chua_Bai{file_suffix}.docx")
-        export_questions_to_word(questions_to_export, path_dongchua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code)
+        export_questions_to_word(questions_to_export, path_dongchua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         path_dapan = os.path.join(export_dir, f"3_Bang_Dap_An{file_suffix}.docx")
-        export_questions_to_word(questions_to_export, path_dapan, mode="dap_an", ds_table_format=True, tln_box_format=tln_box, test_code=test_code)
+        export_questions_to_word(questions_to_export, path_dapan, mode="dap_an", ds_table_format=True, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         path_loigiai = os.path.join(export_dir, f"4_Loi_Giai_Chi_Tiet{file_suffix}.docx")
-        export_questions_to_word(questions_to_export, path_loigiai, mode="loi_giai_chi_tiet", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code)
+        export_questions_to_word(questions_to_export, path_loigiai, mode="loi_giai_chi_tiet", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         st.session_state[f"export_paths_{test_code}"] = {
             "degoc": path_degoc, "dongchua": path_dongchua, "dapan": path_dapan, "loigiai": path_loigiai
@@ -138,8 +175,8 @@ def confirm_delete_dialog(q: Question):
     if col_no.button("Hủy bỏ", width="stretch"):
         st.rerun()
 
-def get_chapter_topics(questions: list, grade: int, chapter: int) -> list:
-    return sorted(list(set(q.topic for q in questions if q.grade == grade and q.chapter == chapter and q.topic)))
+def get_chapter_topics(questions: list, grade, chapter: int) -> list:
+    return sorted(list(set(q.topic for q in questions if str(q.grade) == str(grade) and q.chapter == chapter and q.topic)))
 
 def get_all_stored_topics(questions: list) -> list:
     return sorted(list(set(q.topic for q in questions if q.topic)))
@@ -153,7 +190,7 @@ def extract_topic_num_for_chapter(topic_str: str, chapter_topics: list) -> int:
     if topic_str in chapter_topics: return chapter_topics.index(topic_str) + 1
     return len(chapter_topics) + 1 if topic_str not in chapter_topics else 1
 
-def generate_standard_code(questions: list, grade: int, chapter: int, topic: str) -> str:
+def generate_standard_code(questions: list, grade, chapter: int, topic: str) -> str:
     chap_topics = get_chapter_topics(questions, grade, chapter)
     d_num = extract_topic_num_for_chapter(topic, chap_topics)
     prefix = f"TOAN{grade}_CH{chapter}_D{d_num}_"
@@ -462,7 +499,9 @@ def show_single_question_edit_dialog(q: Question):
     st.subheader(f"Chỉnh sửa câu hỏi: {q.code}")
 
     col_a, col_b = st.columns(2)
-    q.grade = col_a.selectbox("Khối lớp", [12, 11, 10], index=[12, 11, 10].index(q.grade))
+    grade_list = ["HSA", 12, 11, 10]
+    g_idx = grade_list.index(q.grade) if q.grade in grade_list else 1
+    q.grade = col_a.selectbox("Khối lớp", grade_list, index=g_idx)
     q.chapter = col_b.number_input("Chương", min_value=1, value=q.chapter)
 
     key_custom_top_s = f"custom_top_single_{q.code}"
@@ -623,7 +662,7 @@ def show_import_modal(raw_text: str):
 
     st.markdown("### ⚡ 1. Thiết lập thông tin phân loại chung")
     col_a, col_b = st.columns(2)
-    g_val = col_a.selectbox("Khối lớp (Chung)", [12, 11, 10], index=0)
+    g_val = col_a.selectbox("Khối lớp (Chung)", ["HSA", 12, 11, 10], index=1)
     c_val = col_b.number_input("Chương (Chung)", 1, 20, 1)
 
     col_d, col_e = st.columns(2)
@@ -780,9 +819,9 @@ tab1, tab2, tab3 = st.tabs(["📋 Ngân hàng câu hỏi", "🎯 Barem Ma trận
 # TAB 1
 with tab1:
     st.sidebar.markdown("### 📚 Bộ lọc Ngân hàng")
-    grade_options = ["Tất cả", 12, 11, 10]
+    grade_options = ["Tất cả", "HSA", 12, 11, 10]
     grade_selected = st.sidebar.selectbox("Khối lớp", grade_options, index=0)
-    questions_filtered = all_questions if grade_selected == "Tất cả" else [q for q in all_questions if q.grade == grade_selected]
+    questions_filtered = all_questions if grade_selected == "Tất cả" else [q for q in all_questions if str(q.grade) == str(grade_selected)]
 
     chapters = sorted(list(set(q.chapter for q in questions_filtered)))
     selected_chapter = st.sidebar.selectbox("Chương", ["Tất cả"] + chapters, index=0)
@@ -1005,7 +1044,6 @@ with tab2:
                 if st.button(f"📄 Tùy chỉnh & Tải file Word Mã đề {e_code}", key=f"btn_exp_modal_{e_code}", width="stretch"):
                     show_export_config_modal(q_list, test_code=e_code)
 
-# TAB 3
 # TAB 3
 with tab3:
     st.title("📥 Hệ thống tự động phân loại câu hỏi")
