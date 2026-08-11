@@ -27,6 +27,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# HÀM LÀM SẠCH KÝ TỰ ĐẶC BIỆT KHI ĐẶT TÊN FILE
+def sanitize_filename(name: str) -> str:
+    if not name:
+        return ""
+    clean = re.sub(r'[\\/*?:"<>|]', "", name)
+    return re.sub(r'\s+', " ", clean).strip()
+
 # KHÓA MẬT KHẨU TRUY CẬP APP
 def check_password():
     if "APP_PASSWORD" not in st.secrets:
@@ -134,13 +141,16 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
     ds_tbl = (ds_fmt_choice == "Dạng bảng 2 cột (Đúng/Sai)")
     tln_box = (tln_fmt_choice == "Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)")
     export_dir = get_export_dir()
-    file_suffix = f"_{test_code}" if test_code else ""
+    
+    t_clean = sanitize_filename(exam_title) or "ĐỀ THI MÔN TOÁN"
+    s_clean = sanitize_filename(school_name) or "TRUNG TÂM"
+    code_part = f" - Mã đề {test_code}" if test_code else ""
 
     if st.button("🚀 BẮT ĐẦU TẠO CÁC FILE WORD", type="primary", width="stretch"):
-        path_degoc = os.path.join(export_dir, f"1_De_Thi_Goc{file_suffix}.docx")
+        path_degoc = os.path.join(export_dir, f"{t_clean} - {s_clean}{code_part} - Đề gốc.docx")
         export_questions_to_word(questions_to_export, path_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
-        path_dongchua = os.path.join(export_dir, f"2_De_Co_Dong_Chua_Bai{file_suffix}.docx")
+        path_dongchua = os.path.join(export_dir, f"{t_clean} - {s_clean}{code_part} - Đề có dòng chữa bài.docx")
         export_questions_to_word(questions_to_export, path_dongchua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         st.session_state[f"export_paths_{test_code}"] = {
@@ -1032,7 +1042,6 @@ with tab2:
                 random.shuffle(shuffled_qs)
                 st.session_state["generated_exams_dict"][e_code] = shuffled_qs
 
-            # Xóa các đường dẫn file cũ khi tạo bộ đề mới
             if "t2_generated_files" in st.session_state:
                 del st.session_state["t2_generated_files"]
 
@@ -1088,6 +1097,9 @@ with tab2:
             tln_box = (t2_tln_fmt == "Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)")
             export_dir = get_export_dir()
             
+            t_clean = sanitize_filename(t2_exam_title) or "ĐỀ THI MÔN TOÁN"
+            s_clean = sanitize_filename(t2_school_name) or "TRUNG TÂM"
+
             generated_files = {
                 "de_goc": {},
                 "de_dong_chua": {},
@@ -1106,21 +1118,21 @@ with tab2:
                 curr_header = base_header_info.copy()
                 curr_header["sub_title"] = f"Mã đề: {e_code}"
 
-                p_goc = os.path.join(export_dir, f"1_De_Thi_Goc_MaDe_{e_code}.docx")
+                p_goc = os.path.join(export_dir, f"{t_clean} - {s_clean} - Mã đề {e_code} - Đề gốc.docx")
                 export_questions_to_word(q_list, p_goc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=curr_header)
                 generated_files["de_goc"][e_code] = p_goc
 
-                p_chua = os.path.join(export_dir, f"2_De_Co_Dong_Chua_Bai_MaDe_{e_code}.docx")
+                p_chua = os.path.join(export_dir, f"{t_clean} - {s_clean} - Mã đề {e_code} - Đề có dòng chữa bài.docx")
                 export_questions_to_word(q_list, p_chua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=curr_header)
                 generated_files["de_dong_chua"][e_code] = p_chua
 
             # 2. Xuất 1 file BẢNG ĐÁP ÁN TỔNG HỢP duy nhất
-            p_ans_all = os.path.join(export_dir, "3_Bang_Dap_An_Tong_Hop_Tat_Ca_Ma_De.docx")
+            p_ans_all = os.path.join(export_dir, f"{t_clean} - {s_clean} - Bảng đáp án.docx")
             export_consolidated_answers_to_word(st.session_state["generated_exams_dict"], p_ans_all, header_info=base_header_info)
             generated_files["dap_an_tong_hop"] = p_ans_all
 
             # 3. Xuất 1 file LỜI GIẢI CHI TIẾT TỔNG HỢP duy nhất
-            p_sol_all = os.path.join(export_dir, "4_Loi_Giai_Chi_Tiet_Tong_Hop_Tat_Ca_Ma_De.docx")
+            p_sol_all = os.path.join(export_dir, f"{t_clean} - {s_clean} - Lời giải chi tiết.docx")
             export_consolidated_solutions_to_word(st.session_state["generated_exams_dict"], p_sol_all, ds_table_format=ds_tbl, tln_box_format=tln_box, header_info=base_header_info)
             generated_files["loi_giai_tong_hop"] = p_sol_all
 
@@ -1149,7 +1161,7 @@ with tab2:
                         with open(filepath, "rb") as f:
                             st.download_button(f"📥 Tải Đề có dòng kẻ Mã {code}", f, file_name=os.path.basename(filepath), width="stretch", key=f"dl_chua_{code}")
 
-            # Option 3 & 4: Tải bảng đáp án & Lời giải chi tiết tổng hợp (Mỗi cái 1 file chung)
+            # Option 3 & 4: Tải bảng đáp án & Lời giải chi tiết tổng hợp
             st.markdown("##### 🔑 & 📖 Option 3 & 4: Tải file Tổng hợp ĐÁP ÁN và LỜI GIẢI CHI TIẾT (1 file duy nhất cho tất cả mã đề)")
             col_opt3, col_opt4 = st.columns(2)
 
