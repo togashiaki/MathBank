@@ -1,5 +1,6 @@
 import os
 import re
+import html
 import pypandoc
 from typing import List, Optional, Dict
 from models import Question, QuestionType
@@ -48,38 +49,76 @@ LINE_STRING = "_________________________________________________________________
 
 
 def generate_header_html(header_info: dict) -> str:
-    """Tạo bảng tiêu đề 2x2 định dạng HTML không viền cho đề thi."""
+    """Tạo bảng tiêu đề 2x2 định dạng OpenXML chuẩn cho file Word (.docx)."""
     if not header_info:
         return ""
-    school_name = header_info.get("school_name", "").strip()
-    exam_title = header_info.get("exam_title", "").strip()
-    sub_title = header_info.get("sub_title", "").strip()
-    duration = header_info.get("duration", 90)
+    school_name = html.escape(header_info.get("school_name", "").strip().upper())
+    exam_title = html.escape(header_info.get("exam_title", "").strip().upper())
+    sub_title = html.escape(header_info.get("sub_title", "").strip())
+    duration = str(header_info.get("duration", 90))
 
-    sub_title_html = f"<b>{sub_title}</b>" if sub_title else "&nbsp;"
-
-    html = f"""
-    <table style="width: 100%; border-collapse: collapse; border: none; margin-bottom: 20px; font-family: 'Times New Roman', serif;">
-      <tr style="border: none;">
-        <td style="width: 45%; text-align: center; font-weight: bold; vertical-align: top; border: none; font-size: 13pt;">
-          {school_name.upper()}
-        </td>
-        <td style="width: 55%; text-align: center; font-weight: bold; vertical-align: top; border: none; font-size: 13pt;">
-          {exam_title.upper()}
-        </td>
-      </tr>
-      <tr style="border: none;">
-        <td style="width: 45%; text-align: center; vertical-align: top; border: none; font-size: 12pt;">
-          {sub_title_html}
-        </td>
-        <td style="width: 55%; text-align: center; vertical-align: top; border: none; font-size: 12pt;">
-          Thời gian: {duration} phút (không kể thời gian phát đề)
-        </td>
-      </tr>
-    </table>
-    <hr style="border: none; border-top: 1px solid #000; margin-top: 5px; margin-bottom: 15px;" />
-    """
-    return html
+    openxml = (
+        "```{=openxml}\n"
+        "<w:tbl>\n"
+        "  <w:tblPr>\n"
+        "    <w:tblW w:w=\"0\" w:type=\"auto\"/>\n"
+        "    <w:jc w:val=\"center\"/>\n"
+        "    <w:tblBorders>\n"
+        "      <w:top w:val=\"none\" w:sz=\"0\" w:space=\"0\" w:color=\"auto\"/>\n"
+        "      <w:left w:val=\"none\" w:sz=\"0\" w:space=\"0\" w:color=\"auto\"/>\n"
+        "      <w:bottom w:val=\"none\" w:sz=\"0\" w:space=\"0\" w:color=\"auto\"/>\n"
+        "      <w:right w:val=\"none\" w:sz=\"0\" w:space=\"0\" w:color=\"auto\"/>\n"
+        "      <w:insideH w:val=\"none\" w:sz=\"0\" w:space=\"0\" w:color=\"auto\"/>\n"
+        "      <w:insideV w:val=\"none\" w:sz=\"0\" w:space=\"0\" w:color=\"auto\"/>\n"
+        "    </w:tblBorders>\n"
+        "  </w:tblPr>\n"
+        "  <w:tblGrid>\n"
+        "    <w:gridCol w:w=\"4300\"/>\n"
+        "    <w:gridCol w:w=\"5300\"/>\n"
+        "  </w:tblGrid>\n"
+        "  <w:tr>\n"
+        "    <w:tc>\n"
+        "      <w:tcPr><w:tcW w:w=\"4300\" w:type=\"dxa\"/><w:vAlign w:val=\"top\"/></w:tcPr>\n"
+        "      <w:p>\n"
+        "        <w:pPr><w:jc w:val=\"center\"/></w:pPr>\n"
+        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"26\"/></w:rPr><w:t>" + school_name + "</w:t></w:r>\n"
+        "      </w:p>\n"
+        "    </w:tc>\n"
+        "    <w:tc>\n"
+        "      <w:tcPr><w:tcW w:w=\"5300\" w:type=\"dxa\"/><w:vAlign w:val=\"top\"/></w:tcPr>\n"
+        "      <w:p>\n"
+        "        <w:pPr><w:jc w:val=\"center\"/></w:pPr>\n"
+        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"26\"/></w:rPr><w:t>" + exam_title + "</w:t></w:r>\n"
+        "      </w:p>\n"
+        "    </w:tc>\n"
+        "  </w:tr>\n"
+        "  <w:tr>\n"
+        "    <w:tc>\n"
+        "      <w:tcPr><w:tcW w:w=\"4300\" w:type=\"dxa\"/><w:vAlign w:val=\"top\"/></w:tcPr>\n"
+        "      <w:p>\n"
+        "        <w:pPr><w:jc w:val=\"center\"/></w:pPr>\n"
+        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"24\"/></w:rPr><w:t>" + sub_title + "</w:t></w:r>\n"
+        "      </w:p>\n"
+        "    </w:tc>\n"
+        "    <w:tc>\n"
+        "      <w:tcPr><w:tcW w:w=\"5300\" w:type=\"dxa\"/><w:vAlign w:val=\"top\"/></w:tcPr>\n"
+        "      <w:p>\n"
+        "        <w:pPr><w:jc w:val=\"center\"/></w:pPr>\n"
+        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:sz w:val=\"24\"/></w:rPr><w:t>Thời gian: " + duration + " phút (không kể thời gian phát đề)</w:t></w:r>\n"
+        "      </w:p>\n"
+        "    </w:tc>\n"
+        "  </w:tr>\n"
+        "</w:tbl>\n"
+        "<w:p>\n"
+        "  <w:pPr>\n"
+        "    <w:pBdr>\n"
+        "      <w:bottom w:val=\"single\" w:sz=\"8\" w:space=\"1\" w:color=\"auto\"/>\n"
+        "    </w:pBdr>\n"
+        "  </w:pPr>\n"
+        "</w:p>\n"
+        "```\n"
+    )
+    return openxml
 
 
 def export_questions_to_word(
@@ -95,9 +134,9 @@ def export_questions_to_word(
     md_lines = []
 
     if header_info:
-        header_html = generate_header_html(header_info)
-        if header_html:
-            md_lines.append(header_html)
+        header_xml = generate_header_html(header_info)
+        if header_xml:
+            md_lines.append(header_xml)
 
     if mode == "de_goc":
         md_lines.append("# ĐỀ THI MÔN TOÁN GDPT 2018\n")
@@ -177,7 +216,6 @@ def export_consolidated_answers_to_word(
 
     max_q = max(len(qs) for qs in generated_exams.values())
 
-    # Tạo bảng Markdown: Cột 1 là Số câu, các cột sau là Mã đề
     headers = ["Câu"] + [f"Mã đề {c}" for c in codes]
     md_lines.append("| " + " | ".join(headers) + " |")
     md_lines.append("| " + " | ".join([":---:"] * len(headers)) + " |")
