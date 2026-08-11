@@ -535,7 +535,6 @@ def show_single_question_edit_dialog(q: Question):
             label="📋 Dán từ Clipboard (1-Click)",
             background_color="#b8543f",
             text_color="#ffffff",
-            hover_color="#a34834",
             key=f"paste_img_single_{q.code}"
         )
     with col_p2:
@@ -623,7 +622,6 @@ def show_single_question_edit_dialog(q: Question):
             label="📋 Dán từ Clipboard (1-Click)",
             background_color="#b8543f",
             text_color="#ffffff",
-            hover_color="#a34834",
             key=f"paste_sol_img_single_{q.code}"
         )
     with col_ps2:
@@ -730,7 +728,6 @@ def show_import_modal(raw_text: str):
                     label="📋 Dán từ Clipboard (1-Click)",
                     background_color="#b8543f",
                     text_color="#ffffff",
-                    hover_color="#a34834",
                     key=f"paste_t3_img_{idx}"
                 )
             with col_tp2:
@@ -821,7 +818,6 @@ def show_import_modal(raw_text: str):
                     label="📋 Dán từ Clipboard (1-Click)",
                     background_color="#b8543f",
                     text_color="#ffffff",
-                    hover_color="#a34834",
                     key=f"paste_t3_sol_img_{idx}"
                 )
             with col_tsp2:
