@@ -130,7 +130,7 @@ def export_questions_to_word(
     test_code: str = "",
     header_info: Optional[dict] = None
 ):
-    """Xuất từng đề riêng lẻ (Đề gốc, Đề có dòng chữa bài)."""
+    """Xuất từng đề riêng lẻ (Đề gốc, Đề có dòng chữa bài, Đáp án, Lời giải)."""
     md_lines = []
 
     if header_info:
@@ -138,53 +138,112 @@ def export_questions_to_word(
         if header_xml:
             md_lines.append(header_xml)
 
-    if mode == "de_goc":
-        md_lines.append("# ĐỀ THI MÔN TOÁN GDPT 2018\n")
-    elif mode == "de_dong_chua":
-        md_lines.append("# ĐỀ THI MÔN TOÁN\n")
-
-    if test_code:
-        md_lines.append(f"### MÃ ĐỀ THI: {test_code}\n")
-
     md_lines.append("\n")
 
     for idx, q in enumerate(questions, start=1):
-        md_lines.append(f"**Câu {idx}.** {q.content}\n")
+        if mode in ["de_goc", "de_dong_chua"]:
+            md_lines.append(f"**Câu {idx}.** {q.content}\n")
 
-        if q.image_path and os.path.exists(q.image_path):
-            md_lines.append(f"\n![Hình ảnh câu {idx}]({q.image_path})\n")
+            if q.image_path and os.path.exists(q.image_path):
+                md_lines.append(f"\n![Hình ảnh câu {idx}]({q.image_path})\n")
 
-        if q.format == QuestionType.TN and q.options:
-            md_lines.append("")
-            for k in ['A', 'B', 'C', 'D']:
-                if k in q.options:
-                    md_lines.append(f"**{k}.** {q.options[k]}\n")
+            if q.format == QuestionType.TN and q.options:
+                md_lines.append("")
+                for k in ['A', 'B', 'C', 'D']:
+                    if k in q.options:
+                        md_lines.append(f"**{k}.** {q.options[k]}\n")
 
-        elif q.format == QuestionType.DS and q.tf_statements:
-            md_lines.append("")
-            if ds_table_format:
+            elif q.format == QuestionType.DS and q.tf_statements:
+                md_lines.append("")
+                if ds_table_format:
+                    md_lines.append("| Mệnh đề | Đúng | Sai |")
+                    md_lines.append("| :--- | :---: | :---: |")
+                    for stmt, _ in q.tf_statements:
+                        clean_stmt = clean_statement_text(stmt)
+                        md_lines.append(f"| {clean_stmt} | | |")
+                    md_lines.append("")
+                else:
+                    for stmt, _ in q.tf_statements:
+                        clean_stmt = clean_statement_text(stmt)
+                        md_lines.append(f"{clean_stmt}\n")
+
+            elif q.format == QuestionType.TLN:
+                if tln_box_format:
+                    md_lines.append(OPENXML_TLN_TABLE)
+
+            if mode == "de_dong_chua":
+                md_lines.append("\n")
+                lines_count = 4 if q.format == QuestionType.TN else (12 if q.format == QuestionType.DS else 15)
+                for _ in range(lines_count):
+                    md_lines.append(LINE_STRING)
+
+            md_lines.append("\n")
+
+        elif mode == "dap_an":
+            md_lines.append(f"**Câu {idx}.** ")
+            
+            if q.format == QuestionType.TN:
+                md_lines.append(f"Đáp án: **{q.answer}**\n\n")
+
+            elif q.format == QuestionType.DS and q.tf_statements:
+                md_lines.append("Đáp án mệnh đề Đúng/Sai:\n")
                 md_lines.append("| Mệnh đề | Đúng | Sai |")
                 md_lines.append("| :--- | :---: | :---: |")
-                for stmt, _ in q.tf_statements:
+                for stmt, status in q.tf_statements:
                     clean_stmt = clean_statement_text(stmt)
-                    md_lines.append(f"| {clean_stmt} | | |")
+                    chk_d = "X" if status in ["Đúng", "D"] else ""
+                    chk_s = "X" if status in ["Sai", "S"] else ""
+                    md_lines.append(f"| {clean_stmt} | {chk_d} | {chk_s} |")
+                md_lines.append("\n")
+
+            elif q.format == QuestionType.TLN:
+                md_lines.append(f"Đáp án: **{q.answer}**\n\n")
+
+        else: # Lời giải chi tiết
+            md_lines.append(f"**Câu {idx}.** {q.content}\n")
+
+            if q.image_path and os.path.exists(q.image_path):
+                md_lines.append(f"\n![Hình ảnh câu {idx}]({q.image_path})\n")
+
+            if q.format == QuestionType.TN and q.options:
                 md_lines.append("")
-            else:
-                for stmt, _ in q.tf_statements:
-                    clean_stmt = clean_statement_text(stmt)
-                    md_lines.append(f"{clean_stmt}\n")
+                for k in ['A', 'B', 'C', 'D']:
+                    if k in q.options:
+                        is_correct = (k == (q.answer or "").strip().upper())
+                        if is_correct:
+                            md_lines.append(f"**<u>{k}. {q.options[k]}</u>**\n")
+                        else:
+                            md_lines.append(f"**{k}.** {q.options[k]}\n")
 
-        elif q.format == QuestionType.TLN:
-            if tln_box_format:
-                md_lines.append(OPENXML_TLN_TABLE)
+            elif q.format == QuestionType.DS and q.tf_statements:
+                md_lines.append("")
+                if ds_table_format:
+                    md_lines.append("| Mệnh đề | Đúng | Sai |")
+                    md_lines.append("| :--- | :---: | :---: |")
+                    for stmt, status in q.tf_statements:
+                        clean_stmt = clean_statement_text(stmt)
+                        chk_d = "X" if status in ["Đúng", "D"] else ""
+                        chk_s = "X" if status in ["Sai", "S"] else ""
+                        md_lines.append(f"| {clean_stmt} | {chk_d} | {chk_s} |")
+                    md_lines.append("")
+                else:
+                    for stmt, status in q.tf_statements:
+                        clean_stmt = clean_statement_text(stmt)
+                        md_lines.append(f"{clean_stmt} **[{status}]**\n")
 
-        if mode == "de_dong_chua":
+            elif q.format == QuestionType.TLN:
+                if tln_box_format:
+                    md_lines.append(OPENXML_TLN_TABLE)
+
+            md_lines.append(f"\n**Đáp án:** {q.answer}\n")
+            if q.solution:
+                md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n")
+            
+            sol_img = getattr(q, 'solution_image_path', None)
+            if sol_img and os.path.exists(sol_img):
+                md_lines.append(f"\n![Ảnh lời giải câu {idx}]({sol_img})\n")
+
             md_lines.append("\n")
-            lines_count = 4 if q.format == QuestionType.TN else (12 if q.format == QuestionType.DS else 15)
-            for _ in range(lines_count):
-                md_lines.append(LINE_STRING)
-
-        md_lines.append("\n")
 
     full_markdown = "\n".join(md_lines)
     pypandoc.convert_text(
