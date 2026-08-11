@@ -2,9 +2,7 @@ import os
 import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
-from docx.oxml import parse_xml
-from docx.oxml.ns import nsdecls
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from models import Question, QuestionType
 
 
@@ -69,7 +67,7 @@ def add_header_table(doc: docx.Document, header_info: dict, test_code: str = "")
 
 
 def safe_add_image(doc: docx.Document, img_path: str, max_width_inches: float = 5.0):
-    """Chèn hình ảnh an toàn vào tài liệu nếu đường dẫn file tồn tại."""
+    """Chèn hình ảnh an toàn vào tài liệu nếu tệp tồn tại."""
     if not img_path or not isinstance(img_path, str):
         return
     if os.path.exists(img_path):
@@ -84,6 +82,78 @@ def safe_add_image(doc: docx.Document, img_path: str, max_width_inches: float = 
             pass
 
 
+def create_combined_answer_docx(generated_exams_dict: dict, output_filepath: str):
+    """Tạo file Bảng đáp án tổng hợp (Cột 1: Câu, các cột tiếp theo: Đáp án theo từng Mã đề)."""
+    doc = docx.Document()
+    for section in doc.sections:
+        section.top_margin = Inches(0.78)
+        section.bottom_margin = Inches(0.78)
+        section.left_margin = Inches(0.78)
+        section.right_margin = Inches(0.78)
+
+    p_title = doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p_title.add_run("BẢNG ĐÁP ÁN TỔNG HỢP CÁC MÃ ĐỀ THI")
+    run.bold = True
+    run.font.name = "Times New Roman"
+    run.font.size = Pt(14)
+
+    doc.add_paragraph()
+
+    codes = list(generated_exams_dict.keys())
+    if not codes:
+        doc.save(output_filepath)
+        return
+
+    max_q_count = max(len(qs) for qs in generated_exams_dict.values())
+    table = doc.add_table(rows=max_q_count + 1, cols=len(codes) + 1)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.style = 'Table Grid'
+
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = "Câu"
+    hdr_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    hdr_cells[0].paragraphs[0].runs[0].font.bold = True
+    hdr_cells[0].paragraphs[0].runs[0].font.name = "Times New Roman"
+
+    for col_idx, code in enumerate(codes, start=1):
+        hdr_cells[col_idx].text = f"Mã đề {code}"
+        hdr_cells[col_idx].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        hdr_cells[col_idx].paragraphs[0].runs[0].font.bold = True
+        hdr_cells[col_idx].paragraphs[0].runs[0].font.name = "Times New Roman"
+
+    for q_idx in range(max_q_count):
+        row_cells = table.rows[q_idx + 1].cells
+        row_cells[0].text = str(q_idx + 1)
+        row_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        row_cells[0].paragraphs[0].runs[0].font.bold = True
+        row_cells[0].paragraphs[0].runs[0].font.name = "Times New Roman"
+
+        for col_idx, code in enumerate(codes, start=1):
+            qs = generated_exams_dict[code]
+            ans = qs[q_idx].answer if q_idx < len(qs) else ""
+            row_cells[col_idx].text = str(ans or "")
+            row_cells[col_idx].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            if row_cells[col_idx].paragraphs[0].runs:
+                row_cells[col_idx].paragraphs[0].runs[0].font.name = "Times New Roman"
+
+    doc.save(output_filepath)
+
+
+def combine_docx_files(file_list: list, output_filepath: str):
+    """Gộp nhiều file Word lời giải chi tiết thành 1 file duy nhất."""
+    if not file_list:
+        return
+    master = docx.Document(file_list[0])
+    for fpath in file_list[1:]:
+        if os.path.exists(fpath):
+            master.add_page_break()
+            sub_doc = docx.Document(fpath)
+            for element in sub_doc.element.body:
+                master.element.body.append(element)
+    master.save(output_filepath)
+
+
 def export_questions_to_word(
     questions: list,
     output_filepath: str,
@@ -93,28 +163,26 @@ def export_questions_to_word(
     test_code: str = "",
     header_info: dict = None
 ):
-    """Xuất danh sách câu hỏi ra file Word (.docx) theo các cấu hình định dạng."""
+    """Xuất danh sách câu hỏi ra file Word (.docx) theo các tùy chọn định dạng."""
     doc = docx.Document()
 
-    # Thiết lập lề 2cm (0.78 inch)
     for section in doc.sections:
         section.top_margin = Inches(0.78)
         section.bottom_margin = Inches(0.78)
         section.left_margin = Inches(0.78)
         section.right_margin = Inches(0.78)
 
-    # Đặt font chuẩn Times New Roman toàn bộ document
     style = doc.styles['Normal']
     font = style.font
     font.name = 'Times New Roman'
     font.size = Pt(11)
 
-    # 1. CHẾ ĐỘ XUẤT ĐÁP ÁN NHANH (BẢNG ĐÁP ÁN)
     if mode == "dap_an":
         p_title = doc.add_paragraph()
         p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r_title = p_title.add_run(f"BẢNG ĐÁP ÁN NHA NH - MÃ ĐỀ: {test_code}" if test_code else "BẢNG ĐÁP ÁN NHANH")
+        r_title = p_title.add_run(f"BẢNG ĐÁP ÁN NHANH - MÃ ĐỀ: {test_code}" if test_code else "BẢNG ĐÁP ÁN NHANH")
         r_title.bold = True
+        r_title.font.name = "Times New Roman"
         r_title.font.size = Pt(14)
         doc.add_paragraph()
 
@@ -140,7 +208,6 @@ def export_questions_to_word(
         doc.save(output_filepath)
         return
 
-    # 2. CHẾ ĐỘ ĐỀ THI GỐC / ĐỀ CÓ DÒNG CHỮA / LỜI GIẢI CHI TIẾT
     if header_info and mode in ["de_goc", "de_dong_chua"]:
         add_header_table(doc, header_info, test_code)
 
@@ -149,24 +216,25 @@ def export_questions_to_word(
         p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
         r_title = p_title.add_run(f"LỜI GIẢI CHI TIẾT - MÃ ĐỀ: {test_code}" if test_code else "LỜI GIẢI CHI TIẾT ĐỀ THI")
         r_title.bold = True
+        r_title.font.name = "Times New Roman"
         r_title.font.size = Pt(14)
         doc.add_paragraph()
 
     for idx, q in enumerate(questions, start=1):
-        # Viết đề bài
         p_q = doc.add_paragraph()
         p_q.paragraph_format.space_before = Pt(6)
         p_q.paragraph_format.space_after = Pt(4)
         
         r_lbl = p_q.add_run(f"Câu {idx}. ")
         r_lbl.bold = True
-        p_q.add_run(q.content)
+        r_lbl.font.name = "Times New Roman"
+        
+        r_cnt = p_q.add_run(q.content)
+        r_cnt.font.name = "Times New Roman"
 
-        # Ảnh đề bài
         if q.image_path:
             safe_add_image(doc, q.image_path)
 
-        # Hiển thị phương án Trắc nghiệm (TN)
         if q.format == QuestionType.TN and q.options:
             p_opts = doc.add_paragraph()
             p_opts.paragraph_format.space_after = Pt(4)
@@ -175,9 +243,10 @@ def export_questions_to_word(
                 if val:
                     r_k = p_opts.add_run(f"  {key}. ")
                     r_k.bold = True
-                    p_opts.add_run(f"{val}    ")
+                    r_k.font.name = "Times New Roman"
+                    r_v = p_opts.add_run(f"{val}    ")
+                    r_v.font.name = "Times New Roman"
 
-        # Hiển thị mệnh đề Đúng / Sai (ĐS)
         elif q.format == QuestionType.DS and q.tf_statements:
             if ds_table_format and mode in ["de_goc", "de_dong_chua"]:
                 tbl_ds = doc.add_table(rows=len(q.tf_statements) + 1, cols=3)
@@ -190,6 +259,7 @@ def export_questions_to_word(
                 
                 for c in tbl_ds.rows[0].cells:
                     c.paragraphs[0].runs[0].font.bold = True
+                    c.paragraphs[0].runs[0].font.name = "Times New Roman"
                     c.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
                 tbl_ds.columns[0].width = Inches(5.2)
@@ -201,6 +271,9 @@ def export_questions_to_word(
                     row_cells[0].text = stmt_text
                     row_cells[1].text = "[   ]"
                     row_cells[2].text = "[   ]"
+                    row_cells[0].paragraphs[0].runs[0].font.name = "Times New Roman"
+                    row_cells[1].paragraphs[0].runs[0].font.name = "Times New Roman"
+                    row_cells[2].paragraphs[0].runs[0].font.name = "Times New Roman"
                     row_cells[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
                     row_cells[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
                 doc.add_paragraph()
@@ -208,15 +281,14 @@ def export_questions_to_word(
                 for stmt_text, status in q.tf_statements:
                     p_st = doc.add_paragraph()
                     p_st.paragraph_format.space_after = Pt(2)
+                    r_st_txt = p_st.add_run(f"  • {stmt_text} ")
+                    r_st_txt.font.name = "Times New Roman"
                     if mode == "loi_giai_chi_tiet":
-                        p_st.add_run(f"  • {stmt_text} ").font.italic = False
                         r_st = p_st.add_run(f"[{status}]")
                         r_st.bold = True
+                        r_st.font.name = "Times New Roman"
                         r_st.font.color.rgb = RGBColor(184, 84, 63)
-                    else:
-                        p_st.add_run(f"  • {stmt_text}")
 
-        # Ô điền đáp án Trả lời ngắn (TLN)
         elif q.format == QuestionType.TLN:
             if tln_box_format and mode in ["de_goc", "de_dong_chua"]:
                 p_tln = doc.add_paragraph()
@@ -224,6 +296,7 @@ def export_questions_to_word(
                 p_tln.paragraph_format.space_before = Pt(4)
                 r_box_lbl = p_tln.add_run("Đáp số:  ")
                 r_box_lbl.bold = True
+                r_box_lbl.font.name = "Times New Roman"
 
                 tbl_box = doc.add_table(rows=1, cols=5)
                 tbl_box.alignment = WD_TABLE_ALIGNMENT.RIGHT
@@ -235,42 +308,27 @@ def export_questions_to_word(
                     p_cell.add_run(" ")
                 doc.add_paragraph()
 
-        # Thêm dòng chữa bài nếu ở chế độ 'de_dong_chua'
+        if mode == "loi_giai_chi_tiet":
+            if q.solution:
+                p_sol = doc.add_paragraph()
+                p_sol.paragraph_format.space_before = Pt(4)
+                r_sol_head = p_sol.add_run("Lời giải: ")
+                r_sol_head.bold = True
+                r_sol_head.font.name = "Times New Roman"
+                r_sol_txt = p_sol.add_run(q.solution)
+                r_sol_txt.font.name = "Times New Roman"
+
+            sol_img = getattr(q, 'solution_image_path', None)
+            if sol_img:
+                safe_add_image(doc, sol_img)
+
         if mode == "de_dong_chua":
             p_space = doc.add_paragraph()
             p_space.paragraph_format.space_before = Pt(4)
             p_space.paragraph_format.space_after = Pt(4)
-            for _ in range(4):
+            for _ in range(3):
                 p_dot = doc.add_paragraph()
                 p_dot.paragraph_format.space_after = Pt(2)
-                r_dot = p_dot.add_run(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . Front-end và Back-end của dự án MathBank sẽ giao tiếp qua luồng dữ liệu như sau:
+                r_dot = p_dot.add_run(". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ─ strong. minor support font.name = "Times New Roman strict"
 
-**1. Luồng truyền dữ liệu (Data & Execution Flow):**
-*   **User Action (Streamlit Page):** Người dùng thao tác trên giao diện (ví dụ: bấm nút "Xuất file Word", chọn ô cấu hình tiêu đề, nhập nội dung).
-*   **Streamlit State (`st.session_state`):** Lưu trữ các thông số đầu vào từ UI (`header_info`, danh sách câu hỏi `questions`, định dạng `ds_table_format`, v.v.).
-*   **Core Controller (`app.py`):** Bắt sự kiện bấm nút, gom dữ liệu câu hỏi từ Cloud DB (`cloud_db.py`) hoặc Session State và đóng gói các tham số cấu hình.
-*   **Safe Call Wrapper (`safe_export_questions_to_word`):** Sử dụng thư viện `inspect` để tự động kiểm tra signature của hàm `export_questions_to_word`, giúp linh hoạt truyền đủ các tham số (`header_info`, `test_code`, `ds_table_format`, `tln_box_format`) mà không gây tràn tham số hay lỗi Traceback.
-*   **Document Generation Engine (`exporter.py`):**
-    *   Sử dụng thư viện `python-docx` để tạo cấu trúc file `.docx`.
-    *   Tạo bảng tiêu đề 2x2 không viền (`add_header_table`) ở đầu trang dựa trên dữ liệu `header_info` được truyền sang.
-    *   Duyệt qua danh sách đối tượng `Question`, render từng loại câu hỏi (Trắc nghiệm, Đúng/Sai, Trả lời ngắn) theo các tùy chọn hiển thị.
-    *   Ghi file ra ổ đĩa tạm (`/exports/...`).
-*   **File Delivery (Streamlit UI):** `app.py` đọc file đã tạo từ đĩa tạm và gửi về trình duyệt thông qua widget `st.download_button`.
-
-**2. Bản đồ giao tiếp giữa các thành phần:**
-
-```plaintext
-[ Streamlit UI (app.py) ]
-       │
-       ├─► (1) Nhận tham số Header & Filter từ User
-       ├─► (2) Gọi safe_export_questions_to_word()
-       │
-[ Exporter Engine (exporter.py) ]
-       │
-       ├─► (3) Dựng bảng Header 2x2 (Word Table)
-       ├─► (4) Render chi tiết nội dung & Ảnh (python-docx)
-       ├─► (5) Lưu file tạm vào thư mục /exports/
-       │
-[ Streamlit UI (app.py) ]
-       │
-       └─► (6) Phục vụ File qua st.download_button()
+    doc.save(output_filepath)
