@@ -1,7 +1,7 @@
 import os
 import re
 import pypandoc
-from typing import List
+from typing import List, Optional
 from models import Question, QuestionType
 
 def clean_statement_text(stmt: str) -> str:
@@ -49,12 +49,13 @@ LINE_STRING = "_________________________________________________________________
 
 def generate_header_html(header_info: dict) -> str:
     """Tạo bảng tiêu đề 2x2 định dạng HTML không viền cho đề thi."""
+    if not header_info:
+        return ""
     school_name = header_info.get("school_name", "").strip()
     exam_title = header_info.get("exam_title", "").strip()
     sub_title = header_info.get("sub_title", "").strip()
     duration = header_info.get("duration", 90)
 
-    # Nếu sub_title để trống thì giữ nguyên khoảng trắng
     sub_title_html = f"<b>{sub_title}</b>" if sub_title else "&nbsp;"
 
     html = f"""
@@ -81,20 +82,22 @@ def generate_header_html(header_info: dict) -> str:
     return html
 
 
-def export_exam_to_docx(content_markdown: str, header_info: dict, output_filepath: str):
-    """Bổ sung header_info vào nội dung trước khi gọi Pandoc xuất DOCX."""
-    header_html = generate_header_html(header_info)
-    full_content = header_html + "\n\n" + content_markdown
-
 def export_questions_to_word(
     questions: List[Question], 
     output_path: str, 
     mode: str = "de_goc",
     ds_table_format: bool = True,
     tln_box_format: bool = True,
-    test_code: str = ""
+    test_code: str = "",
+    header_info: Optional[dict] = None
 ):
     md_lines = []
+
+    # Tích hợp bảng tiêu đề header vào đầu file Word nếu có truyền header_info
+    if header_info:
+        header_html = generate_header_html(header_info)
+        if header_html:
+            md_lines.append(header_html)
 
     if mode == "de_goc":
         md_lines.append("# ĐỀ THI MÔN TOÁN GDPT 2018\n")
