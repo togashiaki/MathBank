@@ -87,23 +87,23 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
     col_h1, col_h2 = st.columns(2)
     with col_h1:
         school_name = st.text_input(
-            "Tên trường / Trung tâm (Ô trái - Trên):",
-            value="TRUNG TÂM BỒI DƯỠNG VĂN HÓA MHĐ",
+            "Tên trường / Trung tâm:",
+            value="Điền tên trường / trung tâm vào đây",
             key=f"hdr_school_{test_code}"
         )
         sub_title = st.text_input(
-            "Ghi chú / Môn học (Ô trái - Dưới, tùy chọn):",
-            value="MÔN TOÁN LỚP 12",
+            "Ghi chú / Môn học:",
+            value="Điền ghi chú / môn học vào đây",
             key=f"hdr_sub_{test_code}"
         )
     with col_h2:
         exam_title = st.text_input(
-            "Tên đề / Kỳ thi (Ô phải - Trên):",
-            value="KIỂM TRA THÁNG 6 + 7: ỨNG DỤNG ĐẠO HÀM ĐỂ KHẢO SÁT ĐỒ THỊ HÀM SỐ",
+            "Tên đề / Kỳ thi:",
+            value="Điền tên đề / kỳ thi vào đây",
             key=f"hdr_title_{test_code}"
         )
         duration = st.number_input(
-            "Thời gian làm bài (Phút - Ô phải - Dưới):",
+            "Thời gian làm bài:",
             min_value=1,
             max_value=300,
             value=90,
