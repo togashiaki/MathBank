@@ -153,10 +153,25 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
         path_dongchua = os.path.join(export_dir, f"{t_clean} - {s_clean}{code_part} - Đề có dòng chữa bài.docx")
         export_questions_to_word(questions_to_export, path_dongchua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
+        path_dapan = os.path.join(export_dir, f"{t_clean} - {s_clean}{code_part} - Đáp án.docx")
+        export_questions_to_word(questions_to_export, path_dapan, mode="dap_an", ds_table_format=True, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
+
+        path_loigiai = os.path.join(export_dir, f"{t_clean} - {s_clean}{code_part} - Lời giải chi tiết.docx")
+        export_questions_to_word(questions_to_export, path_loigiai, mode="loi_giai_chi_tiet", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
+
         st.session_state[f"export_paths_{test_code}"] = {
-            "degoc": path_degoc, "dongchua": path_dongchua
+            "degoc": path_degoc, "dongchua": path_dongchua, "dapan": path_dapan, "loigiai": path_loigiai
         }
         st.success("🎉 Đã tạo thành công các file Word!")
+
+    if f"export_paths_{test_code}" in st.session_state:
+        paths = st.session_state[f"export_paths_{test_code}"]
+        c1, c2 = st.columns(2)
+        c3, c4 = st.columns(2)
+        with open(paths["degoc"], "rb") as f: c1.download_button("📝 Tải về đề thi gốc", f, file_name=os.path.basename(paths["degoc"]), width="stretch")
+        with open(paths["dongchua"], "rb") as f: c2.download_button("✍️ Tải đề có dòng chữa bài", f, file_name=os.path.basename(paths["dongchua"]), width="stretch")
+        with open(paths["dapan"], "rb") as f: c3.download_button("🔑 Tải về đáp án", f, file_name=os.path.basename(paths["dapan"]), width="stretch")
+        with open(paths["loigiai"], "rb") as f: c4.download_button("📖 Tải về lời giải chi tiết", f, file_name=os.path.basename(paths["loigiai"]), width="stretch")
 
     if f"export_paths_{test_code}" in st.session_state:
         paths = st.session_state[f"export_paths_{test_code}"]
