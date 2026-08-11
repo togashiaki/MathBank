@@ -146,7 +146,7 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
     s_clean = sanitize_filename(school_name) or "TRUNG TÂM"
     code_part = f" - Mã đề {test_code}" if test_code else ""
 
-    if st.button("🚀 BẮT ĐẦU TẠO CÁC FILE WORD", type="primary", width="stretch"):
+    if st.button("🚀 BẮT ĐẦU TẠO CÁC FILE WORD", type="primary", width="stretch", key=f"btn_gen_word_modal_{test_code}"):
         path_degoc = os.path.join(export_dir, f"{t_clean} - {s_clean}{code_part} - Đề gốc.docx")
         export_questions_to_word(questions_to_export, path_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
@@ -168,16 +168,14 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
         paths = st.session_state[f"export_paths_{test_code}"]
         c1, c2 = st.columns(2)
         c3, c4 = st.columns(2)
-        with open(paths["degoc"], "rb") as f: c1.download_button("📝 Tải về đề thi gốc", f, file_name=os.path.basename(paths["degoc"]), width="stretch")
-        with open(paths["dongchua"], "rb") as f: c2.download_button("✍️ Tải đề có dòng chữa bài", f, file_name=os.path.basename(paths["dongchua"]), width="stretch")
-        with open(paths["dapan"], "rb") as f: c3.download_button("🔑 Tải về đáp án", f, file_name=os.path.basename(paths["dapan"]), width="stretch")
-        with open(paths["loigiai"], "rb") as f: c4.download_button("📖 Tải về lời giải chi tiết", f, file_name=os.path.basename(paths["loigiai"]), width="stretch")
-
-    if f"export_paths_{test_code}" in st.session_state:
-        paths = st.session_state[f"export_paths_{test_code}"]
-        c1, c2 = st.columns(2)
-        with open(paths["degoc"], "rb") as f: c1.download_button("📝 Tải về đề thi gốc", f, file_name=os.path.basename(paths["degoc"]), width="stretch")
-        with open(paths["dongchua"], "rb") as f: c2.download_button("✍️ Tải đề có dòng chữa bài", f, file_name=os.path.basename(paths["dongchua"]), width="stretch")
+        with open(paths["degoc"], "rb") as f:
+            c1.download_button("📝 Tải về đề thi gốc", f, file_name=os.path.basename(paths["degoc"]), width="stretch", key=f"dl_modal_goc_{test_code}")
+        with open(paths["dongchua"], "rb") as f:
+            c2.download_button("✍️ Tải đề có dòng chữa bài", f, file_name=os.path.basename(paths["dongchua"]), width="stretch", key=f"dl_modal_chua_{test_code}")
+        with open(paths["dapan"], "rb") as f:
+            c3.download_button("🔑 Tải về đáp án", f, file_name=os.path.basename(paths["dapan"]), width="stretch", key=f"dl_modal_ans_{test_code}")
+        with open(paths["loigiai"], "rb") as f:
+            c4.download_button("📖 Tải về lời giải chi tiết", f, file_name=os.path.basename(paths["loigiai"]), width="stretch", key=f"dl_modal_sol_{test_code}")
 
 # POPUP XÓA CÂU HỎI
 @st.dialog("🗑️ Xác nhận xóa câu hỏi", width="small")
@@ -246,7 +244,7 @@ def reindex_all_database_ids() -> int:
     save_questions_to_cloud(updated_questions)
     return len(updated_questions)
 
-# CSS ĐỒNG BỘ GOOGLE SANS VÀ CỐ ĐỊNH KÍCH THƯỚC SIDEBAR GIỐNG ẢNH 3
+# CSS ĐỒNG BỘ GOOGLE SANS VÀ CỐ ĐỊNH KÍCH THƯỚC SIDEBAR
 st.markdown("""
 <style>
     @import url('https://fonts.cdnfonts.com/css/google-sans');
@@ -257,7 +255,6 @@ st.markdown("""
         background-color: #f7f4ed !important; 
     }
     
-    /* CỐ ĐỊNH SIDEBAR GỌN GÀNG NHƯ ẢNH 3 */
     section[data-testid="stSidebar"] { 
         background-color: #f0ebe1 !important; 
         border-right: 1px solid #e2dbd0 !important; 
