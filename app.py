@@ -1006,6 +1006,7 @@ with tab2:
                     show_export_config_modal(q_list, test_code=e_code)
 
 # TAB 3
+# TAB 3
 with tab3:
     st.title("📥 Hệ thống tự động phân loại câu hỏi")
     st.caption("Dán toàn bộ văn bản đề bài vào ô duy nhất dưới đây. Hệ thống tự nhận diện 'Câu hỏi:', 'Đáp án:' và 'Lời giải:'.")
@@ -1031,8 +1032,8 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
 
     st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
     
-    # BỐ CỤC SONG SONG: CỘT TRÁI CHỨA KHUNG NHẬP LIỆU LỚN, CỘT PHẢI CHỨA NÚT BẤM BO TRÒN SANG TRỌNG
-    col_editor, col_action = st.columns([5, 1])
+    # BỐ CỤC SONG SONG CÓ THẺ NÚT BO TRÒN SANG TRỌNG BÊN PHẢI
+    col_editor, col_action = st.columns([5, 1.2])
 
     with col_editor:
         edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"], height_mode="large")
