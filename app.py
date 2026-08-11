@@ -17,12 +17,18 @@ from cloud_db import (
     upload_image_to_drive
 )
 
-# Class bọc BytesIO để giả lập thuộc tính .type và .name mà Google Drive API yêu cầu
+# Class bọc BytesIO giả lập thuộc tính và tự động tua lại đầu luồng tránh lỗi 0-byte upload của Google API
 class ImageWrapper(io.BytesIO):
     def __init__(self, initial_bytes, name="image.png", type="image/png"):
         super().__init__(initial_bytes)
         self.name = name
         self.type = type
+        self.size = len(initial_bytes)
+
+    def read(self, size=-1):
+        if self.tell() >= self.size and self.size > 0:
+            self.seek(0)
+        return super().read(size)
 
 # 1. CẤU HÌNH TRANG STREAMLIT
 st.set_page_config(
