@@ -2,22 +2,22 @@ import os
 import re
 import time
 import random
-import inspect
-import docx
-from docx.shared import Inches, Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT
+
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from datetime import datetime
 from models import Question, QuestionType
-from exporter import export_questions_to_word
 from cloud_db import (
     load_all_questions_from_cloud,
     save_questions_to_cloud,
     delete_question_from_cloud,
     upload_image_to_drive
+)
+from exporter import (
+    export_questions_to_word,
+    create_combined_answer_docx,
+    combine_docx_files
 )
 
 # 1. CẤU HÌNH TRANG STREAMLIT
@@ -82,82 +82,6 @@ def get_export_dir() -> str:
     os.makedirs(export_dir, exist_ok=True)
     return export_dir
 
-# HÀM BỌC GỌI AN TOÀN TRÁNH LỖI TRACEBACK KHI TRUYỀN PARAMETER
-def safe_export_questions_to_word(questions, filepath, mode="de_goc", ds_table_format=True, tln_box_format=True, test_code="", header_info=None):
-    sig = inspect.signature(export_questions_to_word)
-    kwargs = {
-        "mode": mode,
-        "ds_table_format": ds_table_format,
-        "tln_box_format": tln_box_format,
-        "test_code": test_code,
-        "header_info": header_info,
-    }
-    valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
-    return export_questions_to_word(questions, filepath, **valid_kwargs)
-
-# HÀM TẠO BẢNG ĐÁP ÁN TỔNG HỢP CÁC MÃ ĐỀ (CỘT 1 = CÂU, CỘT 2.. = ĐÁP ÁN MÃ ĐỀ)
-def create_combined_answer_docx(generated_exams_dict: dict, output_filepath: str):
-    doc = docx.Document()
-    for section in doc.sections:
-        section.top_margin = Inches(0.8)
-        section.bottom_margin = Inches(0.8)
-        section.left_margin = Inches(0.8)
-        section.right_margin = Inches(0.8)
-
-    title_p = doc.add_paragraph()
-    title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title_p.add_run("BẢNG ĐÁP ÁN TỔNG HỢP CÁC MÃ ĐỀ THI")
-    run.bold = True
-    run.font.size = Pt(16)
-
-    doc.add_paragraph()
-
-    codes = list(generated_exams_dict.keys())
-    if not codes:
-        doc.save(output_filepath)
-        return
-
-    max_q_count = max(len(qs) for qs in generated_exams_dict.values())
-    table = doc.add_table(rows=max_q_count + 1, cols=len(codes) + 1)
-    table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    table.style = 'Table Grid'
-
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = "Câu"
-    hdr_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    hdr_cells[0].paragraphs[0].runs[0].font.bold = True
-
-    for col_idx, code in enumerate(codes, start=1):
-        hdr_cells[col_idx].text = f"Mã đề {code}"
-        hdr_cells[col_idx].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        hdr_cells[col_idx].paragraphs[0].runs[0].font.bold = True
-
-    for q_idx in range(max_q_count):
-        row_cells = table.rows[q_idx + 1].cells
-        row_cells[0].text = str(q_idx + 1)
-        row_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        row_cells[0].paragraphs[0].runs[0].font.bold = True
-
-        for col_idx, code in enumerate(codes, start=1):
-            qs = generated_exams_dict[code]
-            ans = qs[q_idx].answer if q_idx < len(qs) else ""
-            row_cells[col_idx].text = str(ans or "")
-            row_cells[col_idx].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-    doc.save(output_filepath)
-
-# HÀM GỘP CÁC FILE LỜI GIẢI CHI TIẾT THÀNH 1 FILE DUY NHẤT
-def combine_docx_files(file_list: list, output_filepath: str):
-    if not file_list: return
-    master = docx.Document(file_list[0])
-    for fpath in file_list[1:]:
-        if os.path.exists(fpath):
-            master.add_page_break()
-            sub_doc = docx.Document(fpath)
-            for element in sub_doc.element.body:
-                master.element.body.append(element)
-    master.save(output_filepath)
-
 # POPUP XUẤT WORD TAB 1
 @st.dialog("📄 Cài đặt Tùy chọn Xuất file Word", width="large")
 def show_export_config_modal(questions_to_export: list, test_code: str = ""):
@@ -216,16 +140,16 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
 
     if st.button("🚀 BẮT ĐẦU TẠO CÁC FILE WORD", type="primary", width="stretch"):
         path_degoc = os.path.join(export_dir, f"1_De_Thi_Goc{file_suffix}.docx")
-        safe_export_questions_to_word(questions_to_export, path_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
+        export_questions_to_word(questions_to_export, path_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         path_dongchua = os.path.join(export_dir, f"2_De_Co_Dong_Chua_Bai{file_suffix}.docx")
-        safe_export_questions_to_word(questions_to_export, path_dongchua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
+        export_questions_to_word(questions_to_export, path_dongchua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         path_dapan = os.path.join(export_dir, f"3_Bang_Dap_An{file_suffix}.docx")
-        safe_export_questions_to_word(questions_to_export, path_dapan, mode="dap_an", ds_table_format=True, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
+        export_questions_to_word(questions_to_export, path_dapan, mode="dap_an", ds_table_format=True, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         path_loigiai = os.path.join(export_dir, f"4_Loi_Giai_Chi_Tiet{file_suffix}.docx")
-        safe_export_questions_to_word(questions_to_export, path_loigiai, mode="loi_giai_chi_tiet", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
+        export_questions_to_word(questions_to_export, path_loigiai, mode="loi_giai_chi_tiet", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
         st.session_state[f"export_paths_{test_code}"] = {
             "degoc": path_degoc, "dongchua": path_dongchua, "dapan": path_dapan, "loigiai": path_loigiai
@@ -338,11 +262,11 @@ def show_matrix_export_modal(calc_df: pd.DataFrame, custom_exam_codes: list):
                 "sub_title": sub_label,
                 "duration": duration
             }
-            safe_export_questions_to_word(q_list, p_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=hdr_code)
+            export_questions_to_word(q_list, p_degoc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=hdr_code)
             degoc_paths[e_code] = p_degoc
 
             p_sol_temp = os.path.join(export_dir, f"_temp_sol_{e_code}.docx")
-            safe_export_questions_to_word(q_list, p_sol_temp, mode="loi_giai_chi_tiet", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=hdr_code)
+            export_questions_to_word(q_list, p_sol_temp, mode="loi_giai_chi_tiet", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=hdr_code)
             loigiai_temp_paths.append(p_sol_temp)
 
         path_dapan_tonghop = os.path.join(export_dir, "2_Bang_Dap_An_Tong_Hop.docx")
@@ -1232,7 +1156,6 @@ with tab2:
 
     st.divider()
 
-    # CANH NGANG HÀNG NHÃN "Số lượng mã đề thi cần tạo" VÀ Ô NHẬP SỐ
     col_lbl, col_num = st.columns([1.5, 2.5])
     with col_lbl:
         st.markdown("<div style='padding-top: 8px; font-weight: 700; font-size: 1.05rem;'>Số lượng mã đề thi cần tạo:</div>", unsafe_allow_html=True)
