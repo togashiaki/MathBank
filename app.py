@@ -17,6 +17,13 @@ from cloud_db import (
     upload_image_to_drive
 )
 
+# Class bọc BytesIO để giả lập thuộc tính .type và .name mà Google Drive API yêu cầu
+class ImageWrapper(io.BytesIO):
+    def __init__(self, initial_bytes, name="image.png", type="image/png"):
+        super().__init__(initial_bytes)
+        self.name = name
+        self.type = type
+
 # 1. CẤU HÌNH TRANG STREAMLIT
 st.set_page_config(
     page_title="Ngân hàng câu hỏi",
@@ -544,8 +551,7 @@ def show_single_question_edit_dialog(q: Question):
     if paste_res_q.image_data is not None:
         buf = io.BytesIO()
         paste_res_q.image_data.save(buf, format="PNG")
-        buf.seek(0)
-        img_to_upload = buf
+        img_to_upload = ImageWrapper(buf.getvalue(), name=f"{q.code}.png", type="image/png")
     elif uploaded_img is not None:
         img_to_upload = uploaded_img
 
@@ -631,8 +637,7 @@ def show_single_question_edit_dialog(q: Question):
     if paste_res_sol.image_data is not None:
         buf = io.BytesIO()
         paste_res_sol.image_data.save(buf, format="PNG")
-        buf.seek(0)
-        sol_img_to_upload = buf
+        sol_img_to_upload = ImageWrapper(buf.getvalue(), name=f"{q.code}_sol.png", type="image/png")
     elif uploaded_sol_img is not None:
         sol_img_to_upload = uploaded_sol_img
 
@@ -737,8 +742,7 @@ def show_import_modal(raw_text: str):
             if paste_res_t3.image_data is not None:
                 buf = io.BytesIO()
                 paste_res_t3.image_data.save(buf, format="PNG")
-                buf.seek(0)
-                t3_img_to_upload = buf
+                t3_img_to_upload = ImageWrapper(buf.getvalue(), name=f"temp_{idx}.png", type="image/png")
             elif uploaded_img is not None:
                 t3_img_to_upload = uploaded_img
 
@@ -827,8 +831,7 @@ def show_import_modal(raw_text: str):
             if paste_res_t3_sol.image_data is not None:
                 buf = io.BytesIO()
                 paste_res_t3_sol.image_data.save(buf, format="PNG")
-                buf.seek(0)
-                t3_sol_img_to_upload = buf
+                t3_sol_img_to_upload = ImageWrapper(buf.getvalue(), name=f"temp_sol_{idx}.png", type="image/png")
             elif uploaded_sol_img is not None:
                 t3_sol_img_to_upload = uploaded_sol_img
 
