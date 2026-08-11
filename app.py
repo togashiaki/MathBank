@@ -526,11 +526,46 @@ def show_single_question_edit_dialog(q: Question):
                 time.sleep(0.6)
                 st.rerun()
 
-    uploaded_img = st.file_uploader("🖼️ Tải ảnh đính kèm đề bài mới:", type=["png", "jpg", "jpeg"], key=f"upload_img_single_{q.code}")
-    if uploaded_img:
-        q.image_path = upload_image_to_drive(uploaded_img, f"{q.code}.png")
+  import io
+from streamlit_paste_button import paste_image_button
 
-    st.divider()
+st.markdown("**🖼️ Tải ảnh đính kèm đề bài mới:**")
+
+# Chia 2 cột: 1 bên upload file truyền thống, 1 bên nút 1-click Dán từ Clipboard
+col_paste, col_upload = st.columns([1, 1])
+
+with col_paste:
+    # Nút dán trực tiếp 1-click từ Clipboard
+    paste_result = paste_image_button(
+        label="📋 Dán ảnh từ Clipboard (1-Click)",
+        background_color="#2563EB",
+        text_color="#FFFFFF",
+        hover_color="#1D4ED8",
+        key=f"paste_btn_{q_id}"  # q_id là ID của câu hỏi đang edit để tránh trùng key
+    )
+
+with col_upload:
+    uploaded_file = st.file_uploader(
+        "Hoặc chọn file từ máy", 
+        type=["png", "jpg", "jpeg"], 
+        key=f"upload_btn_{q_id}"
+    )
+
+# Biến chứa dữ liệu byte của ảnh mới (nếu có)
+new_image_bytes = None
+
+# Ưu tiên lấy ảnh từ Clipboard nếu vừa bấm nút Dán
+if paste_result.image_data is not None:
+    buf = io.BytesIO()
+    paste_result.image_data.save(buf, format="PNG")
+    new_image_bytes = buf.getvalue()
+elif uploaded_file is not None:
+    new_image_bytes = uploaded_file.getvalue()
+
+# Preview và Cập nhật vào DB
+if new_image_bytes:
+    st.image(new_image_bytes, caption="Ảnh mới chuẩn bị lưu", width=250)
+    # Lưu new_image_bytes này vào cơ sở dữ liệu khi ấn nút "Lưu câu hỏi"
 
     if q.format == QuestionType.TN:
         st.markdown("##### 📌 Tùy chọn đáp án Trắc nghiệm (TN):")
