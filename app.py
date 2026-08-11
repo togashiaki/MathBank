@@ -2,10 +2,12 @@ import os
 import re
 import time
 import random
+import io
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from datetime import datetime
+from streamlit_paste_button import paste_image_button
 from models import Question, QuestionType
 from exporter import export_questions_to_word
 from cloud_db import (
@@ -526,46 +528,32 @@ def show_single_question_edit_dialog(q: Question):
                 time.sleep(0.6)
                 st.rerun()
 
-  import io
-from streamlit_paste_button import paste_image_button
+    st.markdown("##### 🖼️ Tải/Dán ảnh đính kèm đề bài mới:")
+    col_p1, col_p2 = st.columns([1, 1])
+    with col_p1:
+        paste_res_q = paste_image_button(
+            label="📋 Dán từ Clipboard (1-Click)",
+            background_color="#b8543f",
+            text_color="#ffffff",
+            hover_color="#a34834",
+            key=f"paste_img_single_{q.code}"
+        )
+    with col_p2:
+        uploaded_img = st.file_uploader("Tải file ảnh từ máy", type=["png", "jpg", "jpeg"], key=f"upload_img_single_{q.code}", label_visibility="collapsed")
 
-st.markdown("**🖼️ Tải ảnh đính kèm đề bài mới:**")
+    img_to_upload = None
+    if paste_res_q.image_data is not None:
+        buf = io.BytesIO()
+        paste_res_q.image_data.save(buf, format="PNG")
+        buf.seek(0)
+        img_to_upload = buf
+    elif uploaded_img is not None:
+        img_to_upload = uploaded_img
 
-# Chia 2 cột: 1 bên upload file truyền thống, 1 bên nút 1-click Dán từ Clipboard
-col_paste, col_upload = st.columns([1, 1])
+    if img_to_upload is not None:
+        q.image_path = upload_image_to_drive(img_to_upload, f"{q.code}.png")
 
-with col_paste:
-    # Nút dán trực tiếp 1-click từ Clipboard
-    paste_result = paste_image_button(
-        label="📋 Dán ảnh từ Clipboard (1-Click)",
-        background_color="#2563EB",
-        text_color="#FFFFFF",
-        hover_color="#1D4ED8",
-        key=f"paste_btn_{q_id}"  # q_id là ID của câu hỏi đang edit để tránh trùng key
-    )
-
-with col_upload:
-    uploaded_file = st.file_uploader(
-        "Hoặc chọn file từ máy", 
-        type=["png", "jpg", "jpeg"], 
-        key=f"upload_btn_{q_id}"
-    )
-
-# Biến chứa dữ liệu byte của ảnh mới (nếu có)
-new_image_bytes = None
-
-# Ưu tiên lấy ảnh từ Clipboard nếu vừa bấm nút Dán
-if paste_result.image_data is not None:
-    buf = io.BytesIO()
-    paste_result.image_data.save(buf, format="PNG")
-    new_image_bytes = buf.getvalue()
-elif uploaded_file is not None:
-    new_image_bytes = uploaded_file.getvalue()
-
-# Preview và Cập nhật vào DB
-if new_image_bytes:
-    st.image(new_image_bytes, caption="Ảnh mới chuẩn bị lưu", width=250)
-    # Lưu new_image_bytes này vào cơ sở dữ liệu khi ấn nút "Lưu câu hỏi"
+    st.divider()
 
     if q.format == QuestionType.TN:
         st.markdown("##### 📌 Tùy chọn đáp án Trắc nghiệm (TN):")
@@ -628,9 +616,30 @@ if new_image_bytes:
                 time.sleep(0.6)
                 st.rerun()
 
-    uploaded_sol_img = st.file_uploader("🖼️ Tải ảnh lời giải mới:", type=["png", "jpg", "jpeg"], key=f"upload_sol_img_single_{q.code}")
-    if uploaded_sol_img:
-        q.solution_image_path = upload_image_to_drive(uploaded_sol_img, f"{q.code}_sol.png")
+    st.markdown("##### 🖼️ Tải/Dán ảnh lời giải mới:")
+    col_ps1, col_ps2 = st.columns([1, 1])
+    with col_ps1:
+        paste_res_sol = paste_image_button(
+            label="📋 Dán từ Clipboard (1-Click)",
+            background_color="#b8543f",
+            text_color="#ffffff",
+            hover_color="#a34834",
+            key=f"paste_sol_img_single_{q.code}"
+        )
+    with col_ps2:
+        uploaded_sol_img = st.file_uploader("Tải file ảnh lời giải từ máy", type=["png", "jpg", "jpeg"], key=f"upload_sol_img_single_{q.code}", label_visibility="collapsed")
+
+    sol_img_to_upload = None
+    if paste_res_sol.image_data is not None:
+        buf = io.BytesIO()
+        paste_res_sol.image_data.save(buf, format="PNG")
+        buf.seek(0)
+        sol_img_to_upload = buf
+    elif uploaded_sol_img is not None:
+        sol_img_to_upload = uploaded_sol_img
+
+    if sol_img_to_upload is not None:
+        q.solution_image_path = upload_image_to_drive(sol_img_to_upload, f"{q.code}_sol.png")
 
     st.divider()
 
@@ -714,9 +723,30 @@ def show_import_modal(raw_text: str):
             updated_t3_content = interactive_math_editor(key=f"editor_t3_content_{idx}", text=q.content, height_mode="compact")
             if updated_t3_content is not None: q.content = updated_t3_content
 
-            uploaded_img = st.file_uploader(f"🖼️ Tải ảnh đính kèm đề bài (Câu {idx+1}):", type=["png", "jpg", "jpeg"], key=f"t3_img_{idx}")
-            if uploaded_img:
-                q.image_path = upload_image_to_drive(uploaded_img, f"temp_{idx}.png")
+            st.markdown(f"<b>🖼️ Tải/Dán ảnh đính kèm đề bài (Câu {idx+1}):</b>", unsafe_allow_html=True)
+            col_tp1, col_tp2 = st.columns([1, 1])
+            with col_tp1:
+                paste_res_t3 = paste_image_button(
+                    label="📋 Dán từ Clipboard (1-Click)",
+                    background_color="#b8543f",
+                    text_color="#ffffff",
+                    hover_color="#a34834",
+                    key=f"paste_t3_img_{idx}"
+                )
+            with col_tp2:
+                uploaded_img = st.file_uploader(f"Tải file ảnh (Câu {idx+1})", type=["png", "jpg", "jpeg"], key=f"t3_img_{idx}", label_visibility="collapsed")
+
+            t3_img_to_upload = None
+            if paste_res_t3.image_data is not None:
+                buf = io.BytesIO()
+                paste_res_t3.image_data.save(buf, format="PNG")
+                buf.seek(0)
+                t3_img_to_upload = buf
+            elif uploaded_img is not None:
+                t3_img_to_upload = uploaded_img
+
+            if t3_img_to_upload is not None:
+                q.image_path = upload_image_to_drive(t3_img_to_upload, f"temp_{idx}.png")
 
             ct1, ct2, ct3 = st.columns([2, 1, 1])
             q_chap_topics = get_chapter_topics(all_questions, q.grade, q.chapter)
@@ -784,9 +814,30 @@ def show_import_modal(raw_text: str):
             updated_t3_sol = interactive_math_editor(key=f"editor_t3_sol_{idx}", text=q.solution if q.solution else "", height_mode="compact")
             if updated_t3_sol is not None: q.solution = updated_t3_sol
 
-            uploaded_sol_img = st.file_uploader(f"🖼️ Tải ảnh lời giải (Câu {idx+1}):", type=["png", "jpg", "jpeg"], key=f"t3_sol_img_{idx}")
-            if uploaded_sol_img:
-                q.solution_image_path = upload_image_to_drive(uploaded_sol_img, f"temp_sol_{idx}.png")
+            st.markdown(f"<b>🖼️ Tải/Dán ảnh lời giải (Câu {idx+1}):</b>", unsafe_allow_html=True)
+            col_tsp1, col_tsp2 = st.columns([1, 1])
+            with col_tsp1:
+                paste_res_t3_sol = paste_image_button(
+                    label="📋 Dán từ Clipboard (1-Click)",
+                    background_color="#b8543f",
+                    text_color="#ffffff",
+                    hover_color="#a34834",
+                    key=f"paste_t3_sol_img_{idx}"
+                )
+            with col_tsp2:
+                uploaded_sol_img = st.file_uploader(f"Tải file ảnh lời giải (Câu {idx+1})", type=["png", "jpg", "jpeg"], key=f"t3_sol_img_{idx}", label_visibility="collapsed")
+
+            t3_sol_img_to_upload = None
+            if paste_res_t3_sol.image_data is not None:
+                buf = io.BytesIO()
+                paste_res_t3_sol.image_data.save(buf, format="PNG")
+                buf.seek(0)
+                t3_sol_img_to_upload = buf
+            elif uploaded_sol_img is not None:
+                t3_sol_img_to_upload = uploaded_sol_img
+
+            if t3_sol_img_to_upload is not None:
+                q.solution_image_path = upload_image_to_drive(t3_sol_img_to_upload, f"temp_sol_{idx}.png")
 
             st.markdown("---")
 
@@ -1040,7 +1091,6 @@ with tab2:
                 if st.button(f"📄 Tùy chỉnh & Tải file Word Mã đề {e_code}", key=f"btn_exp_modal_{e_code}", width="stretch"):
                     show_export_config_modal(q_list, test_code=e_code)
 
-# TAB 3
 # TAB 3
 with tab3:
     st.title("📥 Hệ thống tự động phân loại câu hỏi")
