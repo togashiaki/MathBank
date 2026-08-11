@@ -46,6 +46,46 @@ OPENXML_TLN_TABLE = (
 
 LINE_STRING = "________________________________________________________________________________\n\n"
 
+
+def generate_header_html(header_info: dict) -> str:
+    """Tạo bảng tiêu đề 2x2 định dạng HTML không viền cho đề thi."""
+    school_name = header_info.get("school_name", "").strip()
+    exam_title = header_info.get("exam_title", "").strip()
+    sub_title = header_info.get("sub_title", "").strip()
+    duration = header_info.get("duration", 90)
+
+    # Nếu sub_title để trống thì giữ nguyên khoảng trắng
+    sub_title_html = f"<b>{sub_title}</b>" if sub_title else "&nbsp;"
+
+    html = f"""
+    <table style="width: 100%; border-collapse: collapse; border: none; margin-bottom: 20px; font-family: 'Times New Roman', serif;">
+      <tr style="border: none;">
+        <td style="width: 45%; text-align: center; font-weight: bold; vertical-align: top; border: none; font-size: 13pt;">
+          {school_name.upper()}
+        </td>
+        <td style="width: 55%; text-align: center; font-weight: bold; vertical-align: top; border: none; font-size: 13pt;">
+          {exam_title.upper()}
+        </td>
+      </tr>
+      <tr style="border: none;">
+        <td style="width: 45%; text-align: center; vertical-align: top; border: none; font-size: 12pt;">
+          {sub_title_html}
+        </td>
+        <td style="width: 55%; text-align: center; vertical-align: top; border: none; font-size: 12pt;">
+          Thời gian: {duration} phút (không kể thời gian phát đề)
+        </td>
+      </tr>
+    </table>
+    <hr style="border: none; border-top: 1px solid #000; margin-top: 5px; margin-bottom: 15px;" />
+    """
+    return html
+
+
+def export_exam_to_docx(content_markdown: str, header_info: dict, output_filepath: str):
+    """Bổ sung header_info vào nội dung trước khi gọi Pandoc xuất DOCX."""
+    header_html = generate_header_html(header_info)
+    full_content = header_html + "\n\n" + content_markdown
+
 def export_questions_to_word(
     questions: List[Question], 
     output_path: str, 
