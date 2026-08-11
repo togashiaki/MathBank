@@ -1,7 +1,7 @@
 import os
 import re
 import pypandoc
-from typing import List, Optional
+from typing import List, Optional, Dict
 from models import Question, QuestionType
 
 def clean_statement_text(stmt: str) -> str:
@@ -91,9 +91,9 @@ def export_questions_to_word(
     test_code: str = "",
     header_info: Optional[dict] = None
 ):
+    """Xuất từng đề riêng lẻ (Đề gốc, Đề có dòng chữa bài)."""
     md_lines = []
 
-    # Tích hợp bảng tiêu đề header vào đầu file Word nếu có truyền header_info
     if header_info:
         header_html = generate_header_html(header_info)
         if header_html:
@@ -103,10 +103,6 @@ def export_questions_to_word(
         md_lines.append("# ĐỀ THI MÔN TOÁN GDPT 2018\n")
     elif mode == "de_dong_chua":
         md_lines.append("# ĐỀ THI MÔN TOÁN\n")
-    elif mode == "dap_an":
-        md_lines.append("# BẢNG ĐÁP ÁN MÔN TOÁN\n")
-    else:
-        md_lines.append("# ĐỀ THI VÀ LỜI GIẢI CHI TIẾT MÔN TOÁN\n")
 
     if test_code:
         md_lines.append(f"### MÃ ĐỀ THI: {test_code}\n")
@@ -114,65 +110,115 @@ def export_questions_to_word(
     md_lines.append("\n")
 
     for idx, q in enumerate(questions, start=1):
-        if mode in ["de_goc", "de_dong_chua"]:
-            md_lines.append(f"**Câu {idx}.** {q.content}\n")
+        md_lines.append(f"**Câu {idx}.** {q.content}\n")
 
-            if q.image_path and os.path.exists(q.image_path):
-                md_lines.append(f"\n![Hình ảnh câu {idx}]({q.image_path})\n")
+        if q.image_path and os.path.exists(q.image_path):
+            md_lines.append(f"\n![Hình ảnh câu {idx}]({q.image_path})\n")
 
-            if q.format == QuestionType.TN and q.options:
-                md_lines.append("")
-                for k in ['A', 'B', 'C', 'D']:
-                    if k in q.options:
-                        md_lines.append(f"**{k}.** {q.options[k]}\n")
+        if q.format == QuestionType.TN and q.options:
+            md_lines.append("")
+            for k in ['A', 'B', 'C', 'D']:
+                if k in q.options:
+                    md_lines.append(f"**{k}.** {q.options[k]}\n")
 
-            elif q.format == QuestionType.DS and q.tf_statements:
-                md_lines.append("")
-                if ds_table_format:
-                    md_lines.append("| Mệnh đề | Đúng | Sai |")
-                    md_lines.append("| :--- | :---: | :---: |")
-                    for stmt, _ in q.tf_statements:
-                        clean_stmt = clean_statement_text(stmt)
-                        md_lines.append(f"| {clean_stmt} | | |")
-                    md_lines.append("")
-                else:
-                    for stmt, _ in q.tf_statements:
-                        clean_stmt = clean_statement_text(stmt)
-                        md_lines.append(f"{clean_stmt}\n")
-
-            elif q.format == QuestionType.TLN:
-                if tln_box_format:
-                    md_lines.append(OPENXML_TLN_TABLE)
-
-            if mode == "de_dong_chua":
-                md_lines.append("\n")
-                lines_count = 4 if q.format == QuestionType.TN else (12 if q.format == QuestionType.DS else 15)
-                for _ in range(lines_count):
-                    md_lines.append(LINE_STRING)
-
-            md_lines.append("\n")
-
-        elif mode == "dap_an":
-            md_lines.append(f"**Câu {idx}.** ")
-            
-            if q.format == QuestionType.TN:
-                md_lines.append(f"Đáp án: **{q.answer}**\n\n")
-
-            elif q.format == QuestionType.DS and q.tf_statements:
-                md_lines.append("Đáp án mệnh đề Đúng/Sai:\n")
+        elif q.format == QuestionType.DS and q.tf_statements:
+            md_lines.append("")
+            if ds_table_format:
                 md_lines.append("| Mệnh đề | Đúng | Sai |")
                 md_lines.append("| :--- | :---: | :---: |")
-                for stmt, status in q.tf_statements:
+                for stmt, _ in q.tf_statements:
                     clean_stmt = clean_statement_text(stmt)
-                    chk_d = "X" if status in ["Đúng", "D"] else ""
-                    chk_s = "X" if status in ["Sai", "S"] else ""
-                    md_lines.append(f"| {clean_stmt} | {chk_d} | {chk_s} |")
-                md_lines.append("\n")
+                    md_lines.append(f"| {clean_stmt} | | |")
+                md_lines.append("")
+            else:
+                for stmt, _ in q.tf_statements:
+                    clean_stmt = clean_statement_text(stmt)
+                    md_lines.append(f"{clean_stmt}\n")
 
-            elif q.format == QuestionType.TLN:
-                md_lines.append(f"Đáp án: **{q.answer}**\n\n")
+        elif q.format == QuestionType.TLN:
+            if tln_box_format:
+                md_lines.append(OPENXML_TLN_TABLE)
 
-        else:
+        if mode == "de_dong_chua":
+            md_lines.append("\n")
+            lines_count = 4 if q.format == QuestionType.TN else (12 if q.format == QuestionType.DS else 15)
+            for _ in range(lines_count):
+                md_lines.append(LINE_STRING)
+
+        md_lines.append("\n")
+
+    full_markdown = "\n".join(md_lines)
+    pypandoc.convert_text(
+        full_markdown, 
+        'docx', 
+        format='markdown', 
+        outputfile=output_path
+    )
+
+
+def export_consolidated_answers_to_word(
+    generated_exams: Dict[str, List[Question]], 
+    output_path: str,
+    header_info: Optional[dict] = None
+):
+    """Xuất 1 FILE DUY NHẤT chứa BẢNG ĐÁP ÁN tổng hợp của tất cả các mã đề."""
+    md_lines = []
+    
+    if header_info:
+        info_copy = header_info.copy()
+        info_copy["sub_title"] = "BẢNG ĐÁP ÁN TỔNG HỢP CÁC MÃ ĐỀ"
+        md_lines.append(generate_header_html(info_copy))
+
+    md_lines.append("# BẢNG ĐÁP ÁN TỔNG HỢP\n\n")
+
+    codes = list(generated_exams.keys())
+    if not codes:
+        return
+
+    max_q = max(len(qs) for qs in generated_exams.values())
+
+    # Tạo bảng Markdown: Cột 1 là Số câu, các cột sau là Mã đề
+    headers = ["Câu"] + [f"Mã đề {c}" for c in codes]
+    md_lines.append("| " + " | ".join(headers) + " |")
+    md_lines.append("| " + " | ".join([":---:"] * len(headers)) + " |")
+
+    for idx in range(max_q):
+        row = [f"**Câu {idx + 1}**"]
+        for c in codes:
+            qs = generated_exams[c]
+            if idx < len(qs):
+                q = qs[idx]
+                row.append(str(q.answer or ""))
+            else:
+                row.append("-")
+        md_lines.append("| " + " | ".join(row) + " |")
+
+    full_markdown = "\n".join(md_lines)
+    pypandoc.convert_text(full_markdown, 'docx', format='markdown', outputfile=output_path)
+
+
+def export_consolidated_solutions_to_word(
+    generated_exams: Dict[str, List[Question]], 
+    output_path: str,
+    ds_table_format: bool = True,
+    tln_box_format: bool = True,
+    header_info: Optional[dict] = None
+):
+    """Xuất 1 FILE DUY NHẤT chứa ĐÁP ÁN CHI TIẾT gộp chung của tất cả mã đề."""
+    md_lines = []
+    
+    if header_info:
+        info_copy = header_info.copy()
+        info_copy["sub_title"] = "LỜI GIẢI CHI TIẾT TẤT CẢ MÃ ĐỀ"
+        md_lines.append(generate_header_html(info_copy))
+
+    md_lines.append("# LỜI GIẢI CHI TIẾT TẤT CẢ MÃ ĐỀ THI\n\n")
+
+    for e_code, questions in generated_exams.items():
+        md_lines.append(f"## MÃ ĐỀ THI: {e_code}\n")
+        md_lines.append("---\n\n")
+
+        for idx, q in enumerate(questions, start=1):
             md_lines.append(f"**Câu {idx}.** {q.content}\n")
 
             if q.image_path and os.path.exists(q.image_path):
@@ -211,17 +257,14 @@ def export_questions_to_word(
             md_lines.append(f"\n**Đáp án:** {q.answer}\n")
             if q.solution:
                 md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n")
-            
+
             sol_img = getattr(q, 'solution_image_path', None)
             if sol_img and os.path.exists(sol_img):
                 md_lines.append(f"\n![Ảnh lời giải câu {idx}]({sol_img})\n")
 
             md_lines.append("\n")
 
+        md_lines.append("\n\n---\n\n")
+
     full_markdown = "\n".join(md_lines)
-    pypandoc.convert_text(
-        full_markdown, 
-        'docx', 
-        format='markdown', 
-        outputfile=output_path
-    )
+    pypandoc.convert_text(full_markdown, 'docx', format='markdown', outputfile=output_path)
