@@ -7,7 +7,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 from datetime import datetime
 from models import Question, QuestionType
-from exporter import export_questions_to_word
+from exporter import (
+    export_questions_to_word,
+    export_consolidated_answers_to_word,
+    export_consolidated_solutions_to_word
+)
 from cloud_db import (
     load_all_questions_from_cloud,
     save_questions_to_cloud,
@@ -23,7 +27,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# KHÓA MẬT KHẨU TRUY CẬP APP (NẾU CÓ TRONG SECRETS)
+# KHÓA MẬT KHẨU TRUY CẬP APP
 def check_password():
     if "APP_PASSWORD" not in st.secrets:
         return True
@@ -45,7 +49,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. KHỞI TẠO COMPONENT MATHLIVE CHUẨN NGUYÊN BẢN
+# 2. KHỞI TẠO COMPONENT MATHLIVE
 COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mathlive_component")
 if not os.path.exists(COMPONENT_DIR):
     os.makedirs(COMPONENT_DIR, exist_ok=True)
@@ -56,12 +60,11 @@ interactive_math_editor_comp = components.declare_component(
 )
 
 def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -> str:
-    """Wrapper gọi bộ soạn thảo MathLive an toàn - Mở rộng khung dán Tab 3 lên 600px"""
     h_val = 600 if height_mode == "large" else 180
     val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text, height=h_val)
     return val if val is not None else text
 
-# 3. KHỞI TẠO DỮ LIỆU TỪ GOOGLE SHEETS / CLOUD
+# 3. KHỞI TẠO DỮ LIỆU
 all_questions = load_all_questions_from_cloud()
 
 if "selected_questions" not in st.session_state:
@@ -77,7 +80,7 @@ def get_export_dir() -> str:
     os.makedirs(export_dir, exist_ok=True)
     return export_dir
 
-# POPUP XUẤT WORD
+# POPUP XUẤT WORD CHO TAB 1
 @st.dialog("📄 Cài đặt Tùy chọn Xuất file Word", width="large")
 def show_export_config_modal(questions_to_export: list, test_code: str = ""):
     st.markdown("### ⚙️ Cấu hình định dạng file Word")
@@ -122,9 +125,9 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
 
     col1, col2 = st.columns(2)
     with col1:
-        ds_fmt_choice = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0)
+        ds_fmt_choice = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0, key=f"ds_fmt_{test_code}")
     with col2:
-        tln_fmt_choice = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0)
+        tln_fmt_choice = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0, key=f"tln_fmt_{test_code}")
 
     st.divider()
 
@@ -140,25 +143,16 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
         path_dongchua = os.path.join(export_dir, f"2_De_Co_Dong_Chua_Bai{file_suffix}.docx")
         export_questions_to_word(questions_to_export, path_dongchua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
 
-        path_dapan = os.path.join(export_dir, f"3_Bang_Dap_An{file_suffix}.docx")
-        export_questions_to_word(questions_to_export, path_dapan, mode="dap_an", ds_table_format=True, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
-
-        path_loigiai = os.path.join(export_dir, f"4_Loi_Giai_Chi_Tiet{file_suffix}.docx")
-        export_questions_to_word(questions_to_export, path_loigiai, mode="loi_giai_chi_tiet", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=test_code, header_info=header_info)
-
         st.session_state[f"export_paths_{test_code}"] = {
-            "degoc": path_degoc, "dongchua": path_dongchua, "dapan": path_dapan, "loigiai": path_loigiai
+            "degoc": path_degoc, "dongchua": path_dongchua
         }
-        st.success("🎉 Đã tạo thành công toàn bộ 4 bản Word! Chọn phiên bản bên dưới để tải về:")
+        st.success("🎉 Đã tạo thành công các file Word!")
 
     if f"export_paths_{test_code}" in st.session_state:
         paths = st.session_state[f"export_paths_{test_code}"]
         c1, c2 = st.columns(2)
-        c3, c4 = st.columns(2)
         with open(paths["degoc"], "rb") as f: c1.download_button("📝 Tải về đề thi gốc", f, file_name=os.path.basename(paths["degoc"]), width="stretch")
         with open(paths["dongchua"], "rb") as f: c2.download_button("✍️ Tải đề có dòng chữa bài", f, file_name=os.path.basename(paths["dongchua"]), width="stretch")
-        with open(paths["dapan"], "rb") as f: c3.download_button("🔑 Tải về đáp án nhanh", f, file_name=os.path.basename(paths["dapan"]), width="stretch")
-        with open(paths["loigiai"], "rb") as f: c4.download_button("📖 Tải về lời giải chi tiết", f, file_name=os.path.basename(paths["loigiai"]), width="stretch")
 
 # POPUP XÓA CÂU HỎI
 @st.dialog("🗑️ Xác nhận xóa câu hỏi", width="small")
@@ -198,7 +192,6 @@ def generate_standard_code(questions: list, grade, chapter: int, topic: str) -> 
     next_seq = max(existing_seqs) + 1 if existing_seqs else 1
     return f"{prefix}{next_seq:04d}"
 
-# HÀM CHUẨN HÓA VÀ ĐÁNH LẠI MÃ ID CHO TOÀN BỘ NGÂN HÀNG
 def reindex_all_database_ids() -> int:
     questions = load_all_questions_from_cloud()
     if not questions: return 0
@@ -228,7 +221,7 @@ def reindex_all_database_ids() -> int:
     save_questions_to_cloud(updated_questions)
     return len(updated_questions)
 
-# CSS ĐỒNG BỘ GOOGLE SANS VÀ CAN GIỮA TABS
+# CSS ĐỒNG BỘ GOOGLE SANS VÀ CỐ ĐỊNH KÍCH THƯỚC SIDEBAR GIỐNG ẢNH 3
 st.markdown("""
 <style>
     @import url('https://fonts.cdnfonts.com/css/google-sans');
@@ -239,10 +232,14 @@ st.markdown("""
         background-color: #f7f4ed !important; 
     }
     
+    /* CỐ ĐỊNH SIDEBAR GỌN GÀNG NHƯ ẢNH 3 */
     section[data-testid="stSidebar"] { 
         background-color: #f0ebe1 !important; 
         border-right: 1px solid #e2dbd0 !important; 
         padding-top: 1rem;
+        width: 280px !important;
+        min-width: 280px !important;
+        max-width: 280px !important;
     }
 
     div[data-testid="stTabs"] {
@@ -312,7 +309,7 @@ st.markdown("""
         padding: 12px 20px !important; 
         min-height: 48px !important;
         cursor: pointer !important;
-        transition: all 0.2s ease !important; 
+        transition: all 0.22s ease !important; 
         box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
     }
     .stButton > button:hover { 
@@ -1035,14 +1032,136 @@ with tab2:
                 random.shuffle(shuffled_qs)
                 st.session_state["generated_exams_dict"][e_code] = shuffled_qs
 
+            # Xóa các đường dẫn file cũ khi tạo bộ đề mới
+            if "t2_generated_files" in st.session_state:
+                del st.session_state["t2_generated_files"]
+
             st.success(f"🎉 Đã trộn ngẫu nhiên thành công **{len(custom_exam_codes)}** mã đề thi!")
 
+    # HIỂN THỊ DANH SÁCH MÃ ĐỀ ĐÃ TẠO
     if "generated_exams_dict" in st.session_state and st.session_state["generated_exams_dict"]:
-        st.markdown("### 📥 Tải về các Mã đề thi đã tạo:")
+        st.markdown("### 📥 Danh sách Các Mã Đề Thi Đã Tạo:")
         for e_code, q_list in st.session_state["generated_exams_dict"].items():
-            with st.expander(f"📌 MÃ ĐỀ THI: {e_code} ({len(q_list)} câu)", expanded=True):
-                if st.button(f"📄 Tùy chỉnh & Tải file Word Mã đề {e_code}", key=f"btn_exp_modal_{e_code}", width="stretch"):
-                    show_export_config_modal(q_list, test_code=e_code)
+            st.info(f"📌 **MÃ ĐỀ THI: {e_code}** ({len(q_list)} câu)")
+
+        st.divider()
+
+        # KHUNG CẤU HÌNH Y HỆT ẢNH 2 NGAY DƯỚI CHỖ HIỂN THỊ ĐỀ THI
+        st.markdown("### ⚙️ Cấu hình định dạng file Word")
+        total_q_count = sum(len(qs) for qs in st.session_state["generated_exams_dict"].values())
+        st.caption(f"Đang chuẩn bị xuất bộ đề gồm **{len(st.session_state['generated_exams_dict'])}** mã đề sang định dạng Word (.docx)")
+
+        st.markdown("#### 📋 Cấu hình bảng tiêu đề đề thi (Header 2x2)")
+        col_h1, col_h2 = st.columns(2)
+        with col_h1:
+            t2_school_name = st.text_input(
+                "Tên trường / Trung tâm (Ô trái - Trên):",
+                value="TRUNG TÂM BỒI DƯỠNG VĂN HÓA MHĐ",
+                key="t2_hdr_school"
+            )
+        with col_h2:
+            t2_exam_title = st.text_input(
+                "Tên đề / Kỳ thi (Ô phải - Trên):",
+                value="KIỂM TRA THÁNG 6 + 7: ỨNG DỤNG ĐẠO HÀM ĐỂ KHẢO SÁT ĐỒ THỊ HÀM SỐ",
+                key="t2_hdr_title"
+            )
+            t2_duration = st.number_input(
+                "Thời gian làm bài (Phút - Ô phải - Dưới):",
+                min_value=1,
+                max_value=300,
+                value=90,
+                step=5,
+                key="t2_hdr_duration"
+            )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            t2_ds_fmt = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0, key="t2_ds_fmt")
+        with col2:
+            t2_tln_fmt = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0, key="t2_tln_fmt")
+
+        st.divider()
+
+        # NÚT KÍCH HOẠT TẠO FILE
+        if st.button("🚀 BẮT ĐẦU TẠO TOÀN BỘ FILE WORD", type="primary", width="stretch", key="btn_t2_generate_all"):
+            ds_tbl = (t2_ds_fmt == "Dạng bảng 2 cột (Đúng/Sai)")
+            tln_box = (t2_tln_fmt == "Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)")
+            export_dir = get_export_dir()
+            
+            generated_files = {
+                "de_goc": {},
+                "de_dong_chua": {},
+                "dap_an_tong_hop": None,
+                "loi_giai_tong_hop": None
+            }
+
+            base_header_info = {
+                "school_name": t2_school_name,
+                "exam_title": t2_exam_title,
+                "duration": t2_duration
+            }
+
+            # 1. Xuất từng Đề gốc & Đề có dòng chữa bài (Mỗi mã đề là 1 file)
+            for e_code, q_list in st.session_state["generated_exams_dict"].items():
+                curr_header = base_header_info.copy()
+                curr_header["sub_title"] = f"Mã đề: {e_code}"
+
+                p_goc = os.path.join(export_dir, f"1_De_Thi_Goc_MaDe_{e_code}.docx")
+                export_questions_to_word(q_list, p_goc, mode="de_goc", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=curr_header)
+                generated_files["de_goc"][e_code] = p_goc
+
+                p_chua = os.path.join(export_dir, f"2_De_Co_Dong_Chua_Bai_MaDe_{e_code}.docx")
+                export_questions_to_word(q_list, p_chua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=curr_header)
+                generated_files["de_dong_chua"][e_code] = p_chua
+
+            # 2. Xuất 1 file BẢNG ĐÁP ÁN TỔNG HỢP duy nhất
+            p_ans_all = os.path.join(export_dir, "3_Bang_Dap_An_Tong_Hop_Tat_Ca_Ma_De.docx")
+            export_consolidated_answers_to_word(st.session_state["generated_exams_dict"], p_ans_all, header_info=base_header_info)
+            generated_files["dap_an_tong_hop"] = p_ans_all
+
+            # 3. Xuất 1 file LỜI GIẢI CHI TIẾT TỔNG HỢP duy nhất
+            p_sol_all = os.path.join(export_dir, "4_Loi_Giai_Chi_Tiet_Tong_Hop_Tat_Ca_Ma_De.docx")
+            export_consolidated_solutions_to_word(st.session_state["generated_exams_dict"], p_sol_all, ds_table_format=ds_tbl, tln_box_format=tln_box, header_info=base_header_info)
+            generated_files["loi_giai_tong_hop"] = p_sol_all
+
+            st.session_state["t2_generated_files"] = generated_files
+            st.success("🎉 Đã xuất thành công toàn bộ các file Word! Lựa chọn các phiên bản bên dưới để tải về:")
+
+        # HIỂN THỊ CÁC TÙY CHỌN TẢI XUẤT SAU KHÍ TẠO XONG
+        if "t2_generated_files" in st.session_state:
+            g_files = st.session_state["t2_generated_files"]
+            
+            st.markdown("#### 📤 Lựa chọn Tải về:")
+
+            # Option 1: Tải toàn bộ đề thi gốc (Mỗi mã đề 1 file)
+            with st.expander("📝 Option 1: Tải toàn bộ Đề thi gốc (riêng lẻ từng mã đề)", expanded=True):
+                cols_goc = st.columns(min(len(g_files["de_goc"]), 4))
+                for idx, (code, filepath) in enumerate(g_files["de_goc"].items()):
+                    with cols_goc[idx % min(len(g_files["de_goc"]), 4)]:
+                        with open(filepath, "rb") as f:
+                            st.download_button(f"📥 Tải Đề gốc Mã {code}", f, file_name=os.path.basename(filepath), width="stretch", key=f"dl_goc_{code}")
+
+            # Option 2: Tải toàn bộ đề có dòng kẻ ngang (Mỗi mã đề 1 file)
+            with st.expander("✍️ Option 2: Tải toàn bộ Đề có dòng kẻ ngang (riêng lẻ từng mã đề)", expanded=True):
+                cols_chua = st.columns(min(len(g_files["de_dong_chua"]), 4))
+                for idx, (code, filepath) in enumerate(g_files["de_dong_chua"].items()):
+                    with cols_chua[idx % min(len(g_files["de_dong_chua"]), 4)]:
+                        with open(filepath, "rb") as f:
+                            st.download_button(f"📥 Tải Đề có dòng kẻ Mã {code}", f, file_name=os.path.basename(filepath), width="stretch", key=f"dl_chua_{code}")
+
+            # Option 3 & 4: Tải bảng đáp án & Lời giải chi tiết tổng hợp (Mỗi cái 1 file chung)
+            st.markdown("##### 🔑 & 📖 Option 3 & 4: Tải file Tổng hợp ĐÁP ÁN và LỜI GIẢI CHI TIẾT (1 file duy nhất cho tất cả mã đề)")
+            col_opt3, col_opt4 = st.columns(2)
+
+            with col_opt3:
+                if g_files["dap_an_tong_hop"] and os.path.exists(g_files["dap_an_tong_hop"]):
+                    with open(g_files["dap_an_tong_hop"], "rb") as f:
+                        st.download_button("🔑 TẢI BẢNG ĐÁP ÁN TỔNG HỢP (1 File)", f, file_name=os.path.basename(g_files["dap_an_tong_hop"]), width="stretch", type="primary", key="dl_ans_consolidated")
+
+            with col_opt4:
+                if g_files["loi_giai_tong_hop"] and os.path.exists(g_files["loi_giai_tong_hop"]):
+                    with open(g_files["loi_giai_tong_hop"], "rb") as f:
+                        st.download_button("📖 TẢI LỜI GIẢI CHI TIẾT TỔNG HỢP (1 File)", f, file_name=os.path.basename(g_files["loi_giai_tong_hop"]), width="stretch", type="primary", key="dl_sol_consolidated")
 
 # TAB 3
 with tab3:
@@ -1070,7 +1189,6 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
 
     st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
     
-    # BỐ CỤC SONG SONG CÓ THẺ NÚT BO TRÒN SANG TRỌNG BÊN PHẢI
     col_editor, col_action = st.columns([5, 1.2])
 
     with col_editor:
