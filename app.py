@@ -17,7 +17,7 @@ from cloud_db import (
     upload_image_to_drive
 )
 
-# Class bọc BytesIO giả lập thuộc tính và tự động tua lại đầu luồng tránh lỗi 0-byte upload của Google API
+# Class bọc BytesIO giả lập thuộc tính và tự động tua lại đầu luồng
 class ImageWrapper(io.BytesIO):
     def __init__(self, initial_bytes, name="image.png", type="image/png"):
         super().__init__(initial_bytes)
@@ -29,6 +29,24 @@ class ImageWrapper(io.BytesIO):
         if self.tell() >= self.size and self.size > 0:
             self.seek(0)
         return super().read(size)
+
+# Hàm helper upload ảnh an toàn: Chỉ upload 1 lần duy nhất khi ảnh thay đổi, chống lặp API & crash
+def safe_upload_image(img_bytes: bytes, filename: str, session_key: str) -> str:
+    if not img_bytes:
+        return None
+    img_hash = f"{filename}_{hash(img_bytes)}"
+    if st.session_state.get(session_key) == img_hash:
+        return None  # Ảnh đã được upload thành công trước đó, bỏ qua rerun
+    
+    try:
+        img_obj = ImageWrapper(img_bytes, name=filename, type="image/png")
+        url = upload_image_to_drive(img_obj, filename)
+        if url:
+            st.session_state[session_key] = img_hash
+            return url
+    except Exception as e:
+        st.error(f"⚠️ Chưa thể tải ảnh lên Google Drive: {e}. Vui lòng kiểm tra lại quyền Folder / Service Account!")
+    return None
 
 # 1. CẤU HÌNH TRANG STREAMLIT
 st.set_page_config(
@@ -553,16 +571,18 @@ def show_single_question_edit_dialog(q: Question):
     with col_p2:
         uploaded_img = st.file_uploader("Tải file ảnh từ máy", type=["png", "jpg", "jpeg"], key=f"upload_img_single_{q.code}", label_visibility="collapsed")
 
-    img_to_upload = None
+    img_bytes_q = None
     if paste_res_q.image_data is not None:
         buf = io.BytesIO()
         paste_res_q.image_data.save(buf, format="PNG")
-        img_to_upload = ImageWrapper(buf.getvalue(), name=f"{q.code}.png", type="image/png")
+        img_bytes_q = buf.getvalue()
     elif uploaded_img is not None:
-        img_to_upload = uploaded_img
+        img_bytes_q = uploaded_img.getvalue()
 
-    if img_to_upload is not None:
-        q.image_path = upload_image_to_drive(img_to_upload, f"{q.code}.png")
+    if img_bytes_q:
+        new_url = safe_upload_image(img_bytes_q, f"{q.code}.png", f"uploaded_key_q_{q.code}")
+        if new_url:
+            q.image_path = new_url
 
     st.divider()
 
@@ -639,16 +659,18 @@ def show_single_question_edit_dialog(q: Question):
     with col_ps2:
         uploaded_sol_img = st.file_uploader("Tải file ảnh lời giải từ máy", type=["png", "jpg", "jpeg"], key=f"upload_sol_img_single_{q.code}", label_visibility="collapsed")
 
-    sol_img_to_upload = None
+    img_bytes_sol = None
     if paste_res_sol.image_data is not None:
         buf = io.BytesIO()
         paste_res_sol.image_data.save(buf, format="PNG")
-        sol_img_to_upload = ImageWrapper(buf.getvalue(), name=f"{q.code}_sol.png", type="image/png")
+        img_bytes_sol = buf.getvalue()
     elif uploaded_sol_img is not None:
-        sol_img_to_upload = uploaded_sol_img
+        img_bytes_sol = uploaded_sol_img.getvalue()
 
-    if sol_img_to_upload is not None:
-        q.solution_image_path = upload_image_to_drive(sol_img_to_upload, f"{q.code}_sol.png")
+    if img_bytes_sol:
+        new_url = safe_upload_image(img_bytes_sol, f"{q.code}_sol.png", f"uploaded_key_sol_{q.code}")
+        if new_url:
+            q.solution_image_path = new_url
 
     st.divider()
 
@@ -744,16 +766,18 @@ def show_import_modal(raw_text: str):
             with col_tp2:
                 uploaded_img = st.file_uploader(f"Tải file ảnh (Câu {idx+1})", type=["png", "jpg", "jpeg"], key=f"t3_img_{idx}", label_visibility="collapsed")
 
-            t3_img_to_upload = None
+            t3_img_bytes = None
             if paste_res_t3.image_data is not None:
                 buf = io.BytesIO()
                 paste_res_t3.image_data.save(buf, format="PNG")
-                t3_img_to_upload = ImageWrapper(buf.getvalue(), name=f"temp_{idx}.png", type="image/png")
+                t3_img_bytes = buf.getvalue()
             elif uploaded_img is not None:
-                t3_img_to_upload = uploaded_img
+                t3_img_bytes = uploaded_img.getvalue()
 
-            if t3_img_to_upload is not None:
-                q.image_path = upload_image_to_drive(t3_img_to_upload, f"temp_{idx}.png")
+            if t3_img_bytes:
+                new_url = safe_upload_image(t3_img_bytes, f"temp_{idx}.png", f"uploaded_key_t3_{idx}")
+                if new_url:
+                    q.image_path = new_url
 
             ct1, ct2, ct3 = st.columns([2, 1, 1])
             q_chap_topics = get_chapter_topics(all_questions, q.grade, q.chapter)
@@ -833,16 +857,18 @@ def show_import_modal(raw_text: str):
             with col_tsp2:
                 uploaded_sol_img = st.file_uploader(f"Tải file ảnh lời giải (Câu {idx+1})", type=["png", "jpg", "jpeg"], key=f"t3_sol_img_{idx}", label_visibility="collapsed")
 
-            t3_sol_img_to_upload = None
+            t3_sol_bytes = None
             if paste_res_t3_sol.image_data is not None:
                 buf = io.BytesIO()
                 paste_res_t3_sol.image_data.save(buf, format="PNG")
-                t3_sol_img_to_upload = ImageWrapper(buf.getvalue(), name=f"temp_sol_{idx}.png", type="image/png")
+                t3_sol_bytes = buf.getvalue()
             elif uploaded_sol_img is not None:
-                t3_sol_img_to_upload = uploaded_sol_img
+                t3_sol_bytes = uploaded_sol_img.getvalue()
 
-            if t3_sol_img_to_upload is not None:
-                q.solution_image_path = upload_image_to_drive(t3_sol_img_to_upload, f"temp_sol_{idx}.png")
+            if t3_sol_bytes:
+                new_url = safe_upload_image(t3_sol_bytes, f"temp_sol_{idx}.png", f"uploaded_key_t3_sol_{idx}")
+                if new_url:
+                    q.solution_image_path = new_url
 
             st.markdown("---")
 
@@ -1122,7 +1148,6 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
 
     st.markdown("##### 📝 Khung dán văn bản & Sửa công thức MathLive trực tiếp (Dán Ctrl+V từ ChatGPT/Word tại đây):")
     
-    # BỐ CỤC SONG SONG CÓ THẺ NÚT BO TRÒN SANG TRỌNG BÊN PHẢI
     col_editor, col_action = st.columns([5, 1.2])
 
     with col_editor:
