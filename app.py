@@ -461,6 +461,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # PARSER THÔNG MINH ĐƯỢC TỐI ƯU VÀ SỬA LỖI TÁCH CÂU TLN
+# PARSER THÔNG MINH ĐÃ SỬA LỖI REGEX PATTERN
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
     if not raw_text or not raw_text.strip(): 
         return []
@@ -469,9 +470,8 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
     clean_raw = raw_text.replace('\r\n', '\n').replace('\r', '\n').strip()
     
     # 2. Tách các câu hỏi bằng regex KHÔNG PHÂN BIỆT HOA THƯỜNG
-    # Hỗ trợ: Câu 1, câu 1., Câu hỏi:, câu hỏi, Bài 1:, CÂU 12...
-    pattern = r'\n+(?=\s*(?i:(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]))'
-    q_blocks = re.split(pattern, clean_raw)
+    pattern = r'\n+(?=\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s])'
+    q_blocks = re.split(pattern, clean_raw, flags=re.IGNORECASE)
     parsed_questions = []
 
     for block in q_blocks:
@@ -480,11 +480,11 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
             continue
 
         # Regex tìm vị trí của "Đáp án" và "Lời giải"
-        ans_pattern = r'(?i)(?:^|\n)\s*(?:đáp\s*án|đáp\s*số|kết\s*quả|ans|answer|da)\s*[:\.]?\s*'
-        sol_pattern = r'(?i)(?:^|\n)\s*(?:lời\s*giải(?:\s*chi\s*tiết)?|hướng\s*dẫn\s*giải|hdg|lg|solution)\s*[:\.]?\s*'
+        ans_pattern = r'(?:^|\n)\s*(?:đáp\s*án|đáp\s*số|kết\s*quả|ans|answer|da)\s*[:\.]?\s*'
+        sol_pattern = r'(?:^|\n)\s*(?:lời\s*giải(?:\s*chi\s*tiết)?|hướng\s*dẫn\s*giải|hdg|lg|solution)\s*[:\.]?\s*'
 
-        ans_match = re.search(ans_pattern, block)
-        sol_match = re.search(sol_pattern, block)
+        ans_match = re.search(ans_pattern, block, flags=re.IGNORECASE)
+        sol_match = re.search(sol_pattern, block, flags=re.IGNORECASE)
 
         extracted_ans = ""
         extracted_sol = ""
@@ -511,15 +511,15 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         extracted_ans = re.sub(r'^[:\.\-\s]+', '', extracted_ans).strip()
         extracted_sol = re.sub(r'^[:\.\-\s]+', '', extracted_sol).strip()
 
-        # Lấy nội dung đề bài chính và bỏ tiêu đề Câu x:
+        # Lấy nội dung đề bài chính và bỏ tiêu đề Câu x: (Sử dụng flags=re.IGNORECASE thay vì (?i) sai vị trí)
         clean_content = block[:main_content_end].strip()
-        clean_content = re.sub(r'^(?i)\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]*', '', clean_content).strip()
+        clean_content = re.sub(r'^\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]*', '', clean_content, flags=re.IGNORECASE).strip()
 
         lines = [l.strip() for l in clean_content.split('\n') if l.strip()]
 
         # Kiểm tra loại câu hỏi
         has_tn = any(re.match(r'^[A-D][\.\)]\s*', l) for l in lines)
-        has_ds = any(re.match(r'^[a-d][\.\)\:-]\s*', l) for l in lines)
+        has_ds = any(re.match(r'^[a-d][\.\)\:-]\s*', l, flags=re.IGNORECASE) for l in lines)
 
         content_lines, options, tf_statements = [], {}, []
 
@@ -533,14 +533,14 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         if q_fmt == QuestionType.DS:
             is_ds = False
             for line in lines:
-                ds_match = re.match(r'^([a-d])[\.\)\:-]\s*(.*)', line, re.IGNORECASE)
+                ds_match = re.match(r'^([a-d])[\.\)\:-]\s*(.*)', line, flags=re.IGNORECASE)
                 if ds_match:
                     is_ds = True
                     lbl = ds_match.group(1).lower()
                     val = ds_match.group(2).strip()
                     stmt_status = "Đúng"
                     if extracted_ans:
-                        st_m = re.search(rf'{lbl}[\)\.\:-]?\s*(Đúng|Sai|Đ|S|True|False)', extracted_ans, re.IGNORECASE)
+                        st_m = re.search(rf'{lbl}[\)\.\:-]?\s*(Đúng|Sai|Đ|S|True|False)', extracted_ans, flags=re.IGNORECASE)
                         if st_m: 
                             stmt_status = "Sai" if st_m.group(1).upper() in ['SAI', 'S', 'FALSE'] else "Đúng"
                     tf_statements.append((f"{lbl}) {val}", stmt_status))
