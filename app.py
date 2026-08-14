@@ -193,7 +193,11 @@ def confirm_delete_dialog(q: Question):
         st.rerun()
 
 def get_chapter_topics(questions: list, grade, chapter: int) -> list:
-    return sorted(list(set(q.topic for q in questions if str(q.grade) == str(grade) and q.chapter == int(chapter) and q.topic)))
+    try:
+        chap_int = int(chapter)
+    except (ValueError, TypeError):
+        chap_int = 1
+    return sorted(list(set(q.topic for q in questions if str(q.grade) == str(grade) and q.chapter == chap_int and q.topic)))
 
 def get_all_stored_topics(questions: list) -> list:
     return sorted(list(set(q.topic for q in questions if q.topic)))
@@ -332,14 +336,14 @@ st.markdown("""
         min-height: 48px !important;
         cursor: pointer !important;
         transition: all 0.22s ease !important; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important; 
     }
     .stButton > button:hover { 
         border-color: #b8543f !important; 
         color: #b8543f !important; 
         background-color: #f7ece8 !important; 
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 16px rgba(184, 84, 63, 0.15) !important;
+        box-shadow: 0 6px 16px rgba(184, 84, 63, 0.15) !important; 
     }
     .stButton > button[kind="primary"] { 
         background-color: #b8543f !important; 
@@ -512,14 +516,14 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
 
     return parsed_questions
 
-# POPUP SỬA 1 CÂU HỎI
+# POPUP SỬA 1 CÂU HỎI (TAB 1)
 @st.dialog("✏️ Chỉnh sửa câu hỏi", width="large")
 def show_single_question_edit_dialog(q: Question):
     st.subheader(f"Chỉnh sửa câu hỏi: {q.code}")
 
     col_a, col_b = st.columns(2)
     grade_list = ["HSA", 12, 11, 10]
-    g_idx = grade_list.index(q.grade) if q.grade in grade_list else 1
+    g_idx = grade_list.index(q.grade) if q.grade in grade_list else (grade_list.index(int(q.grade)) if str(q.grade).isdigit() and int(q.grade) in grade_list else 1)
     q.grade = col_a.selectbox("Khối lớp", grade_list, index=g_idx)
     q.chapter = col_b.number_input("Chương", min_value=1, value=int(q.chapter))
 
@@ -532,6 +536,7 @@ def show_single_question_edit_dialog(q: Question):
         q.topic = c_i.text_input("Nhập tên Dạng bài mới:", value=q.topic if q.topic not in chap_topics else "", key=f"single_top_inp_{q.code}")
         if c_b.button("↩️", key=f"btn_canc_single_top_{q.code}"):
             st.session_state[key_custom_top_s] = False
+            st.session_state.pop(f"single_top_sel_{q.code}", None)
             st.rerun()
     else:
         top_options = chap_topics + ["➕ Nhập dạng bài mới..."]
@@ -539,6 +544,7 @@ def show_single_question_edit_dialog(q: Question):
         sel_topic = st.selectbox(f"Dạng bài (Lớp {q.grade} - CH{q.chapter}):", top_options, index=default_top_idx, key=f"single_top_sel_{q.code}")
         if sel_topic == "➕ Nhập dạng bài mới...":
             st.session_state[key_custom_top_s] = True
+            st.session_state.pop(f"single_top_inp_{q.code}", None)
             st.rerun()
         else:
             q.topic = sel_topic
@@ -555,6 +561,7 @@ def show_single_question_edit_dialog(q: Question):
         q.source = c_i.text_input("Nhập Nguồn đề mới:", value=q.source if (q.source and q.source not in all_sources) else "", key=f"single_src_inp_{q.code}")
         if c_b.button("↩️", key=f"btn_canc_single_src_{q.code}"):
             st.session_state[key_custom_src_s] = False
+            st.session_state.pop(f"single_src_sel_{q.code}", None)
             st.rerun()
     else:
         src_options = all_sources + ["➕ Nhập nguồn đề mới..."]
@@ -562,6 +569,7 @@ def show_single_question_edit_dialog(q: Question):
         sel_source = col_f2.selectbox("Nguồn đề:", src_options, index=default_src_idx, key=f"single_src_sel_{q.code}")
         if sel_source == "➕ Nhập nguồn đề mới...":
             st.session_state[key_custom_src_s] = True
+            st.session_state.pop(f"single_src_inp_{q.code}", None)
             st.rerun()
         else:
             q.source = sel_source
@@ -681,56 +689,81 @@ def show_import_modal(raw_text: str):
 
     st.markdown("### ⚡ 1. Thiết lập thông tin phân loại chung")
     col_a, col_b = st.columns(2)
-    g_val = col_a.selectbox("Khối lớp (Chung)", ["HSA", 12, 11, 10], index=1)
-    c_val = col_b.number_input("Chương (Chung)", 1, 20, 1)
+    grade_list = ["HSA", 12, 11, 10]
+    g_val = col_a.selectbox("Khối lớp (Chung)", grade_list, index=1, key="global_grade_sel")
+    c_val = col_b.number_input("Chương (Chung)", 1, 20, 1, key="global_chap_inp")
 
     col_d, col_e = st.columns(2)
 
+    # Dạng bài chung
     global_chap_topics = get_chapter_topics(all_questions, g_val, c_val)
     if st.session_state["custom_top_global"]:
         c_inp, c_btn = col_d.columns([5, 1])
         t_val = c_inp.text_input(f"Nhập Dạng bài mới (Lớp {g_val} - CH{c_val}):", value="Dạng 1. Cực trị hàm số", key="global_top_inp")
         if c_btn.button("↩️", help="Quay lại chọn từ danh sách", key="btn_cancel_top_g"):
             st.session_state["custom_top_global"] = False
+            st.session_state.pop("global_top_sel", None)  # Xóa key để không bị trigger lại
             st.rerun()
     else:
         top_global_options = global_chap_topics + ["➕ Nhập dạng bài mới..."]
         sel_global_top = col_d.selectbox(f"Chọn Dạng bài (Lớp {g_val} - CH{c_val}):", top_global_options, index=0, key="global_top_sel")
         if sel_global_top == "➕ Nhập dạng bài mới...":
             st.session_state["custom_top_global"] = True
+            st.session_state.pop("global_top_inp", None)
             st.rerun()
         else:
             t_val = sel_global_top
 
+    # Nguồn đề chung
     all_stored_srcs = get_all_stored_sources(all_questions)
     if st.session_state["custom_src_global"]:
         c_inp, c_btn = col_e.columns([5, 1])
         src_val = c_inp.text_input("Nhập Nguồn đề mới (Chung):", value="Đề thi thử THPT 2026", key="global_src_inp")
         if c_btn.button("↩️", help="Quay lại chọn từ danh sách", key="btn_cancel_src_g"):
             st.session_state["custom_src_global"] = False
+            st.session_state.pop("global_src_sel", None)  # Xóa key để không bị trigger lại
             st.rerun()
     else:
         src_global_options = all_stored_srcs + ["➕ Nhập nguồn đề mới..."]
         sel_global_src = col_e.selectbox("Chọn Nguồn đề (Chung):", src_global_options, index=0, key="global_src_sel")
         if sel_global_src == "➕ Nhập nguồn đề mới...":
             st.session_state["custom_src_global"] = True
+            st.session_state.pop("global_src_inp", None)
             st.rerun()
         else:
             src_val = sel_global_src
 
-    lvl_val = st.selectbox("Mức độ (Chung)", [1, 2, 3], index=1)
+    lvl_val = st.selectbox("Mức độ (Chung)", [1, 2, 3], index=1, key="global_lvl_sel")
 
-    if st.button("🔄 Gán thông tin chung phía trên cho TẤT CẢ các câu", width="stretch"):
-        for q in st.session_state["temp_questions"]:
-            q.grade, q.chapter, q.topic, q.level, q.source = g_val, c_val, t_val, lvl_val, src_val
-        st.success("Đã áp dụng thông tin chung cho toàn bộ danh sách!")
+    # NÚT GÁN THÔNG TIN CHUNG CHO TOÀN BỘ CÂU
+    if st.button("🔄 Gán thông tin chung phía trên cho TẤT CẢ các câu", width="stretch", key="btn_apply_global_meta"):
+        for idx, q in enumerate(st.session_state["temp_questions"]):
+            q.grade = g_val
+            q.chapter = c_val
+            q.topic = t_val
+            q.level = lvl_val
+            q.source = src_val
+
+            # ĐỒNG BỘ TRỰC TIẾP VÀO SESSION STATE TỪNG WIDGET ĐỂ UI TỰ ĐỘNG THAY ĐỔI
+            st.session_state[f"t3_grade_{idx}"] = g_val
+            st.session_state[f"t3_chap_{idx}"] = c_val
+            st.session_state[f"t3_lvl_{idx}"] = lvl_val
+
+            # Tắt cờ nhập tay của câu con
+            st.session_state[f"custom_top_q_{idx}"] = False
+            st.session_state[f"custom_src_q_{idx}"] = False
+
+            # Xóa các key widget cũ để selectbox nhận giá trị mới
+            st.session_state.pop(f"t3_top_sel_{idx}", None)
+            st.session_state.pop(f"t3_top_inp_{idx}", None)
+            st.session_state.pop(f"t3_src_sel_{idx}", None)
+            st.session_state.pop(f"t3_src_inp_{idx}", None)
+
+        st.success("🎉 Đã áp dụng thông tin chung cho toàn bộ danh sách câu hỏi bên dưới!")
         st.rerun()
 
     st.divider()
     st.markdown(f"### ✏️ 2. Chỉnh sửa chi tiết & Sửa công thức TỪNG CÂU ({len(st.session_state['temp_questions'])} câu)")
-
-    grade_list = ["HSA", 12, 11, 10]
-    all_stored_srcs = get_all_stored_sources(all_questions)
 
     for idx, q in enumerate(st.session_state["temp_questions"]):
         with st.container():
@@ -746,7 +779,7 @@ def show_import_modal(raw_text: str):
 
             # --- HÀNG 1: KHỐI LỚP & CHƯƠNG ---
             col_qa, col_qb = st.columns(2)
-            g_idx = grade_list.index(q.grade) if q.grade in grade_list else (grade_list.index(str(q.grade)) if str(q.grade) in ["12","11","10"] else 1)
+            g_idx = grade_list.index(q.grade) if q.grade in grade_list else (grade_list.index(int(q.grade)) if str(q.grade).isdigit() and int(q.grade) in grade_list else 1)
             q.grade = col_qa.selectbox(f"Khối lớp (Câu {idx+1}):", grade_list, index=g_idx, key=f"t3_grade_{idx}")
             q.chapter = col_qb.number_input(f"Chương (Câu {idx+1}):", min_value=1, max_value=20, value=int(q.chapter), key=f"t3_chap_{idx}")
 
@@ -756,13 +789,18 @@ def show_import_modal(raw_text: str):
             # Dạng bài từng câu
             q_chap_topics = get_chapter_topics(all_questions, q.grade, q.chapter)
             key_custom_top_q = f"custom_top_q_{idx}"
-            if key_custom_top_q not in st.session_state: st.session_state[key_custom_top_q] = False
+            if key_custom_top_q not in st.session_state:
+                st.session_state[key_custom_top_q] = (q.topic not in q_chap_topics and bool(q.topic))
 
             if st.session_state[key_custom_top_q]:
                 c_i, c_b = col_qd.columns([5, 1])
-                q.topic = c_i.text_input(f"Nhập Dạng bài mới (Câu {idx+1}):", value=q.topic if q.topic not in q_chap_topics else "", key=f"t3_top_inp_{idx}")
+                q_top_in = c_i.text_input(f"Nhập Dạng bài mới (Câu {idx+1}):", value=q.topic, key=f"t3_top_inp_{idx}")
+                q.topic = q_top_in
                 if c_b.button("↩️", key=f"btn_canc_top_{idx}"):
                     st.session_state[key_custom_top_q] = False
+                    st.session_state.pop(f"t3_top_sel_{idx}", None)
+                    if q_chap_topics:
+                        q.topic = q_chap_topics[0]
                     st.rerun()
             else:
                 t3_top_options = q_chap_topics + ["➕ Nhập dạng bài mới..."]
@@ -770,19 +808,25 @@ def show_import_modal(raw_text: str):
                 sel_t3_top = col_qd.selectbox(f"Chọn Dạng bài (Lớp {q.grade} - CH{q.chapter}):", t3_top_options, index=t3_top_default_idx, key=f"t3_top_sel_{idx}")
                 if sel_t3_top == "➕ Nhập dạng bài mới...":
                     st.session_state[key_custom_top_q] = True
+                    st.session_state.pop(f"t3_top_inp_{idx}", None)
                     st.rerun()
                 else:
                     q.topic = sel_t3_top
 
             # Nguồn đề từng câu
             key_custom_src_q = f"custom_src_q_{idx}"
-            if key_custom_src_q not in st.session_state: st.session_state[key_custom_src_q] = False
+            if key_custom_src_q not in st.session_state:
+                st.session_state[key_custom_src_q] = (q.source not in all_stored_srcs and bool(q.source))
 
             if st.session_state[key_custom_src_q]:
                 c_i, c_b = col_qe.columns([5, 1])
-                q.source = c_i.text_input(f"Nhập Nguồn đề mới (Câu {idx+1}):", value=q.source if (q.source and q.source not in all_stored_srcs) else "", key=f"t3_src_inp_{idx}")
+                q_src_in = c_i.text_input(f"Nhập Nguồn đề mới (Câu {idx+1}):", value=q.source if q.source else "", key=f"t3_src_inp_{idx}")
+                q.source = q_src_in
                 if c_b.button("↩️", key=f"btn_canc_src_{idx}"):
                     st.session_state[key_custom_src_q] = False
+                    st.session_state.pop(f"t3_src_sel_{idx}", None)
+                    if all_stored_srcs:
+                        q.source = all_stored_srcs[0]
                     st.rerun()
             else:
                 src_q_options = all_stored_srcs + ["➕ Nhập nguồn đề mới..."]
@@ -790,6 +834,7 @@ def show_import_modal(raw_text: str):
                 sel_q_src = col_qe.selectbox(f"Chọn Nguồn đề (Câu {idx+1}):", src_q_options, index=src_q_default_idx, key=f"t3_src_sel_{idx}")
                 if sel_q_src == "➕ Nhập nguồn đề mới...":
                     st.session_state[key_custom_src_q] = True
+                    st.session_state.pop(f"t3_src_inp_{idx}", None)
                     st.rerun()
                 else:
                     q.source = sel_q_src
@@ -1104,7 +1149,7 @@ with tab2:
 
         st.divider()
 
-        # KHUNG CẤU HÌNH Y HỆT ẢNH 2 NGAY DƯỚI CHỖ HIỂN THỊ ĐỀ THI
+        # KHUNG CẤU HÌNH NGAY DƯỚI CHỖ HIỂN THỊ ĐỀ THI
         st.markdown("### ⚙️ Cấu hình định dạng file Word")
         total_q_count = sum(len(qs) for qs in st.session_state["generated_exams_dict"].values())
         st.caption(f"Đang chuẩn bị xuất bộ đề gồm **{len(st.session_state['generated_exams_dict'])}** mã đề sang định dạng Word (.docx)")
