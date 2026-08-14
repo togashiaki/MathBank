@@ -16,6 +16,11 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
+# ID GOOGLE SHEET VÀ GOOGLE DRIVE FOLDER CỦA BẠN
+DEFAULT_SPREADSHEET_ID = "13Ck1FfpBolHEsWrRU2uQ6zoe9BIk1Wr0vWCta_PtUSs"
+DEFAULT_DRIVE_FOLDER_ID = "1z9L_y8ohfr6TmfQXLSoAxiBMcrLtIepQ"
+
+
 # 1. KHỞI TẠO XÁC THỰC SERVICE ACCOUNT
 def get_credentials():
     """Lấy credentials từ st.secrets hoặc file service_account.json."""
@@ -37,37 +42,33 @@ def get_drive_service():
     return None
 
 def get_sheet():
-    """Kết nối và mở Google Sheet lưu trữ dữ liệu."""
+    """Mở trực tiếp Google Sheet bằng ID đã được cấp quyền."""
     creds = get_credentials()
     if not creds:
         return None
     gc = gspread.authorize(creds)
     
-    sheet_name = st.secrets.get("GSHEET_NAME", "MathBank_DB")
-    sheet_id = st.secrets.get("SPREADSHEET_ID", None)
+    sheet_id = st.secrets.get("SPREADSHEET_ID", DEFAULT_SPREADSHEET_ID)
 
     try:
-        if sheet_id:
-            sh = gc.open_by_key(sheet_id)
-        else:
-            sh = gc.open(sheet_name)
-        return sh.sheet1
-    except Exception:
-        try:
-            sh = gc.create(sheet_name)
-            ws = sh.sheet1
+        sh = gc.open_by_key(sheet_id)
+        ws = sh.sheet1
+        
+        # Tự động tạo header nếu trang tính còn hoàn toàn trống
+        existing_values = ws.get_all_values()
+        if not existing_values:
             ws.append_row([
                 "Code", "Grade", "Chapter", "Lesson", "Topic", "Format", 
                 "Level", "Source", "Content", "Options", "TF_Statements", 
                 "Answer", "Solution", "Image_Path", "Solution_Image_Path"
             ])
-            return ws
-        except Exception as e:
-            st.error(f"Lỗi kết nối Google Sheets '{sheet_name}': {e}")
-            return None
+        return ws
+    except Exception as e:
+        st.error(f"Lỗi mở Google Sheet (ID: {sheet_id}). Vui lòng kiểm tra quyền Editor của Service Account: {e}")
+        return None
 
 
-# 2. HÀM TẢI ẢNH LÊN GOOGLE DRIVE (TRỰC TIẾP TỪ RAM, KHÔNG LƯU CỤC BỘ)
+# 2. HÀM TẢI ẢNH LÊN GOOGLE DRIVE (LƯU VÀO THƯ MỤC CHỈ ĐỊNH)
 def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_id: Optional[str] = None) -> Optional[str]:
     if uploaded_file is None:
         return None
@@ -93,9 +94,10 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
         stream = io.BytesIO(file_bytes)
         stream.seek(0)
 
+        # Đặt file vào đúng thư mục Drive đã cấp quyền để dùng dung lượng của bạn
+        target_folder = folder_id or st.secrets.get("DRIVE_FOLDER_ID", DEFAULT_DRIVE_FOLDER_ID)
         file_metadata = {'name': filename}
-        target_folder = folder_id or st.secrets.get("DRIVE_FOLDER_ID", None)
-        if target_folder and target_folder.strip():
+        if target_folder:
             file_metadata['parents'] = [target_folder.strip()]
 
         media = MediaIoBaseUpload(stream, mimetype='image/png', resumable=True)
@@ -109,7 +111,7 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
 
         file_id = uploaded_drive_file.get('id')
 
-        # Cấp quyền đọc công khai để hiển thị ảnh trên Web/Docx
+        # Cấp quyền xem cho bất kỳ ai có link
         try:
             drive_service.permissions().create(
                 fileId=file_id,
