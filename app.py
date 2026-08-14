@@ -193,7 +193,7 @@ def confirm_delete_dialog(q: Question):
         st.rerun()
 
 def get_chapter_topics(questions: list, grade, chapter: int) -> list:
-    return sorted(list(set(q.topic for q in questions if str(q.grade) == str(grade) and q.chapter == chapter and q.topic)))
+    return sorted(list(set(q.topic for q in questions if str(q.grade) == str(grade) and q.chapter == int(chapter) and q.topic)))
 
 def get_all_stored_topics(questions: list) -> list:
     return sorted(list(set(q.topic for q in questions if q.topic)))
@@ -302,7 +302,7 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
         cursor: pointer !important;
-        transition: all 0.22s ease-in-out !important;
+        transition: all 0.22s ease-in-out !important; 
     }
 
     button[data-baseweb="tab"]:hover {
@@ -345,12 +345,12 @@ st.markdown("""
         background-color: #b8543f !important; 
         color: #ffffff !important; 
         border: 1px solid #a34834 !important; 
-        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.25) !important;
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.25) !important; 
     }
     .stButton > button[kind="primary"]:hover { 
         background-color: #a34834 !important; 
         color: #ffffff !important; 
-        box-shadow: 0 8px 20px rgba(184, 84, 63, 0.35) !important;
+        box-shadow: 0 8px 20px rgba(184, 84, 63, 0.35) !important; 
     }
 
     .question-card { 
@@ -521,7 +521,7 @@ def show_single_question_edit_dialog(q: Question):
     grade_list = ["HSA", 12, 11, 10]
     g_idx = grade_list.index(q.grade) if q.grade in grade_list else 1
     q.grade = col_a.selectbox("Khối lớp", grade_list, index=g_idx)
-    q.chapter = col_b.number_input("Chương", min_value=1, value=q.chapter)
+    q.chapter = col_b.number_input("Chương", min_value=1, value=int(q.chapter))
 
     key_custom_top_s = f"custom_top_single_{q.code}"
     if key_custom_top_s not in st.session_state: st.session_state[key_custom_top_s] = False
@@ -729,9 +729,12 @@ def show_import_modal(raw_text: str):
     st.divider()
     st.markdown(f"### ✏️ 2. Chỉnh sửa chi tiết & Sửa công thức TỪNG CÂU ({len(st.session_state['temp_questions'])} câu)")
 
+    grade_list = ["HSA", 12, 11, 10]
+    all_stored_srcs = get_all_stored_sources(all_questions)
+
     for idx, q in enumerate(st.session_state["temp_questions"]):
         with st.container():
-            st.markdown(f"""<div class="edit-q-box"><b>Câu {idx + 1}</b> [{q.format.value}]</div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="question-card"><div style="margin-bottom:12px;"><span class="badge-fmt">{q.format.value}</span><span class="card-badge">Câu {idx + 1}</span></div>""", unsafe_allow_html=True)
             
             st.markdown("<b>Sửa nội dung đề bài (MathLive):</b>", unsafe_allow_html=True)
             updated_t3_content = interactive_math_editor(key=f"editor_t3_content_{idx}", text=q.content, height_mode="compact")
@@ -741,14 +744,22 @@ def show_import_modal(raw_text: str):
             if uploaded_img:
                 q.image_path = upload_image_to_drive(uploaded_img, f"temp_{idx}.png")
 
-            ct1, ct2, ct3 = st.columns([2, 1, 1])
-            q_chap_topics = get_chapter_topics(all_questions, q.grade, q.chapter)
+            # --- HÀNG 1: KHỐI LỚP & CHƯƠNG ---
+            col_qa, col_qb = st.columns(2)
+            g_idx = grade_list.index(q.grade) if q.grade in grade_list else (grade_list.index(str(q.grade)) if str(q.grade) in ["12","11","10"] else 1)
+            q.grade = col_qa.selectbox(f"Khối lớp (Câu {idx+1}):", grade_list, index=g_idx, key=f"t3_grade_{idx}")
+            q.chapter = col_qb.number_input(f"Chương (Câu {idx+1}):", min_value=1, max_value=20, value=int(q.chapter), key=f"t3_chap_{idx}")
+
+            # --- HÀNG 2: DẠNG BÀI & NGUỒN ĐỀ ---
+            col_qd, col_qe = st.columns(2)
             
+            # Dạng bài từng câu
+            q_chap_topics = get_chapter_topics(all_questions, q.grade, q.chapter)
             key_custom_top_q = f"custom_top_q_{idx}"
             if key_custom_top_q not in st.session_state: st.session_state[key_custom_top_q] = False
 
             if st.session_state[key_custom_top_q]:
-                c_i, c_b = ct1.columns([4, 1])
+                c_i, c_b = col_qd.columns([5, 1])
                 q.topic = c_i.text_input(f"Nhập Dạng bài mới (Câu {idx+1}):", value=q.topic if q.topic not in q_chap_topics else "", key=f"t3_top_inp_{idx}")
                 if c_b.button("↩️", key=f"btn_canc_top_{idx}"):
                     st.session_state[key_custom_top_q] = False
@@ -756,16 +767,41 @@ def show_import_modal(raw_text: str):
             else:
                 t3_top_options = q_chap_topics + ["➕ Nhập dạng bài mới..."]
                 t3_top_default_idx = q_chap_topics.index(q.topic) if q.topic in q_chap_topics else 0
-                sel_t3_top = ct1.selectbox(f"Dạng bài (Câu {idx+1}):", t3_top_options, index=t3_top_default_idx, key=f"t3_top_sel_{idx}")
+                sel_t3_top = col_qd.selectbox(f"Chọn Dạng bài (Lớp {q.grade} - CH{q.chapter}):", t3_top_options, index=t3_top_default_idx, key=f"t3_top_sel_{idx}")
                 if sel_t3_top == "➕ Nhập dạng bài mới...":
                     st.session_state[key_custom_top_q] = True
                     st.rerun()
                 else:
                     q.topic = sel_t3_top
 
-            q.format = QuestionType(ct2.selectbox(f"Loại (Câu {idx+1})", ["TN", "DS", "TLN"], index=["TN", "DS", "TLN"].index(q.format.value), key=f"t3_fmt_{idx}"))
-            q.level = ct3.selectbox(f"Mức độ (Câu {idx+1})", [1, 2, 3], index=q.level-1, key=f"t3_lvl_{idx}")
+            # Nguồn đề từng câu
+            key_custom_src_q = f"custom_src_q_{idx}"
+            if key_custom_src_q not in st.session_state: st.session_state[key_custom_src_q] = False
 
+            if st.session_state[key_custom_src_q]:
+                c_i, c_b = col_qe.columns([5, 1])
+                q.source = c_i.text_input(f"Nhập Nguồn đề mới (Câu {idx+1}):", value=q.source if (q.source and q.source not in all_stored_srcs) else "", key=f"t3_src_inp_{idx}")
+                if c_b.button("↩️", key=f"btn_canc_src_{idx}"):
+                    st.session_state[key_custom_src_q] = False
+                    st.rerun()
+            else:
+                src_q_options = all_stored_srcs + ["➕ Nhập nguồn đề mới..."]
+                src_q_default_idx = all_stored_srcs.index(q.source) if (q.source and q.source in all_stored_srcs) else 0
+                sel_q_src = col_qe.selectbox(f"Chọn Nguồn đề (Câu {idx+1}):", src_q_options, index=src_q_default_idx, key=f"t3_src_sel_{idx}")
+                if sel_q_src == "➕ Nhập nguồn đề mới...":
+                    st.session_state[key_custom_src_q] = True
+                    st.rerun()
+                else:
+                    q.source = sel_q_src
+
+            # --- HÀNG 3: LOẠI CÂU & MỨC ĐỘ ---
+            col_qf1, col_qf2 = st.columns(2)
+            q.format = QuestionType(col_qf1.selectbox(f"Loại câu hỏi (Câu {idx+1}):", ["TN", "DS", "TLN"], index=["TN", "DS", "TLN"].index(q.format.value), key=f"t3_fmt_{idx}"))
+            q.level = col_qf2.selectbox(f"Mức độ (Câu {idx+1}):", [1, 2, 3], index=q.level-1, key=f"t3_lvl_{idx}")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # PHẦN ĐÁP ÁN THEO LOẠI
             if q.format == QuestionType.TN:
                 st.markdown("<b>Phương án & Đáp án Trắc nghiệm:</b>", unsafe_allow_html=True)
                 if not q.options: q.options = {'A': '', 'B': '', 'C': '', 'D': ''}
@@ -811,7 +847,8 @@ def show_import_modal(raw_text: str):
             if uploaded_sol_img:
                 q.solution_image_path = upload_image_to_drive(uploaded_sol_img, f"temp_sol_{idx}.png")
 
-            st.markdown("---")
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
 
     col_btn1, col_btn2 = st.columns(2)
     if col_btn1.button("💾 LƯU TẤT CẢ VÀO GOOGLE SHEET", type="primary", width="stretch"):
