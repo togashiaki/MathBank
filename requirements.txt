@@ -8,3 +8,6 @@ google-auth
 streamlit-mathlive
 streamlit-paste-button
 python-docx
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
