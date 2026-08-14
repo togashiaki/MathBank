@@ -2,6 +2,7 @@ import os
 import io
 import time
 import json
+import ast
 import gspread
 import streamlit as st
 from typing import List, Optional
@@ -58,17 +59,17 @@ def get_sheet():
         existing_values = ws.get_all_values()
         if not existing_values:
             ws.append_row([
-                "Code", "Grade", "Chapter", "Lesson", "Topic", "Format", 
-                "Level", "Source", "Content", "Options", "TF_Statements", 
-                "Answer", "Solution", "Image_Path", "Solution_Image_Path"
+                "code", "grade", "chapter", "lesson", "topic", "format", 
+                "level", "source", "content", "options", "tf_statements", 
+                "answer", "solution", "image_path", "solution_image_path"
             ])
         return ws
     except Exception as e:
-        st.error(f"Lỗi mở Google Sheet (ID: {sheet_id}). Vui lòng kiểm tra quyền Editor của Service Account: {e}")
+        st.error(f"Lỗi mở Google Sheet (ID: {sheet_id}): {e}")
         return None
 
 
-# 2. HÀM TẢI ẢNH LÊN GOOGLE DRIVE (LƯU VÀO THƯ MỤC CHỈ ĐỊNH)
+# 2. HÀM TẢI ẢNH LÊN GOOGLE DRIVE
 def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_id: Optional[str] = None) -> Optional[str]:
     if uploaded_file is None:
         return None
@@ -81,7 +82,6 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
         if not filename:
             filename = f"img_{int(time.time())}.png"
 
-        # Đọc dữ liệu ảnh thành byte stream
         if hasattr(uploaded_file, "getvalue"):
             file_bytes = uploaded_file.getvalue()
         elif isinstance(uploaded_file, bytes):
@@ -94,7 +94,6 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
         stream = io.BytesIO(file_bytes)
         stream.seek(0)
 
-        # Đặt file vào đúng thư mục Drive đã cấp quyền để dùng dung lượng của bạn
         target_folder = folder_id or st.secrets.get("DRIVE_FOLDER_ID", DEFAULT_DRIVE_FOLDER_ID)
         file_metadata = {'name': filename}
         if target_folder:
@@ -111,7 +110,6 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
 
         file_id = uploaded_drive_file.get('id')
 
-        # Cấp quyền xem cho bất kỳ ai có link
         try:
             drive_service.permissions().create(
                 fileId=file_id,
@@ -125,14 +123,14 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
         return f"https://lh3.googleusercontent.com/d/{file_id}"
 
     except HttpError as err:
-        st.error(f"Lỗi tải ảnh Google Drive (HttpError): {err}")
+        st.error(f"Lỗi tải ảnh Google Drive: {err}")
         return None
     except Exception as e:
-        st.error(f"Lỗi khi upload ảnh lên Drive: {e}")
+        st.error(f"Lỗi upload ảnh: {e}")
         return None
 
 
-# 3. HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEET
+# 3. HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEET (KHÔNG PHÂN BIỆT HOA/THƯỜNG)
 def load_all_questions_from_cloud() -> List[Question]:
     ws = get_sheet()
     if not ws:
@@ -142,11 +140,15 @@ def load_all_questions_from_cloud() -> List[Question]:
         records = ws.get_all_records()
         questions = []
         for r in records:
-            if not r.get("Code"):
+            # Chuẩn hóa toàn bộ key cột về chữ thường và bỏ khoảng trắng thừa
+            r_clean = {str(k).strip().lower(): v for k, v in r.items()}
+
+            code_val = str(r_clean.get("code", "")).strip()
+            if not code_val:
                 continue
 
             # Format
-            fmt_str = str(r.get("Format", "TN")).strip().upper()
+            fmt_str = str(r_clean.get("format", "TN")).strip().upper()
             try:
                 q_fmt = QuestionType(fmt_str)
             except Exception:
@@ -154,63 +156,70 @@ def load_all_questions_from_cloud() -> List[Question]:
 
             # Options
             opts = {}
-            raw_opts = r.get("Options", "")
+            raw_opts = r_clean.get("options", "")
             if raw_opts:
                 if isinstance(raw_opts, dict):
                     opts = raw_opts
                 else:
                     try:
-                        opts = json.loads(str(raw_opts))
+                        opts = ast.literal_eval(str(raw_opts))
                     except Exception:
-                        opts = {}
+                        try:
+                            opts = json.loads(str(raw_opts))
+                        except Exception:
+                            opts = {}
 
             # TF_Statements
             tf_stmts = []
-            raw_tf = r.get("TF_Statements", "")
+            raw_tf = r_clean.get("tf_statements", "")
             if raw_tf:
                 if isinstance(raw_tf, list):
                     tf_stmts = [tuple(x) for x in raw_tf]
                 else:
                     try:
-                        parsed = json.loads(str(raw_tf))
+                        parsed = ast.literal_eval(str(raw_tf))
                         tf_stmts = [tuple(x) for x in parsed]
                     except Exception:
-                        tf_stmts = []
+                        try:
+                            parsed = json.loads(str(raw_tf))
+                            tf_stmts = [tuple(x) for x in parsed]
+                        except Exception:
+                            tf_stmts = []
 
             # Level & Chapter & Grade
             try:
-                lvl = int(r.get("Level", 2))
+                lvl = int(r_clean.get("level", 2))
             except Exception:
                 lvl = 2
             try:
-                chap = int(r.get("Chapter", 1))
+                chap = int(r_clean.get("chapter", 1))
             except Exception:
                 chap = 1
             try:
-                lesson = int(r.get("Lesson", 1))
+                lesson = int(r_clean.get("lesson", 1))
             except Exception:
                 lesson = 1
 
-            grade = r.get("Grade", 12)
+            grade = r_clean.get("grade", 12)
             if str(grade).isdigit():
                 grade = int(grade)
 
             q = Question(
-                code=str(r.get("Code", "")).strip(),
+                code=code_val,
                 grade=grade,
                 chapter=chap,
                 lesson=lesson,
-                topic=str(r.get("Topic", "")).strip(),
+                topic=str(r_clean.get("topic", "")).strip(),
                 format=q_fmt,
                 level=lvl,
-                source=str(r.get("Source", "")).strip(),
-                content=str(r.get("Content", "")).strip(),
+                source=str(r_clean.get("source", "")).strip(),
+                content=str(r_clean.get("content", "")).strip(),
                 options=opts,
                 tf_statements=tf_stmts,
-                answer=str(r.get("Answer", "")).strip(),
-                solution=str(r.get("Solution", "")).strip(),
-                image_path=str(r.get("Image_Path", "")).strip() or None,
-                solution_image_path=str(r.get("Solution_Image_Path", "")).strip() or None
+                answer=str(r_clean.get("answer", "")).strip(),
+                solution=str(r_clean.get("solution", "")).strip(),
+                image_path=str(r_clean.get("image_path", "")).strip() or None,
+                solution_image_path=str(r_clean.get("solution_image_path", "")).strip() or None
             )
             questions.append(q)
         return questions
@@ -219,7 +228,7 @@ def load_all_questions_from_cloud() -> List[Question]:
         return []
 
 
-# 4. HÀM LƯU / CẬP NHẬT CÂU HỎI LÊN GOOGLE SHEET
+# 4. HÀM LƯU DỮ LIỆU TỰ ĐỘNG KHỚP THEO TIÊU ĐỀ CỘT TRÊN SHEET
 def save_questions_to_cloud(questions: List[Question]):
     ws = get_sheet()
     if not ws or not questions:
@@ -227,44 +236,50 @@ def save_questions_to_cloud(questions: List[Question]):
 
     try:
         all_values = ws.get_all_values()
-        headers = [
-            "Code", "Grade", "Chapter", "Lesson", "Topic", "Format", 
-            "Level", "Source", "Content", "Options", "TF_Statements", 
-            "Answer", "Solution", "Image_Path", "Solution_Image_Path"
-        ]
-
         if not all_values:
-            ws.append_row(headers)
-            all_values = [headers]
+            standard_headers = [
+                "code", "grade", "chapter", "lesson", "topic", "format", 
+                "level", "source", "content", "options", "tf_statements", 
+                "answer", "solution", "image_path", "solution_image_path"
+            ]
+            ws.append_row(standard_headers)
+            all_values = [standard_headers]
+
+        header_row = [str(h).strip().lower() for h in all_values[0]]
+        
+        # Tự động gán đúng dữ liệu vào vị trí cột tương ứng trên Sheet
+        def build_row_data(q: Question, headers: list) -> list:
+            q_dict = {
+                "code": q.code,
+                "grade": str(q.grade),
+                "chapter": int(q.chapter),
+                "lesson": int(getattr(q, 'lesson', 1)),
+                "topic": q.topic or "",
+                "format": q.format.value if hasattr(q.format, 'value') else str(q.format),
+                "level": int(q.level),
+                "source": q.source or "",
+                "content": q.content or "",
+                "options": json.dumps(q.options, ensure_ascii=False) if q.options else "",
+                "tf_statements": json.dumps(q.tf_statements, ensure_ascii=False) if q.tf_statements else "",
+                "answer": q.answer or "",
+                "solution": q.solution or "",
+                "image_path": q.image_path or "",
+                "solution_image_path": getattr(q, 'solution_image_path', "") or ""
+            }
+            return [q_dict.get(h, "") for h in headers]
 
         code_to_row = {}
         for row_idx, row in enumerate(all_values[1:], start=2):
-            if row:
+            if row and row[0].strip():
                 code_to_row[row[0].strip()] = row_idx
 
         rows_to_append = []
         for q in questions:
-            row_data = [
-                q.code,
-                str(q.grade),
-                int(q.chapter),
-                int(getattr(q, 'lesson', 1)),
-                q.topic or "",
-                q.format.value if hasattr(q.format, 'value') else str(q.format),
-                int(q.level),
-                q.source or "",
-                q.content or "",
-                json.dumps(q.options, ensure_ascii=False) if q.options else "",
-                json.dumps(q.tf_statements, ensure_ascii=False) if q.tf_statements else "",
-                q.answer or "",
-                q.solution or "",
-                q.image_path or "",
-                getattr(q, 'solution_image_path', "") or ""
-            ]
-
+            row_data = build_row_data(q, header_row)
             if q.code in code_to_row:
                 row_num = code_to_row[q.code]
-                ws.update(f"A{row_num}:O{row_num}", [row_data])
+                col_end_letter = gspread.utils.rowcol_to_a1(row_num, len(header_row))
+                ws.update(f"A{row_num}:{col_end_letter}", [row_data])
             else:
                 rows_to_append.append(row_data)
 
