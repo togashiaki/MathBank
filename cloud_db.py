@@ -1,149 +1,79 @@
-import json
 import io
-import gspread
+import time
 import streamlit as st
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
-from models import Question, QuestionType
+from googleapiclient.errors import HttpError
 
-SCOPES = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive'
-]
+def upload_image_to_drive(uploaded_file, filename=None, folder_id=None):
+    """
+    Tải ảnh trực tiếp lên Google Drive từ bộ nhớ RAM (BytesIO) và trả về URL ảnh công khai.
+    Không lưu bất kỳ file tạm nào vào ổ cứng cục bộ.
+    """
+    if uploaded_file is None:
+        return ""
 
-@st.cache_resource
-def get_google_services():
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=SCOPES
-    )
-    gc = gspread.authorize(creds)
-    sheet = gc.open_by_key("13Ck1FfpBolHEsWrRU2uQ6zoe9BIk1Wr0vWCta_PtUSs").sheet1
-    drive_service = build('drive', 'v3', credentials=creds)
-    return sheet, drive_service
-
-sheet, drive_service = get_google_services()
-DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
-
-def load_all_questions_from_cloud() -> list[Question]:
-    """Đọc toàn bộ danh sách câu hỏi từ Google Sheet an toàn"""
     try:
-        records = sheet.get_all_records()
-    except Exception as e:
-        st.error(f"Lỗi kết nối đọc Google Sheet: {e}")
-        return []
-        
-    questions = []
-    for idx, r in enumerate(records, start=2): # Hàng 2 là dòng dữ liệu đầu tiên
-        try:
-            # Ép kiểu an toàn cho grade, chapter, level
-            grade_val = int(r.get('grade')) if str(r.get('grade', '')).strip().isdigit() else 12
-            chap_val = int(r.get('chapter')) if str(r.get('chapter', '')).strip().isdigit() else 1
-            lvl_val = int(r.get('level')) if str(r.get('level', '')).strip().isdigit() else 1
+        # Lấy Google Drive service đã khởi tạo từ service_account
+        drive_service = get_drive_service() # Đảm bảo gọi đúng hàm khởi tạo service của bạn
 
-            # Chuẩn hóa format
-            fmt_str = str(r.get('format', 'TN')).strip().upper()
-            if fmt_str not in ['TN', 'DS', 'TLN']:
-                fmt_str = 'TN'
-            fmt_enum = QuestionType(fmt_str)
+        # Tạo tên file duy nhất nếu chưa có
+        if not filename:
+            filename = f"img_{int(time.time())}.png"
 
-            # Parse options
-            options = {}
-            if r.get('options'):
-                try:
-                    raw_opt = str(r['options']).strip()
-                    options = eval(raw_opt) if raw_opt.startswith('{') else {}
-                except Exception:
-                    options = {}
-
-            # Parse tf_statements
-            tf_statements = []
-            if r.get('tf_statements'):
-                try:
-                    raw_tf = str(r['tf_statements']).strip()
-                    tf_statements = eval(raw_tf) if raw_tf.startswith('[') else []
-                except Exception:
-                    tf_statements = []
-
-            q = Question(
-                code=str(r.get('code', f'Q_{idx}')),
-                grade=grade_val,
-                chapter=chap_val,
-                lesson=1,
-                topic=str(r.get('topic', '')),
-                format=fmt_enum,
-                level=lvl_val,
-                source=str(r.get('source', '')),
-                content=str(r.get('content', '')),
-                options=options,
-                tf_statements=tf_statements,
-                answer=str(r.get('answer', '')),
-                solution=str(r.get('solution', '')),
-                image_path=str(r.get('image_path', '')).strip() or None,
-                solution_image_path=str(r.get('solution_image_path', '')).strip() or None
-            )
-            
-            # Chỉ lấy những câu có nội dung đề bài
-            if q.content.strip():
-                questions.append(q)
-
-        except Exception as err:
-            st.warning(f"⚠️ Không đọc được câu hỏi tại Dòng {idx} trên Google Sheet: {err}")
-            continue
-            
-    return questions
-def save_questions_to_cloud(questions: list[Question]):
-    """Cập nhật hoặc thêm mới danh sách câu hỏi vào Google Sheet"""
-    all_rows = sheet.get_all_records()
-    existing_codes = {str(r['code']): idx + 2 for idx, r in enumerate(all_rows)} # Dòng 1 là tiêu đề
-    
-    for q in questions:
-        row_data = [
-            q.code,
-            q.grade,
-            q.chapter,
-            q.topic,
-            q.format.value,
-            q.level,
-            q.source or "",
-            q.content,
-            str(q.options) if q.options else "",
-            str(q.tf_statements) if q.tf_statements else "",
-            q.answer or "",
-            q.solution or "",
-            q.image_path or "",
-            getattr(q, 'solution_image_path', '') or ""
-        ]
-        
-        if q.code in existing_codes:
-            row_idx = existing_codes[q.code]
-            sheet.update(f"A{row_idx}:N{row_idx}", [row_data])
+        # 1. Chuyển đổi dữ liệu sang io.BytesIO
+        if hasattr(uploaded_file, "getvalue"):  # Streamlit UploadedFile
+            file_bytes = uploaded_file.getvalue()
+        elif isinstance(uploaded_file, bytes):
+            file_bytes = uploaded_file
+        elif hasattr(uploaded_file, "read"):
+            file_bytes = uploaded_file.read()
         else:
-            sheet.append_row(row_data)
+            st.error("Định dạng file không hợp lệ để tải lên Drive.")
+            return ""
 
-def delete_question_from_cloud(q_code: str):
-    """Xóa 1 câu hỏi khỏi Google Sheet"""
-    all_rows = sheet.get_all_records()
-    for idx, r in enumerate(all_rows):
-        if str(r.get('code')) == q_code:
-            sheet.delete_rows(idx + 2)
-            break
+        stream = io.BytesIO(file_bytes)
+        stream.seek(0)
 
-def upload_image_to_drive(uploaded_file, file_name: str) -> str:
-    """Tải file ảnh lên Google Drive và trả về đường link trực tiếp"""
-    file_metadata = {
-        'name': file_name,
-        'parents': [DRIVE_FOLDER_ID]
-    }
-    media = MediaIoBaseUpload(
-        io.BytesIO(uploaded_file.getvalue()),
-        mimetype=uploaded_file.type,
-        resumable=True
-    )
-    file = drive_service.files().create(
-        body=file_metadata, media_body=media, fields='id'
-    ).execute()
-    
-    file_id = file.get('id')
-    return f"https://lh3.googleusercontent.com/d/{file_id}"
+        # 2. Thiết lập metadata
+        file_metadata = {'name': filename}
+        
+        # Lấy Folder ID từ secrets nếu có
+        target_folder = folder_id or st.secrets.get("DRIVE_FOLDER_ID", None)
+        if target_folder:
+            file_metadata['parents'] = [target_folder]
+
+        # 3. Chuẩn bị upload
+        media = MediaIoBaseUpload(
+            stream, 
+            mimetype='image/png', 
+            resumable=True
+        )
+
+        # 4. Gọi API upload
+        uploaded_drive_file = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, webViewLink, webContentLink'
+        ).execute()
+
+        file_id = uploaded_drive_file.get('id')
+
+        # 5. Cấp quyền xem công khai (anyone: reader) để ảnh load được trên App/Sheet
+        try:
+            drive_service.permissions().create(
+                fileId=file_id,
+                body={'type': 'anyone', 'role': 'reader'},
+                fields='id'
+            ).execute()
+        except Exception:
+            pass  # Bỏ qua nếu folder cha đã có quyền kế thừa
+
+        # Trả về link trực tiếp (direct embed link)
+        return f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+
+    except HttpError as err:
+        st.error(f"Lỗi Google Drive API: {err}")
+        return ""
+    except Exception as e:
+        st.error(f"Lỗi tải ảnh lên Drive: {e}")
+        return ""
