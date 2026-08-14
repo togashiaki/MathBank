@@ -460,55 +460,92 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# PARSER THÔNG MINH
+# PARSER THÔNG MINH ĐƯỢC TỐI ƯU VÀ SỬA LỖI TÁCH CÂU TLN
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
-    if not raw_text or not raw_text.strip(): return []
-    pattern = r'\n(?=\s*(?:Câu|CÂU)(?:\s*hỏi)?(?:\s*\d+)?[\.:\s])'
-    q_blocks = re.split(pattern, raw_text.strip())
+    if not raw_text or not raw_text.strip(): 
+        return []
+    
+    # 1. Chuẩn hóa xuống dòng
+    clean_raw = raw_text.replace('\r\n', '\n').replace('\r', '\n').strip()
+    
+    # 2. Tách các câu hỏi bằng regex KHÔNG PHÂN BIỆT HOA THƯỜNG
+    # Hỗ trợ: Câu 1, câu 1., Câu hỏi:, câu hỏi, Bài 1:, CÂU 12...
+    pattern = r'\n+(?=\s*(?i:(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]))'
+    q_blocks = re.split(pattern, clean_raw)
     parsed_questions = []
 
     for block in q_blocks:
         block = block.strip()
-        if not block or (not re.search(r'(?:Câu|CÂU)', block, re.IGNORECASE) and not re.search(r'^[a-d][\.\)]', block, re.MULTILINE)): continue
+        if not block: 
+            continue
 
-        ans_match = re.search(r'(?:^|\n)\s*(?:Đáp án|ĐÁP ÁN|Đáp án:|ĐÁP ÁN:)\s*(.*?)(?=\n\s*(?:Lời giải|LỜI GIẢI)\s*:|$)', block, re.DOTALL | re.IGNORECASE)
-        sol_match = re.search(r'(?:^|\n)\s*(?:Lời giải|LỜI GIẢI|Lời giải:|LỜI GIẢI:)\s*(.*)', block, re.DOTALL | re.IGNORECASE)
+        # Regex tìm vị trí của "Đáp án" và "Lời giải"
+        ans_pattern = r'(?i)(?:^|\n)\s*(?:đáp\s*án|đáp\s*số|kết\s*quả|ans|answer|da)\s*[:\.]?\s*'
+        sol_pattern = r'(?i)(?:^|\n)\s*(?:lời\s*giải(?:\s*chi\s*tiết)?|hướng\s*dẫn\s*giải|hdg|lg|solution)\s*[:\.]?\s*'
 
-        extracted_ans, extracted_sol, clean_content = "", "", block
+        ans_match = re.search(ans_pattern, block)
+        sol_match = re.search(sol_pattern, block)
 
-        if ans_match:
-            extracted_ans = ans_match.group(1).strip()
-            if ans_match.start() > 0: clean_content = clean_content[:ans_match.start()].strip()
+        extracted_ans = ""
+        extracted_sol = ""
+        main_content_end = len(block)
 
-        if sol_match:
-            q_start = re.search(r'(?:Câu|CÂU)', block, re.IGNORECASE)
-            q_idx = q_start.start() if q_start else 0
-            if sol_match.start() >= q_idx:
-                extracted_sol = sol_match.group(1).strip()
-                if not ans_match and sol_match.start() > q_idx: clean_content = clean_content[:sol_match.start()].strip()
+        # Bóc tách chính xác theo thứ tự xuất hiện của Đáp án & Lời giải
+        if ans_match and sol_match:
+            if ans_match.start() < sol_match.start():
+                main_content_end = ans_match.start()
+                extracted_ans = block[ans_match.end():sol_match.start()].strip()
+                extracted_sol = block[sol_match.end():].strip()
+            else:
+                main_content_end = sol_match.start()
+                extracted_sol = block[sol_match.end():ans_match.start()].strip()
+                extracted_ans = block[ans_match.end():].strip()
+        elif ans_match:
+            main_content_end = ans_match.start()
+            extracted_ans = block[ans_match.end():].strip()
+        elif sol_match:
+            main_content_end = sol_match.start()
+            extracted_sol = block[sol_match.end():].strip()
 
-        clean_content = re.sub(r'^\s*(?:Câu|CÂU)(?:\s*hỏi)?(?:\s*\d+)?[\.:\s]*', '', clean_content, flags=re.IGNORECASE).strip()
+        # Làm sạch chuỗi đáp án & lời giải (bỏ dấu : hoặc - thừa ở đầu)
+        extracted_ans = re.sub(r'^[:\.\-\s]+', '', extracted_ans).strip()
+        extracted_sol = re.sub(r'^[:\.\-\s]+', '', extracted_sol).strip()
+
+        # Lấy nội dung đề bài chính và bỏ tiêu đề Câu x:
+        clean_content = block[:main_content_end].strip()
+        clean_content = re.sub(r'^(?i)\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]*', '', clean_content).strip()
+
         lines = [l.strip() for l in clean_content.split('\n') if l.strip()]
 
+        # Kiểm tra loại câu hỏi
         has_tn = any(re.match(r'^[A-D][\.\)]\s*', l) for l in lines)
-        has_ds = any(re.match(r'^[a-d][\.\)]\s*', l) for l in lines)
+        has_ds = any(re.match(r'^[a-d][\.\)\:-]\s*', l) for l in lines)
 
         content_lines, options, tf_statements = [], {}, []
-        q_fmt = QuestionType.DS if (has_ds and not has_tn) else (QuestionType.TN if (has_tn and not has_ds) else (QuestionType.DS if has_ds else (QuestionType.TN if has_tn else QuestionType.TLN)))
+
+        if has_ds and not has_tn:
+            q_fmt = QuestionType.DS
+        elif has_tn:
+            q_fmt = QuestionType.TN
+        else:
+            q_fmt = QuestionType.TLN
 
         if q_fmt == QuestionType.DS:
             is_ds = False
             for line in lines:
-                ds_match = re.match(r'^([a-d])[\.\)\:-]\s*(.*)', line)
+                ds_match = re.match(r'^([a-d])[\.\)\:-]\s*(.*)', line, re.IGNORECASE)
                 if ds_match:
                     is_ds = True
-                    lbl, val = ds_match.group(1).lower(), ds_match.group(2).strip()
+                    lbl = ds_match.group(1).lower()
+                    val = ds_match.group(2).strip()
                     stmt_status = "Đúng"
                     if extracted_ans:
                         st_m = re.search(rf'{lbl}[\)\.\:-]?\s*(Đúng|Sai|Đ|S|True|False)', extracted_ans, re.IGNORECASE)
-                        if st_m: stmt_status = "Sai" if st_m.group(1).upper() in ['SAI', 'S', 'FALSE'] else "Đúng"
+                        if st_m: 
+                            stmt_status = "Sai" if st_m.group(1).upper() in ['SAI', 'S', 'FALSE'] else "Đúng"
                     tf_statements.append((f"{lbl}) {val}", stmt_status))
-                elif not is_ds: content_lines.append(line)
+                elif not is_ds: 
+                    content_lines.append(line)
             final_ans = ", ".join([f"{l[0]}) {v}" for l, (_, v) in zip(['a', 'b', 'c', 'd'], tf_statements)]) if tf_statements else extracted_ans
 
         elif q_fmt == QuestionType.TN:
@@ -517,23 +554,37 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
                 opt_match = re.match(r'^([A-D])[\.\)]\s*(.*)', line)
                 if opt_match:
                     is_opt = True
-                    options[opt_match.group(1)] = opt_match.group(2).strip()
-                elif not is_opt: content_lines.append(line)
+                    options[opt_match.group(1).upper()] = opt_match.group(2).strip()
+                elif not is_opt: 
+                    content_lines.append(line)
 
             final_ans = "A"
             if extracted_ans:
                 m_single = re.search(r'\b([A-D])\b', extracted_ans)
-                if m_single: final_ans = m_single.group(1).upper()
-                elif extracted_ans.upper() in ['A', 'B', 'C', 'D']: final_ans = extracted_ans.upper()
+                if m_single: 
+                    final_ans = m_single.group(1).upper()
+                elif extracted_ans.upper() in ['A', 'B', 'C', 'D']: 
+                    final_ans = extracted_ans.upper()
 
-        else:
-            q_fmt = QuestionType.TLN
-            content_lines, final_ans = lines, extracted_ans
+        else: # TLN (Trả lời ngắn)
+            content_lines = lines
+            final_ans = extracted_ans
 
         parsed_questions.append(Question(
-            code="TEMP_CODE", grade=default_meta['grade'], chapter=default_meta['chapter'], lesson=1,
-            topic=default_meta['topic'], format=q_fmt, level=default_meta['level'], source=default_meta['source'],
-            content="\n".join(content_lines), options=options, tf_statements=tf_statements, answer=final_ans, solution=extracted_sol, image_path=None
+            code="TEMP_CODE", 
+            grade=default_meta['grade'], 
+            chapter=default_meta['chapter'], 
+            lesson=1,
+            topic=default_meta['topic'], 
+            format=q_fmt, 
+            level=default_meta['level'], 
+            source=default_meta['source'],
+            content="\n".join(content_lines), 
+            options=options, 
+            tf_statements=tf_statements, 
+            answer=final_ans, 
+            solution=extracted_sol, 
+            image_path=None
         ))
 
     return parsed_questions
@@ -735,7 +786,6 @@ def show_single_question_edit_dialog(q: Question):
 def show_import_modal(raw_text: str):
     grade_list = ["HSA", 12, 11, 10]
     
-    # Khởi tạo thông tin chung mặc định
     init_grade = st.session_state.get("global_grade_sel", 12)
     init_chap = st.session_state.get("global_chap_inp", 1)
     init_top = st.session_state.get("global_top_sel", "Dạng 1. Cực trị hàm số")
