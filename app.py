@@ -27,7 +27,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# HÀM LÀM SẠCH KÝ TỰ ĐẶC BIỆT KHI ĐẶT TÊN FILE
 def sanitize_filename(name: str) -> str:
     if not name:
         return ""
@@ -86,14 +85,12 @@ if "extra_topics_registry" not in st.session_state:
 if "extra_sources_registry" not in st.session_state:
     st.session_state["extra_sources_registry"] = set()
 
-# HÀM TẠO THƯ MỤC LƯU FILE WORD XUẤT RA
 def get_export_dir() -> str:
     today_str = datetime.now().strftime("%d-%m-%Y")
     export_dir = os.path.join(os.getcwd(), "exports", f"Đề tạo ngày {today_str}")
     os.makedirs(export_dir, exist_ok=True)
     return export_dir
 
-# HÀM LẤY TẤT CẢ DẠNG BÀI (BAO GỒM CẢ CÁC DẠNG MỚI TẠO TRONG PHIÊN)
 def get_chapter_topics(questions: list, grade, chapter: int) -> list:
     try:
         chap_int = int(chapter)
@@ -1025,7 +1022,7 @@ def show_import_modal(raw_text: str):
                         choice = st.selectbox(f"Đ/S ({label})", ["Đúng", "Sai"], index=0 if raw_stmt_tuple[1] in ["Đúng", "D"] else 1, key=f"t3_ds_val_{idx}_{label}")
                     new_tf.append((f"{label}) {stmt_input}", choice))
                 q.tf_statements = new_tf
-                q.answer = ", ".join([f"{l}) {v}" for l, (_, v) in zip(labels, new_tf)])
+                q.answer = ", ".join([f"{l[0]}) {v}" for l, (_, v) in zip(labels, new_tf)])
 
             else:
                 q.answer = st.text_input(f"🔑 Nhập đáp án Trả lời ngắn (Câu {idx+1}):", value=q.answer, key=f"t3_tln_{idx}")
