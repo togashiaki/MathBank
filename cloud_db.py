@@ -2,29 +2,23 @@ import os
 import io
 import time
 import json
+import base64
 import ast
+import requests
 import gspread
 import streamlit as st
 from typing import List, Optional
 from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
-from googleapiclient.errors import HttpError
 from models import Question, QuestionType
 
 SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/spreadsheets"
 ]
 
-# ID GOOGLE SHEET VÀ GOOGLE DRIVE FOLDER CỦA BẠN
 DEFAULT_SPREADSHEET_ID = "13Ck1FfpBolHEsWrRU2uQ6zoe9BIk1Wr0vWCta_PtUSs"
-DEFAULT_DRIVE_FOLDER_ID = "1z9L_y8ohfr6TmfQXLSoAxiBMcrLtIepQ"
 
-
-# 1. KHỞI TẠO XÁC THỰC SERVICE ACCOUNT
+# 1. KHỞI TẠO XÁC THỰC GOOGLE SHEET
 def get_credentials():
-    """Lấy credentials từ st.secrets hoặc file service_account.json."""
     if "gcp_service_account" in st.secrets:
         return Credentials.from_service_account_info(dict(st.secrets["gcp_service_account"]), scopes=SCOPES)
     elif "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
@@ -35,27 +29,16 @@ def get_credentials():
         st.error("⚠️ Chưa tìm thấy thông tin Service Account trong st.secrets!")
         return None
 
-def get_drive_service():
-    """Khởi tạo Google Drive API Service."""
-    creds = get_credentials()
-    if creds:
-        return build("drive", "v3", credentials=creds)
-    return None
-
 def get_sheet():
-    """Mở trực tiếp Google Sheet bằng ID đã được cấp quyền."""
     creds = get_credentials()
     if not creds:
         return None
     gc = gspread.authorize(creds)
-    
     sheet_id = st.secrets.get("SPREADSHEET_ID", DEFAULT_SPREADSHEET_ID)
 
     try:
         sh = gc.open_by_key(sheet_id)
         ws = sh.sheet1
-        
-        # Tự động tạo header nếu trang tính còn hoàn toàn trống
         existing_values = ws.get_all_values()
         if not existing_values:
             ws.append_row([
@@ -69,19 +52,19 @@ def get_sheet():
         return None
 
 
-# 2. HÀM TẢI ẢNH LÊN GOOGLE DRIVE
+# 2. HÀM TẢI ẢNH LÊN CLOUD (SỬ DỤNG IMGBB API MIỄN PHÍ - KHÔNG LO BỊ CHẶN QUOTA)
 def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_id: Optional[str] = None) -> Optional[str]:
     if uploaded_file is None:
         return None
 
     try:
-        drive_service = get_drive_service()
-        if not drive_service:
-            return None
+        # Lấy API Key từ Secrets hoặc dùng key dự phòng
+        api_key = st.secrets.get("IMGBB_API_KEY", "")
+        
+        if not api_key:
+            st.warning("⚠️ Chưa cấu hình IMGBB_API_KEY trong st.secrets! Đang tạm thời mã hóa ảnh...")
 
-        if not filename:
-            filename = f"img_{int(time.time())}.png"
-
+        # Đọc dữ liệu ảnh thành bytes
         if hasattr(uploaded_file, "getvalue"):
             file_bytes = uploaded_file.getvalue()
         elif isinstance(uploaded_file, bytes):
@@ -91,46 +74,35 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
         else:
             return None
 
-        stream = io.BytesIO(file_bytes)
-        stream.seek(0)
+        # Nếu có API Key -> Tải trực tiếp lên ImgBB
+        if api_key:
+            url = "https://api.imgbb.com/1/upload"
+            payload = {
+                "key": api_key,
+                "image": base64.b64encode(file_bytes).decode("utf-8")
+            }
+            if filename:
+                payload["name"] = filename
 
-        target_folder = folder_id or st.secrets.get("DRIVE_FOLDER_ID", DEFAULT_DRIVE_FOLDER_ID)
-        file_metadata = {'name': filename}
-        if target_folder:
-            file_metadata['parents'] = [target_folder.strip()]
+            response = requests.post(url, data=payload, timeout=30)
+            res_json = response.json()
 
-        media = MediaIoBaseUpload(stream, mimetype='image/png', resumable=True)
+            if response.status_code == 200 and res_json.get("success"):
+                return res_json["data"]["url"]
+            else:
+                st.error(f"Lỗi từ máy chủ lưu ảnh: {res_json.get('error', {}).get('message', 'Không xác định')}")
+                return None
+        else:
+            # Fallback: Trả về base64 data URL trực tiếp nếu chưa kịp tạo key
+            base64_str = base64.b64encode(file_bytes).decode("utf-8")
+            return f"data:image/png;base64,{base64_str}"
 
-        uploaded_drive_file = drive_service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id, webContentLink, webViewLink',
-            supportsAllDrives=True
-        ).execute()
-
-        file_id = uploaded_drive_file.get('id')
-
-        try:
-            drive_service.permissions().create(
-                fileId=file_id,
-                body={'type': 'anyone', 'role': 'reader'},
-                fields='id',
-                supportsAllDrives=True
-            ).execute()
-        except Exception:
-            pass
-
-        return f"https://lh3.googleusercontent.com/d/{file_id}"
-
-    except HttpError as err:
-        st.error(f"Lỗi tải ảnh Google Drive: {err}")
-        return None
     except Exception as e:
-        st.error(f"Lỗi upload ảnh: {e}")
+        st.error(f"Lỗi khi upload ảnh lên Cloud: {e}")
         return None
 
 
-# 3. HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEET (KHÔNG PHÂN BIỆT HOA/THƯỜNG)
+# 3. HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEET
 def load_all_questions_from_cloud() -> List[Question]:
     ws = get_sheet()
     if not ws:
@@ -140,21 +112,17 @@ def load_all_questions_from_cloud() -> List[Question]:
         records = ws.get_all_records()
         questions = []
         for r in records:
-            # Chuẩn hóa toàn bộ key cột về chữ thường và bỏ khoảng trắng thừa
             r_clean = {str(k).strip().lower(): v for k, v in r.items()}
-
             code_val = str(r_clean.get("code", "")).strip()
             if not code_val:
                 continue
 
-            # Format
             fmt_str = str(r_clean.get("format", "TN")).strip().upper()
             try:
                 q_fmt = QuestionType(fmt_str)
             except Exception:
                 q_fmt = QuestionType.TN
 
-            # Options
             opts = {}
             raw_opts = r_clean.get("options", "")
             if raw_opts:
@@ -169,7 +137,6 @@ def load_all_questions_from_cloud() -> List[Question]:
                         except Exception:
                             opts = {}
 
-            # TF_Statements
             tf_stmts = []
             raw_tf = r_clean.get("tf_statements", "")
             if raw_tf:
@@ -186,7 +153,6 @@ def load_all_questions_from_cloud() -> List[Question]:
                         except Exception:
                             tf_stmts = []
 
-            # Level & Chapter & Grade
             try:
                 lvl = int(r_clean.get("level", 2))
             except Exception:
@@ -228,7 +194,7 @@ def load_all_questions_from_cloud() -> List[Question]:
         return []
 
 
-# 4. HÀM LƯU DỮ LIỆU TỰ ĐỘNG KHỚP THEO TIÊU ĐỀ CỘT TRÊN SHEET
+# 4. HÀM LƯU / CẬP NHẬT CÂU HỎI LÊN GOOGLE SHEET
 def save_questions_to_cloud(questions: List[Question]):
     ws = get_sheet()
     if not ws or not questions:
@@ -247,7 +213,6 @@ def save_questions_to_cloud(questions: List[Question]):
 
         header_row = [str(h).strip().lower() for h in all_values[0]]
         
-        # Tự động gán đúng dữ liệu vào vị trí cột tương ứng trên Sheet
         def build_row_data(q: Question, headers: list) -> list:
             q_dict = {
                 "code": q.code,
