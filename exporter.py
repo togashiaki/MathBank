@@ -5,6 +5,10 @@ import pypandoc
 from typing import List, Optional, Dict
 from models import Question, QuestionType
 
+# Khóa cứng cụm Đ/S không cho Word ngắt dòng và tạo độ rộng tối thiểu chuẩn ~1.5cm - 2cm
+DS_COL_HEADER = "\u00a0\u00a0\u00a0Đ\u2060/\u2060S\u00a0\u00a0\u00a0"
+DS_EMPTY_CELL = "\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0"
+
 def clean_statement_text(stmt: str) -> str:
     """Loại bỏ ký tự gạch đầu dòng hoặc dấu chấm tròn dư thừa trong các mệnh đề Đúng/Sai."""
     if not stmt:
@@ -166,12 +170,12 @@ def export_questions_to_word(
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("")
                 if ds_table_format:
-                    # Tỷ lệ 86% : 14% đảm bảo chữ Đ/S luôn nằm gọn trên 1 dòng
-                    md_lines.append("| Mệnh đề | Đ/S |")
-                    md_lines.append("| :--------------------------------------------------------------------------------- | :------------: |")
+                    # Bảng định dạng chống rớt dòng chữ Đ/S tuyệt đối
+                    md_lines.append(f"| Mệnh đề | {DS_COL_HEADER} |")
+                    md_lines.append("| :-------------------------------------------------------------------------------- | :-----------------: |")
                     for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
                         clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
-                        md_lines.append(f"| {clean_stmt} | |")
+                        md_lines.append(f"| {clean_stmt} | {DS_EMPTY_CELL} |")
                     md_lines.append("")
                 else:
                     for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
@@ -198,12 +202,12 @@ def export_questions_to_word(
 
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("Đáp án mệnh đề Đúng/Sai:\n")
-                md_lines.append("| Mệnh đề | Đ/S |")
-                md_lines.append("| :--------------------------------------------------------------------------------- | :------------: |")
+                md_lines.append(f"| Mệnh đề | {DS_COL_HEADER} |")
+                md_lines.append("| :-------------------------------------------------------------------------------- | :-----------------: |")
                 for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
                     clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
                     chk_val = "Đ" if status in ["Đúng", "D", "True", "T"] else ("S" if status in ["Sai", "S", "False", "F"] else status)
-                    md_lines.append(f"| {clean_stmt} | {chk_val} |")
+                    md_lines.append(f"| {clean_stmt} | \u00a0\u00a0\u00a0{chk_val}\u00a0\u00a0\u00a0 |")
                 md_lines.append("\n")
 
             elif q.format == QuestionType.TLN:
@@ -228,12 +232,12 @@ def export_questions_to_word(
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("")
                 if ds_table_format:
-                    md_lines.append("| Mệnh đề | Đ/S |")
-                    md_lines.append("| :--------------------------------------------------------------------------------- | :------------: |")
+                    md_lines.append(f"| Mệnh đề | {DS_COL_HEADER} |")
+                    md_lines.append("| :-------------------------------------------------------------------------------- | :-----------------: |")
                     for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
                         clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
                         chk_val = "Đ" if status in ["Đúng", "D", "True", "T"] else ("S" if status in ["Sai", "S", "False", "F"] else status)
-                        md_lines.append(f"| {clean_stmt} | {chk_val} |")
+                        md_lines.append(f"| {clean_stmt} | \u00a0\u00a0\u00a0{chk_val}\u00a0\u00a0\u00a0 |")
                     md_lines.append("")
                 else:
                     for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
@@ -343,12 +347,12 @@ def export_consolidated_solutions_to_word(
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("")
                 if ds_table_format:
-                    md_lines.append("| Mệnh đề | Đ/S |")
-                    md_lines.append("| :--------------------------------------------------------------------------------- | :------------: |")
+                    md_lines.append(f"| Mệnh đề | {DS_COL_HEADER} |")
+                    md_lines.append("| :-------------------------------------------------------------------------------- | :-----------------: |")
                     for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
                         clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
                         chk_val = "Đ" if status in ["Đúng", "D", "True", "T"] else ("S" if status in ["Sai", "S", "False", "F"] else status)
-                        md_lines.append(f"| {clean_stmt} | {chk_val} |")
+                        md_lines.append(f"| {clean_stmt} | \u00a0\u00a0\u00a0{chk_val}\u00a0\u00a0\u00a0 |")
                     md_lines.append("")
                 else:
                     for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
