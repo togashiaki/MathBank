@@ -16,7 +16,6 @@ def format_ds_statement_with_label(stmt: str, index: int) -> str:
     """Đảm bảo các mệnh đề luôn có tiền tố nhãn a), b), c), d) chuẩn xác."""
     labels = ['a', 'b', 'c', 'd']
     clean_stmt = clean_statement_text(stmt)
-    # Nếu chưa có nhãn a), b), c), d) ở đầu thì tự động thêm vào
     if not re.match(r'^[a-dA-D][\.\)\:-]', clean_stmt):
         lbl = labels[index] if index < len(labels) else f"({index + 1})"
         clean_stmt = f"{lbl}) {clean_stmt}"
@@ -167,12 +166,12 @@ def export_questions_to_word(
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("")
                 if ds_table_format:
-                    # Bảng 2 cột: Cột 1 Mệnh đề (~15.5cm), Cột 2 Đ/S (~1.5cm)
+                    # Bảng chuẩn: Cột 1 rộng ~15.5cm, Cột 2 gọn ~1.5cm; giãn cách dòng thoáng
                     md_lines.append("| Mệnh đề | Đ/S |")
                     md_lines.append("| :-------------------------------------------------------------------------------------------------------------------| :---: |")
                     for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
                         clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
-                        md_lines.append(f"| {clean_stmt} | |")
+                        md_lines.append(f"| {clean_stmt} | &nbsp; |")
                     md_lines.append("")
                 else:
                     for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
@@ -277,7 +276,7 @@ def export_consolidated_answers_to_word(
         info_copy["sub_title"] = "BẢNG ĐÁP ÁN TỔNG HỢP CÁC MÃ ĐỀ"
         md_lines.append(generate_header_html(info_copy))
 
-    md_lines.append("# BẢNG ĐÁP ÁN TỔNG HỢP\n\n")
+    md_lines.append("\n")
 
     codes = list(generated_exams.keys())
     if not codes:
