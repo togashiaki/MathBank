@@ -175,23 +175,23 @@ def show_export_config_modal(questions_to_export: list, test_code: str = ""):
     col_h1, col_h2 = st.columns(2)
     with col_h1:
         school_name = st.text_input(
-            "Tên trường / Trung tâm (Ô trái - Trên):",
-            value="TRUNG TÂM BỒI DƯỠNG VĂN HÓA MHĐ",
+            "Tên trường / Trung tâm:",
+            value="Nhập tên trường / trung tâm",
             key=f"hdr_school_{test_code}"
         )
         sub_title = st.text_input(
-            "Ghi chú / Môn học (Ô trái - Dưới, tùy chọn):",
-            value="MÔN TOÁN LỚP 12",
+            "Ghi chú / Môn học:",
+            value="Nhập ghi chú",
             key=f"hdr_sub_{test_code}"
         )
     with col_h2:
         exam_title = st.text_input(
-            "Tên đề / Kỳ thi (Ô phải - Trên):",
-            value="KIỂM TRA THÁNG 6 + 7: ỨNG DỤNG ĐẠO HÀM ĐỂ KHẢO SÁT ĐỒ THỊ HÀM SỐ",
+            "Tên đề / Kỳ thi:",
+            value="Nhập tên đề",
             key=f"hdr_title_{test_code}"
         )
         duration = st.number_input(
-            "Thời gian làm bài (Phút - Ô phải - Dưới):",
+            "Thời gian làm bài (Phút):",
             min_value=1,
             max_value=300,
             value=90,
@@ -1496,7 +1496,7 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
     with col_action:
         st.write("")
         st.write("")
-        btn_analyze = st.button("🔍 PHÂN TÍCH &\nMỞ POPUP", type="primary", use_container_width=True, key="btn_tab3_analyze")
+        btn_analyze = st.button("🔍 PHÂN TÍCH &\n TỰ ĐỘNG PHÂN LOẠI", type="primary", use_container_width=True, key="btn_tab3_analyze")
 
     if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
         st.session_state["tab3_input_text"] = edited_live_text
