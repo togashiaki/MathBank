@@ -738,7 +738,7 @@ def show_single_question_edit_dialog(q: Question):
 def show_import_modal(raw_text: str):
     grade_list = ["HSA", 12, 11, 10]
     
-    # Khởi tạo mặc định
+    # Khởi tạo thông tin chung mặc định
     init_grade = st.session_state.get("global_grade_sel", 12)
     init_chap = st.session_state.get("global_chap_inp", 1)
     init_top = st.session_state.get("global_top_sel", "Dạng 1. Cực trị hàm số")
@@ -756,6 +756,18 @@ def show_import_modal(raw_text: str):
     if "temp_questions" not in st.session_state or st.session_state.get("reset_temp"):
         st.session_state["temp_questions"] = parse_raw_text_to_questions(raw_text, default_meta)
         st.session_state["reset_temp"] = False
+        
+        # Tự động gán thông tin chung vào trạng thái widget của tất cả các câu mới phân tích
+        for idx in range(len(st.session_state["temp_questions"])):
+            st.session_state[f"t3_grade_{idx}"] = init_grade
+            st.session_state[f"t3_chap_{idx}"] = int(init_chap)
+            st.session_state[f"t3_lvl_{idx}"] = int(init_lvl)
+            st.session_state[f"t3_top_sel_{idx}"] = init_top
+            st.session_state[f"t3_src_sel_{idx}"] = init_src
+            st.session_state[f"custom_top_q_{idx}"] = False
+            st.session_state[f"custom_src_q_{idx}"] = False
+            st.session_state.pop(f"t3_top_inp_{idx}", None)
+            st.session_state.pop(f"t3_src_inp_{idx}", None)
 
     if "custom_top_global" not in st.session_state: st.session_state["custom_top_global"] = False
     if "custom_src_global" not in st.session_state: st.session_state["custom_src_global"] = False
