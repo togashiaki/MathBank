@@ -12,6 +12,17 @@ def clean_statement_text(stmt: str) -> str:
     return re.sub(r'^\s*[\-\*\•]\s*', '', stmt).strip()
 
 
+def format_ds_statement_with_label(stmt: str, index: int) -> str:
+    """Đảm bảo các mệnh đề luôn có tiền tố nhãn a), b), c), d) chuẩn xác."""
+    labels = ['a', 'b', 'c', 'd']
+    clean_stmt = clean_statement_text(stmt)
+    # Nếu chưa có nhãn a), b), c), d) ở đầu thì tự động thêm vào
+    if not re.match(r'^[a-dA-D][\.\)\:-]', clean_stmt):
+        lbl = labels[index] if index < len(labels) else f"({index + 1})"
+        clean_stmt = f"{lbl}) {clean_stmt}"
+    return clean_stmt
+
+
 OPENXML_TLN_TABLE = (
     "```{=openxml}\n"
     "<w:tbl>\n"
@@ -49,7 +60,7 @@ LINE_STRING = "_________________________________________________________________
 
 
 def generate_header_html(header_info: dict) -> str:
-    """Tạo bảng tiêu đề 2x2 định dạng OpenXML chuẩn cho file Word (.docx)."""
+    """Tạo bảng tiêu đề 2x2 định dạng OpenXML chuẩn cho file Word (.docx) cỡ chữ 11pt."""
     if not header_info:
         return ""
     school_name = html.escape(header_info.get("school_name", "").strip().upper())
@@ -81,14 +92,14 @@ def generate_header_html(header_info: dict) -> str:
         "      <w:tcPr><w:tcW w:w=\"4300\" w:type=\"dxa\"/><w:vAlign w:val=\"top\"/></w:tcPr>\n"
         "      <w:p>\n"
         "        <w:pPr><w:jc w:val=\"center\"/></w:pPr>\n"
-        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"26\"/></w:rPr><w:t>" + school_name + "</w:t></w:r>\n"
+        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"22\"/></w:rPr><w:t>" + school_name + "</w:t></w:r>\n"
         "      </w:p>\n"
         "    </w:tc>\n"
         "    <w:tc>\n"
         "      <w:tcPr><w:tcW w:w=\"5300\" w:type=\"dxa\"/><w:vAlign w:val=\"top\"/></w:tcPr>\n"
         "      <w:p>\n"
         "        <w:pPr><w:jc w:val=\"center\"/></w:pPr>\n"
-        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"26\"/></w:rPr><w:t>" + exam_title + "</w:t></w:r>\n"
+        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"22\"/></w:rPr><w:t>" + exam_title + "</w:t></w:r>\n"
         "      </w:p>\n"
         "    </w:tc>\n"
         "  </w:tr>\n"
@@ -97,14 +108,14 @@ def generate_header_html(header_info: dict) -> str:
         "      <w:tcPr><w:tcW w:w=\"4300\" w:type=\"dxa\"/><w:vAlign w:val=\"top\"/></w:tcPr>\n"
         "      <w:p>\n"
         "        <w:pPr><w:jc w:val=\"center\"/></w:pPr>\n"
-        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"24\"/></w:rPr><w:t>" + sub_title + "</w:t></w:r>\n"
+        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:b/><w:sz w:val=\"22\"/></w:rPr><w:t>" + sub_title + "</w:t></w:r>\n"
         "      </w:p>\n"
         "    </w:tc>\n"
         "    <w:tc>\n"
         "      <w:tcPr><w:tcW w:w=\"5300\" w:type=\"dxa\"/><w:vAlign w:val=\"top\"/></w:tcPr>\n"
         "      <w:p>\n"
         "        <w:pPr><w:jc w:val=\"center\"/></w:pPr>\n"
-        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:sz w:val=\"24\"/></w:rPr><w:t>Thời gian: " + duration + " phút (không kể thời gian phát đề)</w:t></w:r>\n"
+        "        <w:r><w:rPr><w:rFonts w:ascii=\"Times New Roman\" w:hAnsi=\"Times New Roman\"/><w:sz w:val=\"22\"/></w:rPr><w:t>Thời gian: " + duration + " phút (không kể thời gian phát đề)</w:t></w:r>\n"
         "      </w:p>\n"
         "    </w:tc>\n"
         "  </w:tr>\n"
@@ -156,15 +167,16 @@ def export_questions_to_word(
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("")
                 if ds_table_format:
-                    md_lines.append("| Mệnh đề | Đúng | Sai |")
-                    md_lines.append("| :--- | :---: | :---: |")
-                    for stmt, _ in q.tf_statements:
-                        clean_stmt = clean_statement_text(stmt)
-                        md_lines.append(f"| {clean_stmt} | | |")
+                    # Bảng 2 cột: Cột 1 Mệnh đề (~15.5cm), Cột 2 Đ/S (~1.5cm)
+                    md_lines.append("| Mệnh đề | Đ/S |")
+                    md_lines.append("| :-------------------------------------------------------------------------------------------------------------------| :---: |")
+                    for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
+                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                        md_lines.append(f"| {clean_stmt} | |")
                     md_lines.append("")
                 else:
-                    for stmt, _ in q.tf_statements:
-                        clean_stmt = clean_statement_text(stmt)
+                    for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
+                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
                         md_lines.append(f"{clean_stmt}\n")
 
             elif q.format == QuestionType.TLN:
@@ -187,13 +199,12 @@ def export_questions_to_word(
 
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("Đáp án mệnh đề Đúng/Sai:\n")
-                md_lines.append("| Mệnh đề | Đúng | Sai |")
-                md_lines.append("| :--- | :---: | :---: |")
-                for stmt, status in q.tf_statements:
-                    clean_stmt = clean_statement_text(stmt)
-                    chk_d = "X" if status in ["Đúng", "D"] else ""
-                    chk_s = "X" if status in ["Sai", "S"] else ""
-                    md_lines.append(f"| {clean_stmt} | {chk_d} | {chk_s} |")
+                md_lines.append("| Mệnh đề | Đ/S |")
+                md_lines.append("| :-------------------------------------------------------------------------------------------------------------------| :---: |")
+                for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
+                    clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                    chk_val = "Đ" if status in ["Đúng", "D", "True", "T"] else ("S" if status in ["Sai", "S", "False", "F"] else status)
+                    md_lines.append(f"| {clean_stmt} | {chk_val} |")
                 md_lines.append("\n")
 
             elif q.format == QuestionType.TLN:
@@ -218,17 +229,16 @@ def export_questions_to_word(
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("")
                 if ds_table_format:
-                    md_lines.append("| Mệnh đề | Đúng | Sai |")
-                    md_lines.append("| :--- | :---: | :---: |")
-                    for stmt, status in q.tf_statements:
-                        clean_stmt = clean_statement_text(stmt)
-                        chk_d = "X" if status in ["Đúng", "D"] else ""
-                        chk_s = "X" if status in ["Sai", "S"] else ""
-                        md_lines.append(f"| {clean_stmt} | {chk_d} | {chk_s} |")
+                    md_lines.append("| Mệnh đề | Đ/S |")
+                    md_lines.append("| :-------------------------------------------------------------------------------------------------------------------| :---: |")
+                    for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
+                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                        chk_val = "Đ" if status in ["Đúng", "D", "True", "T"] else ("S" if status in ["Sai", "S", "False", "F"] else status)
+                        md_lines.append(f"| {clean_stmt} | {chk_val} |")
                     md_lines.append("")
                 else:
-                    for stmt, status in q.tf_statements:
-                        clean_stmt = clean_statement_text(stmt)
+                    for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
+                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
                         md_lines.append(f"{clean_stmt} **[{status}]**\n")
 
             elif q.format == QuestionType.TLN:
@@ -309,10 +319,10 @@ def export_consolidated_solutions_to_word(
         info_copy["sub_title"] = "LỜI GIẢI CHI TIẾT TẤT CẢ MÃ ĐỀ"
         md_lines.append(generate_header_html(info_copy))
 
-    md_lines.append("# LỜI GIẢI CHI TIẾT TẤT CẢ MÃ ĐỀ THI\n\n")
+    md_lines.append("\n")
 
     for e_code, questions in generated_exams.items():
-        md_lines.append(f"## MÃ ĐỀ THI: {e_code}\n")
+        md_lines.append(f"**MÃ ĐỀ THI: {e_code}**\n")
         md_lines.append("---\n\n")
 
         for idx, q in enumerate(questions, start=1):
@@ -334,17 +344,16 @@ def export_consolidated_solutions_to_word(
             elif q.format == QuestionType.DS and q.tf_statements:
                 md_lines.append("")
                 if ds_table_format:
-                    md_lines.append("| Mệnh đề | Đúng | Sai |")
-                    md_lines.append("| :--- | :---: | :---: |")
-                    for stmt, status in q.tf_statements:
-                        clean_stmt = clean_statement_text(stmt)
-                        chk_d = "X" if status in ["Đúng", "D"] else ""
-                        chk_s = "X" if status in ["Sai", "S"] else ""
-                        md_lines.append(f"| {clean_stmt} | {chk_d} | {chk_s} |")
+                    md_lines.append("| Mệnh đề | Đ/S |")
+                    md_lines.append("| :-------------------------------------------------------------------------------------------------------------------| :---: |")
+                    for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
+                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                        chk_val = "Đ" if status in ["Đúng", "D", "True", "T"] else ("S" if status in ["Sai", "S", "False", "F"] else status)
+                        md_lines.append(f"| {clean_stmt} | {chk_val} |")
                     md_lines.append("")
                 else:
-                    for stmt, status in q.tf_statements:
-                        clean_stmt = clean_statement_text(stmt)
+                    for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
+                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
                         md_lines.append(f"{clean_stmt} **[{status}]**\n")
 
             elif q.format == QuestionType.TLN:
