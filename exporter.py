@@ -1,6 +1,7 @@
 import os
 import re
 import html
+import shutil
 import tempfile
 import base64
 import requests
@@ -159,44 +160,30 @@ def generate_header_html(header_info: dict) -> str:
     return openxml
 
 
-def _resolve_image_to_local(img_src: Optional[str], temp_dir: str, prefix: str = "img") -> Optional[str]:
-    """Tải ảnh ImgBB hoặc giải mã Base64 thành file cục bộ, trả về đường dẫn chuẩn forward-slash."""
+def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_base: str) -> Optional[str]:
+    """
+    Tải hoặc sao chép ảnh vào workspace tạm thời, trả về TÊN FILE tương đối (VD: 'q_1.png')
+    để Pandoc nhúng trực tiếp mà không bị lỗi đường dẫn URI scheme trên Windows/Linux.
+    """
     if not img_src or not isinstance(img_src, str):
         return None
     
     img_src = img_src.strip()
-    if not img_src:
+    if not img_src or img_src.lower() in ["none", "null", ""]:
         return None
 
     # 1. Nếu là file cục bộ có sẵn
     if os.path.exists(img_src):
-        return os.path.abspath(img_src).replace("\\", "/")
-
-    # 2. Nếu là URL online (ImgBB Direct link)
-    if img_src.startswith("http://") or img_src.startswith("https://"):
         try:
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-            }
-            res = requests.get(img_src, headers=headers, timeout=25)
-            if res.status_code == 200 and len(res.content) > 0:
-                ext = ".png"
-                lower_url = img_src.lower()
-                if ".jpg" in lower_url or ".jpeg" in lower_url:
-                    ext = ".jpg"
-                elif ".webp" in lower_url:
-                    ext = ".webp"
-
-                tmp_filename = f"{prefix}_{os.getpid()}_{int(tempfile._get_candidate_names().__next__(), 36)}{ext}"
-                tmp_path = os.path.join(temp_dir, tmp_filename)
-                with open(tmp_path, "wb") as f:
-                    f.write(res.content)
-                return os.path.abspath(tmp_path).replace("\\", "/")
-        except Exception as e:
-            print(f"Lỗi tải ảnh từ ImgBB URL ({img_src}): {e}")
+            ext = os.path.splitext(img_src)[1] or ".png"
+            target_filename = f"{filename_base}{ext}"
+            target_path = os.path.join(temp_dir, target_filename)
+            shutil.copy2(img_src, target_path)
+            return target_filename
+        except Exception:
             return None
 
-    # 3. Nếu là chuỗi Base64 (data:image/...)
+    # 2. Nếu là chuỗi Base64 (data:image/...)
     if img_src.startswith("data:image/"):
         try:
             header, encoded = img_src.split(",", 1)
@@ -204,16 +191,83 @@ def _resolve_image_to_local(img_src: Optional[str], temp_dir: str, prefix: str =
             if "jpeg" in header or "jpg" in header:
                 ext = ".jpg"
             data = base64.b64decode(encoded)
-            tmp_filename = f"{prefix}_b64_{int(tempfile._get_candidate_names().__next__(), 36)}{ext}"
-            tmp_path = os.path.join(temp_dir, tmp_filename)
-            with open(tmp_path, "wb") as f:
+            target_filename = f"{filename_base}{ext}"
+            target_path = os.path.join(temp_dir, target_filename)
+            with open(target_path, "wb") as f:
                 f.write(data)
-            return os.path.abspath(tmp_path).replace("\\", "/")
+            return target_filename
         except Exception as e:
             print(f"Lỗi giải mã ảnh Base64: {e}")
             return None
 
+    # 3. Nếu là link URL (ImgBB hoặc Google Drive cũ)
+    if img_src.startswith("http://") or img_src.startswith("https://"):
+        try:
+            # Chuyển đổi link Google Drive cũ (nếu có) sang direct link
+            if "drive.google.com" in img_src:
+                m = re.search(r'(?:/d/|id=)([a-zA-Z0-9_-]+)', img_src)
+                if m:
+                    g_id = m.group(1)
+                    img_src = f"https://lh3.googleusercontent.com/d/{g_id}"
+
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+            }
+            res = requests.get(img_src, headers=headers, timeout=25, allow_redirects=True)
+
+            # Xử lý trường hợp URL là trang Viewer HTML (https://ibb.co/xyz)
+            content_type = res.headers.get("Content-Type", "").lower()
+            if "text/html" in content_type:
+                html_text = res.text
+                og_match = re.search(r'<meta\s+property=["\']og:image["\']\s+content=["\']([^"\']+)["\']', html_text)
+                if not og_match:
+                    og_match = re.search(r'<img[^>]+src=["\'](https?://i\.ibb\.co/[^"\']+)["\']', html_text)
+                
+                if og_match:
+                    direct_url = og_match.group(1)
+                    res = requests.get(direct_url, headers=headers, timeout=25)
+                    content_type = res.headers.get("Content-Type", "").lower()
+
+            if res.status_code == 200 and len(res.content) > 100:
+                ext = ".png"
+                if "jpeg" in content_type or ".jpg" in img_src.lower() or ".jpeg" in img_src.lower():
+                    ext = ".jpg"
+                elif "webp" in content_type or ".webp" in img_src.lower():
+                    ext = ".webp"
+
+                target_filename = f"{filename_base}{ext}"
+                target_path = os.path.join(temp_dir, target_filename)
+                with open(target_path, "wb") as f:
+                    f.write(res.content)
+                return target_filename
+        except Exception as e:
+            print(f"Lỗi tải ảnh từ URL ({img_src}): {e}")
+            return None
+
     return None
+
+
+def _compile_markdown_to_docx(full_markdown: str, temp_dir: str, output_path: str):
+    """Ghi file Markdown trong thư mục tạm và chuyển đổi sang Docx ngay tại workspace."""
+    input_md_path = os.path.join(temp_dir, "document.md")
+    with open(input_md_path, "w", encoding="utf-8") as f:
+        f.write(full_markdown)
+
+    abs_output_path = os.path.abspath(output_path)
+    orig_cwd = os.getcwd()
+    try:
+        # Chuyển working directory sang temp_dir để Pandoc nhận diện ảnh tương đối 100%
+        os.chdir(temp_dir)
+        pypandoc.convert_file(
+            "document.md",
+            'docx',
+            format='markdown',
+            outputfile=abs_output_path,
+            extra_args=['--standalone']
+        )
+    finally:
+        os.chdir(orig_cwd)
 
 
 def export_questions_to_word(
@@ -237,14 +291,14 @@ def export_questions_to_word(
         md_lines.append("\n")
 
         for idx, q in enumerate(questions, start=1):
-            local_q_img = _resolve_image_to_local(q.image_path, temp_dir, f"q_{idx}")
-            local_sol_img = _resolve_image_to_local(getattr(q, 'solution_image_path', None), temp_dir, f"sol_{idx}")
+            q_img_file = _save_image_to_workspace(q.image_path, temp_dir, f"q_{idx}")
+            sol_img_file = _save_image_to_workspace(getattr(q, 'solution_image_path', None), temp_dir, f"sol_{idx}")
 
             if mode in ["de_goc", "de_dong_chua"]:
                 md_lines.append(f"**Câu {idx}.** {q.content}\n\n")
 
-                if local_q_img and os.path.exists(local_q_img):
-                    md_lines.append(f"\n\n![]({local_q_img})\n\n")
+                if q_img_file:
+                    md_lines.append(f"![]({q_img_file})\n\n")
 
                 if q.format == QuestionType.TN and q.options:
                     md_lines.append("")
@@ -290,8 +344,8 @@ def export_questions_to_word(
             else:  # Lời giải chi tiết
                 md_lines.append(f"**Câu {idx}.** {q.content}\n\n")
 
-                if local_q_img and os.path.exists(local_q_img):
-                    md_lines.append(f"\n\n![]({local_q_img})\n\n")
+                if q_img_file:
+                    md_lines.append(f"![]({q_img_file})\n\n")
 
                 if q.format == QuestionType.TN and q.options:
                     md_lines.append("")
@@ -318,21 +372,15 @@ def export_questions_to_word(
 
                 md_lines.append(f"\n**Đáp án:** {q.answer}\n")
                 if q.solution:
-                    md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n")
+                    md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n\n")
                 
-                if local_sol_img and os.path.exists(local_sol_img):
-                    md_lines.append(f"\n\n![Ảnh lời giải câu {idx}]({local_sol_img})\n\n")
+                if sol_img_file:
+                    md_lines.append(f"![Ảnh lời giải câu {idx}]({sol_img_file})\n\n")
 
                 md_lines.append("\n")
 
         full_markdown = "\n".join(md_lines)
-        pypandoc.convert_text(
-            full_markdown, 
-            'docx', 
-            format='markdown', 
-            outputfile=output_path,
-            extra_args=['--standalone', f'--resource-path={temp_dir.replace("\\", "/")}']
-        )
+        _compile_markdown_to_docx(full_markdown, temp_dir, output_path)
 
 
 def export_consolidated_answers_to_word(
@@ -372,7 +420,8 @@ def export_consolidated_answers_to_word(
         md_lines.append("| " + " | ".join(row) + " |")
 
     full_markdown = "\n".join(md_lines)
-    pypandoc.convert_text(full_markdown, 'docx', format='markdown', outputfile=output_path)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        _compile_markdown_to_docx(full_markdown, temp_dir, output_path)
 
 
 def export_consolidated_solutions_to_word(
@@ -398,13 +447,13 @@ def export_consolidated_solutions_to_word(
             md_lines.append("---\n\n")
 
             for idx, q in enumerate(questions, start=1):
-                local_q_img = _resolve_image_to_local(q.image_path, temp_dir, f"{e_code}_q_{idx}")
-                local_sol_img = _resolve_image_to_local(getattr(q, 'solution_image_path', None), temp_dir, f"{e_code}_sol_{idx}")
+                q_img_file = _save_image_to_workspace(q.image_path, temp_dir, f"{e_code}_q_{idx}")
+                sol_img_file = _save_image_to_workspace(getattr(q, 'solution_image_path', None), temp_dir, f"{e_code}_sol_{idx}")
 
                 md_lines.append(f"**Câu {idx}.** {q.content}\n\n")
 
-                if local_q_img and os.path.exists(local_q_img):
-                    md_lines.append(f"\n\n![]({local_q_img})\n\n")
+                if q_img_file:
+                    md_lines.append(f"![]({q_img_file})\n\n")
 
                 if q.format == QuestionType.TN and q.options:
                     md_lines.append("")
@@ -431,20 +480,14 @@ def export_consolidated_solutions_to_word(
 
                 md_lines.append(f"\n**Đáp án:** {q.answer}\n")
                 if q.solution:
-                    md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n")
+                    md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n\n")
                 
-                if local_sol_img and os.path.exists(local_sol_img):
-                    md_lines.append(f"\n\n![Ảnh lời giải câu {idx}]({local_sol_img})\n\n")
+                if sol_img_file:
+                    md_lines.append(f"![Ảnh lời giải câu {idx}]({sol_img_file})\n\n")
 
                 md_lines.append("\n")
 
             md_lines.append("\n\n---\n\n")
 
         full_markdown = "\n".join(md_lines)
-        pypandoc.convert_text(
-            full_markdown, 
-            'docx', 
-            format='markdown', 
-            outputfile=output_path,
-            extra_args=['--standalone', f'--resource-path={temp_dir.replace("\\", "/")}']
-        )
+        _compile_markdown_to_docx(full_markdown, temp_dir, output_path)
