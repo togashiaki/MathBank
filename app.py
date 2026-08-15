@@ -1136,7 +1136,17 @@ with tab1:
         st.sidebar.success(f"🎉 Đã đánh lại mã ID liên tục cho {count_reindexed} câu hỏi!")
         time.sleep(1)
         st.rerun()
+from cloud_db import migrate_imgbb_to_cloudinary
 
+    if st.sidebar.button("☁️ Chuyển toàn bộ ảnh sang Cloudinary", width="stretch"):
+        with st.spinner("Đang tải ảnh từ ImgBB và đẩy sang Cloudinary, vui lòng đợi..."):
+            count, msg = migrate_imgbb_to_cloudinary()
+            if count > 0:
+                st.sidebar.success(f"🎉 {msg}")
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.sidebar.info(msg)
     st.markdown(f"""
     <div class="header-info-bar">
         <div>
