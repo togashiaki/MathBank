@@ -71,7 +71,7 @@ def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -
     val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text, height=h_val)
     return val if val is not None else text
 
-# 3. KHỞI TẠO DỮ LIỆU
+# 3. KHỞI TẠO DỮ LIỆU & SESSION STATE
 all_questions = load_all_questions_from_cloud()
 
 if "selected_questions" not in st.session_state:
@@ -85,6 +85,9 @@ if "extra_topics_registry" not in st.session_state:
 
 if "extra_sources_registry" not in st.session_state:
     st.session_state["extra_sources_registry"] = set()
+
+if "current_nav_tab" not in st.session_state:
+    st.session_state["current_nav_tab"] = "📋"
 
 def get_export_dir() -> str:
     today_str = datetime.now().strftime("%d-%m-%Y")
@@ -272,7 +275,7 @@ def confirm_delete_dialog(q: Question):
         st.rerun()
 
 # -------------------------------------------------------------
-# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (SIDEBAR DOCK ICON VUÔNG)
+# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (3 NÚT VUÔNG ICON CỐ ĐỊNH Ở DOCK TRÁI)
 # -------------------------------------------------------------
 st.markdown("""
 <style>
@@ -302,77 +305,37 @@ st.markdown("""
         display: none !important;
     }
 
-    /* ẨN TOÀN BỘ LABEL / CHỮ "Menu" TRÊN RADIO */
-    section[data-testid="stSidebar"] [data-testid="stWidgetLabel"],
-    section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"] {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0 !important;
-        margin: 0 !important;
+    /* TÙY BIẾN 3 NÚT BẤM VUÔNG ICON Ở SIDEBAR */
+    section[data-testid="stSidebar"] .stButton > button {
+        width: 48px !important;
+        height: 48px !important;
+        min-height: 48px !important;
+        max-width: 48px !important;
         padding: 0 !important;
-    }
-
-    /* ẨN HOÀN TOÀN CÁC NÚT TRÒN RADIO DOT */
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child,
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-baseweb="radio"] span:first-child,
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] input[type="radio"],
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] svg {
-        display: none !important;
-        visibility: hidden !important;
-        width: 0 !important;
-        height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* CONTAINER DOCK ICON */
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 12px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* TỪNG Ô VUÔNG ICON BO GÓC */
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] label,
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-baseweb="radio"] {
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        width: 46px !important;
-        height: 46px !important;
-        min-width: 46px !important;
-        max-width: 46px !important;
         border-radius: 14px !important;
+        font-size: 1.35rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto 12px auto !important;
         background-color: #ffffff !important;
         border: 1px solid #e2dbd0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
+        transition: all 0.2s ease !important;
     }
 
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
+    section[data-testid="stSidebar"] .stButton > button:hover {
         background-color: #f7ece8 !important;
         border-color: #b8543f !important;
         transform: translateY(-2px) !important;
     }
 
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked),
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-checked="true"] {
+    /* NÚT ĐANG ĐƯỢC CHỌN (PRIMARY) */
+    section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
         background-color: #b8543f !important;
         border-color: #a34834 !important;
-        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.3) !important;
-    }
-
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
-        font-size: 1.35rem !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        line-height: 1 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.35) !important;
     }
 
     /* PADDING NỘI DUNG CHÍNH */
@@ -383,8 +346,8 @@ st.markdown("""
         max-width: 100% !important;
     }
 
-    /* NÚT BẤM (BUTTONS) */
-    .stButton > button { 
+    /* NÚT BẤM TRONG TRANG CHÍNH */
+    .main .stButton > button { 
         font-family: 'Google Sans', sans-serif !important; 
         border-radius: 14px !important; 
         border: 1px solid #d8cfc4 !important; 
@@ -397,20 +360,20 @@ st.markdown("""
         transition: all 0.2s ease !important; 
         box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important; 
     }
-    .stButton > button:hover { 
+    .main .stButton > button:hover { 
         border-color: #b8543f !important; 
         color: #b8543f !important; 
         background-color: #f7ece8 !important; 
         transform: translateY(-2px) !important; 
         box-shadow: 0 6px 16px rgba(184, 84, 63, 0.15) !important; 
     }
-    .stButton > button[kind="primary"] { 
+    .main .stButton > button[kind="primary"] { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
         border: 1px solid #a34834 !important; 
         box-shadow: 0 4px 14px rgba(184, 84, 63, 0.25) !important; 
     }
-    .stButton > button[kind="primary"]:hover { 
+    .main .stButton > button[kind="primary"]:hover { 
         background-color: #a34834 !important; 
         color: #ffffff !important; 
         box-shadow: 0 8px 20px rgba(184, 84, 63, 0.35) !important; 
@@ -424,11 +387,11 @@ st.markdown("""
         padding: 22px !important; 
         margin-bottom: 20px !important; 
         box-shadow: 0 8px 24px rgba(44, 40, 37, 0.04) !important; 
-        transition: all 0.2s ease !important;
+        transition: all 0.2s ease !important; 
     }
     .question-card:hover {
-        border-color: #d8cfc4 !important;
-        box-shadow: 0 10px 28px rgba(44, 40, 37, 0.08) !important;
+        border-color: #d8cfc4 !important; 
+        box-shadow: 0 10px 28px rgba(44, 40, 37, 0.08) !important; 
     }
 
     /* BADGES (TAGS) */
@@ -457,7 +420,7 @@ st.markdown("""
         border: 1px solid #e8e2d8 !important; 
         border-radius: 20px !important; 
         padding: 16px 24px !important; 
-        margin-bottom: 22px !important; 
+        margin-bottom: 20px !important; 
         display: flex !important; 
         align-items: center !important; 
         justify-content: space-between !important; 
@@ -493,7 +456,7 @@ st.markdown("""
         font-weight: 700 !important; 
         display: inline-block !important; 
         margin-top: 12px !important; 
-        font-size: 0.88rem !important;
+        font-size: 0.88rem !important; 
     }
 
     /* INPUTS & SELECTS */
@@ -503,7 +466,7 @@ st.markdown("""
         border-radius: 12px !important; 
     }
     div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within {
-        border-color: #b8543f !important;
+        border-color: #b8543f !important; 
     }
 
     iframe[title*="interactive_math_editor"] { 
@@ -1137,25 +1100,38 @@ def show_import_modal(raw_text: str):
         st.rerun()
 
 # -------------------------------------------------------------
-# 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI (3 Ô VUÔNG ICON)
+# 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI (3 NÚT VUÔNG ICON)
 # -------------------------------------------------------------
 with st.sidebar:
     st.markdown("<div style='text-align: center; font-size: 1.45rem; margin-bottom: 1.2rem;'>📐</div>", unsafe_allow_html=True)
     
-    # 3 Icon vuông duy nhất: Ngân hàng, Ma trận barem, Nhập liệu
-    nav_icon = st.radio(
-        label="",
-        options=["📋", "🎯", "📥"],
-        index=0,
-        label_visibility="collapsed"
-    )
+    # Nút 1: Ngân hàng câu hỏi
+    is_active_1 = (st.session_state["current_nav_tab"] == "📋")
+    if st.button("📋", key="nav_btn_1", type="primary" if is_active_1 else "secondary", help="Ngân hàng câu hỏi"):
+        if not is_active_1:
+            st.session_state["current_nav_tab"] = "📋"
+            st.rerun()
+
+    # Nút 2: Barem Ma trận & Tạo đề
+    is_active_2 = (st.session_state["current_nav_tab"] == "🎯")
+    if st.button("🎯", key="nav_btn_2", type="primary" if is_active_2 else "secondary", help="Barem Ma trận & Tạo đề"):
+        if not is_active_2:
+            st.session_state["current_nav_tab"] = "🎯"
+            st.rerun()
+
+    # Nút 3: Hệ thống nhập liệu
+    is_active_3 = (st.session_state["current_nav_tab"] == "📥")
+    if st.button("📥", key="nav_btn_3", type="primary" if is_active_3 else "secondary", help="Hệ thống nhập liệu"):
+        if not is_active_3:
+            st.session_state["current_nav_tab"] = "📥"
+            st.rerun()
 
 # -------------------------------------------------------------
 # 5. NỘI DUNG CHÍNH
 # -------------------------------------------------------------
 
 # TRANG 1: NGÂN HÀNG CÂU HỎI
-if nav_icon == "📋":
+if st.session_state["current_nav_tab"] == "📋":
     # 1. Tính toán trước bộ lọc để hiển thị ngay trên Header Info Bar
     grade_options = ["Tất cả", "HSA", 12, 11, 10]
     grade_selected = st.session_state.get("f_grade", "Tất cả")
@@ -1298,7 +1274,7 @@ if nav_icon == "📋":
             st.markdown("</div>", unsafe_allow_html=True)
 
 # TRANG 2: BAREM MA TRẬN & TẠO ĐỀ
-elif nav_icon == "🎯":
+elif st.session_state["current_nav_tab"] == "🎯":
     st.title("🎯 Barem Ma trận Đề thi GDPT 2018")
     st.caption("Cấu hình số lượng câu theo chủ đề và cấp độ tư duy.")
 
@@ -1429,9 +1405,9 @@ elif nav_icon == "🎯":
 
         col1, col2 = st.columns(2)
         with col1:
-            t2_ds_fmt = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0, key=f"t2_ds_fmt")
+            t2_ds_fmt = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0, key="t2_ds_fmt")
         with col2:
-            t2_tln_fmt = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0, key=f"t2_tln_fmt")
+            t2_tln_fmt = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0, key="t2_tln_fmt")
 
         st.divider()
 
@@ -1511,7 +1487,7 @@ elif nav_icon == "🎯":
                         st.download_button("📖 TẢI LỜI GIẢI CHI TIẾT TỔNG HỢP (1 File)", f, file_name=os.path.basename(g_files["loi_giai_tong_hop"]), width="stretch", type="primary", key="dl_sol_consolidated")
 
 # TRANG 3: HỆ THỐNG NHẬP LIỆU
-elif nav_icon == "📥":
+elif st.session_state["current_nav_tab"] == "📥":
     st.title("📥 Hệ thống tự động phân loại câu hỏi")
     st.caption("Dán toàn bộ văn bản đề bài vào ô duy nhất dưới đây. Hệ thống tự nhận diện 'Câu hỏi:', 'Đáp án:' và 'Lời giải:'.")
 
