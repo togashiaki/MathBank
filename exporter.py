@@ -1,9 +1,67 @@
 import os
 import re
 import html
+import base64
+import tempfile
+import requests
 import pypandoc
 from typing import List, Optional, Dict
 from models import Question, QuestionType
+
+
+def resolve_image_path(img_src: Optional[str], temp_dir: str) -> Optional[str]:
+    """
+    Xử lý đường dẫn ảnh cho Pandoc:
+    - Nếu là file cục bộ có sẵn -> dùng trực tiếp.
+    - Nếu là URL (ImgBB https://...) -> tải về thư mục tạm.
+    - Nếu là base64 Data URL -> giải mã và lưu file tạm.
+    """
+    if not img_src or not str(img_src).strip():
+        return None
+
+    img_src = str(img_src).strip()
+
+    # 1. Đường dẫn file cục bộ
+    if os.path.exists(img_src):
+        return img_src.replace("\\", "/")
+
+    # 2. Data URL Base64 (data:image/...;base64,...)
+    if img_src.startswith("data:image"):
+        try:
+            match = re.match(r'data:image/(\w+);base64,(.+)', img_src)
+            if match:
+                ext = match.group(1)
+                data = base64.b64decode(match.group(2))
+                temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir, suffix=f".{ext}")
+                temp_file.write(data)
+                temp_file.close()
+                return temp_file.name.replace("\\", "/")
+        except Exception:
+            return None
+
+    # 3. URL Web trực tiếp (ImgBB, Web...)
+    if img_src.startswith("http://") or img_src.startswith("https://"):
+        try:
+            res = requests.get(img_src, timeout=20)
+            if res.status_code == 200:
+                ext = ".png"
+                lower_url = img_src.lower()
+                if ".jpg" in lower_url or ".jpeg" in lower_url:
+                    ext = ".jpg"
+                elif ".webp" in lower_url:
+                    ext = ".webp"
+                elif ".gif" in lower_url:
+                    ext = ".gif"
+
+                temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir, suffix=ext)
+                temp_file.write(res.content)
+                temp_file.close()
+                return temp_file.name.replace("\\", "/")
+        except Exception as e:
+            print(f"Lỗi tải ảnh từ URL ({img_src}): {e}")
+            return None
+
+    return None
 
 
 def clean_statement_text(stmt: str) -> str:
@@ -17,7 +75,6 @@ def format_ds_statement_with_label(stmt: str, index: int) -> str:
     """Đảm bảo các mệnh đề luôn có tiền tố nhãn a), b), c), d) chuẩn xác."""
     labels = ['a', 'b', 'c', 'd']
     clean_stmt = clean_statement_text(stmt)
-    # Nếu chưa có nhãn a), b), c), d) ở đầu thì tự động thêm vào
     if not re.match(r'^[a-dA-D][\.\)\:-]', clean_stmt):
         lbl = labels[index] if index < len(labels) else f"({index + 1})"
         clean_stmt = f"{lbl}) {clean_stmt}"
@@ -25,12 +82,6 @@ def format_ds_statement_with_label(stmt: str, index: int) -> str:
 
 
 def generate_ds_table(tf_statements: list, show_answers: bool = False) -> List[str]:
-    """
-    Tạo bảng Markdown Đúng/Sai 2 cột:
-    - Cột 1 (~15cm): 'Mệnh đề'
-    - Cột 2 (~2cm):  'Đ.S'
-    Tỉ lệ 75 : 10 dấu gạch ngang giúp Pandoc chia độ rộng chuẩn xác trên trang Word A4.
-    """
     lines = [
         "| Mệnh đề | Đ.S |",
         "| :" + "-" * 80 + " | :" + "-" * 5 + ": |"
@@ -85,7 +136,6 @@ LINE_STRING = "_________________________________________________________________
 
 
 def generate_header_html(header_info: dict) -> str:
-    """Tạo bảng tiêu đề 2x2 định dạng OpenXML chuẩn cho file Word (.docx) cỡ chữ 11pt."""
     if not header_info:
         return ""
     school_name = html.escape(header_info.get("school_name", "").strip().upper())
@@ -167,109 +217,113 @@ def export_questions_to_word(
     header_info: Optional[dict] = None
 ):
     """Xuất từng đề riêng lẻ (Đề gốc, Đề có dòng chữa bài, Đáp án, Lời giải)."""
-    md_lines = []
+    with tempfile.TemporaryDirectory() as temp_dir:
+        md_lines = []
 
-    if header_info:
-        header_xml = generate_header_html(header_info)
-        if header_xml:
-            md_lines.append(header_xml)
+        if header_info:
+            header_xml = generate_header_html(header_info)
+            if header_xml:
+                md_lines.append(header_xml)
 
-    md_lines.append("\n")
+        md_lines.append("\n")
 
-    for idx, q in enumerate(questions, start=1):
-        if mode in ["de_goc", "de_dong_chua"]:
-            md_lines.append(f"**Câu {idx}.** {q.content}\n")
+        for idx, q in enumerate(questions, start=1):
+            img_local = resolve_image_path(q.image_path, temp_dir)
 
-            if q.image_path and os.path.exists(q.image_path):
-                md_lines.append(f"\n![Hình ảnh câu {idx}]({q.image_path})\n")
+            if mode in ["de_goc", "de_dong_chua"]:
+                md_lines.append(f"**Câu {idx}.** {q.content}\n")
 
-            if q.format == QuestionType.TN and q.options:
-                md_lines.append("")
-                for k in ['A', 'B', 'C', 'D']:
-                    if k in q.options:
-                        md_lines.append(f"**{k}.** {q.options[k]}\n")
+                if img_local:
+                    md_lines.append(f"\n![Hình ảnh câu {idx}]({img_local})\n")
 
-            elif q.format == QuestionType.DS and q.tf_statements:
-                md_lines.append("")
-                if ds_table_format:
-                    md_lines.extend(generate_ds_table(q.tf_statements, show_answers=False))
-                else:
-                    for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
-                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
-                        md_lines.append(f"{clean_stmt}\n")
-
-            elif q.format == QuestionType.TLN:
-                if tln_box_format:
-                    md_lines.append(OPENXML_TLN_TABLE)
-
-            if mode == "de_dong_chua":
-                md_lines.append("\n")
-                lines_count = 4 if q.format == QuestionType.TN else (12 if q.format == QuestionType.DS else 15)
-                for _ in range(lines_count):
-                    md_lines.append(LINE_STRING)
-
-            md_lines.append("\n")
-
-        elif mode == "dap_an":
-            md_lines.append(f"**Câu {idx}.** ")
-            
-            if q.format == QuestionType.TN:
-                md_lines.append(f"Đáp án: **{q.answer}**\n\n")
-
-            elif q.format == QuestionType.DS and q.tf_statements:
-                md_lines.append("Đáp án mệnh đề Đúng/Sai:\n")
-                md_lines.extend(generate_ds_table(q.tf_statements, show_answers=True))
-                md_lines.append("\n")
-
-            elif q.format == QuestionType.TLN:
-                md_lines.append(f"Đáp án: **{q.answer}**\n\n")
-
-        else: # Lời giải chi tiết
-            md_lines.append(f"**Câu {idx}.** {q.content}\n")
-
-            if q.image_path and os.path.exists(q.image_path):
-                md_lines.append(f"\n![Hình ảnh câu {idx}]({q.image_path})\n")
-
-            if q.format == QuestionType.TN and q.options:
-                md_lines.append("")
-                for k in ['A', 'B', 'C', 'D']:
-                    if k in q.options:
-                        is_correct = (k == (q.answer or "").strip().upper())
-                        if is_correct:
-                            md_lines.append(f"**<u>{k}. {q.options[k]}</u>**\n")
-                        else:
+                if q.format == QuestionType.TN and q.options:
+                    md_lines.append("")
+                    for k in ['A', 'B', 'C', 'D']:
+                        if k in q.options:
                             md_lines.append(f"**{k}.** {q.options[k]}\n")
 
-            elif q.format == QuestionType.DS and q.tf_statements:
-                md_lines.append("")
-                if ds_table_format:
+                elif q.format == QuestionType.DS and q.tf_statements:
+                    md_lines.append("")
+                    if ds_table_format:
+                        md_lines.extend(generate_ds_table(q.tf_statements, show_answers=False))
+                    else:
+                        for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
+                            clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                            md_lines.append(f"{clean_stmt}\n")
+
+                elif q.format == QuestionType.TLN:
+                    if tln_box_format:
+                        md_lines.append(OPENXML_TLN_TABLE)
+
+                if mode == "de_dong_chua":
+                    md_lines.append("\n")
+                    lines_count = 4 if q.format == QuestionType.TN else (12 if q.format == QuestionType.DS else 15)
+                    for _ in range(lines_count):
+                        md_lines.append(LINE_STRING)
+
+                md_lines.append("\n")
+
+            elif mode == "dap_an":
+                md_lines.append(f"**Câu {idx}.** ")
+                
+                if q.format == QuestionType.TN:
+                    md_lines.append(f"Đáp án: **{q.answer}**\n\n")
+
+                elif q.format == QuestionType.DS and q.tf_statements:
+                    md_lines.append("Đáp án mệnh đề Đúng/Sai:\n")
                     md_lines.extend(generate_ds_table(q.tf_statements, show_answers=True))
-                else:
-                    for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
-                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
-                        md_lines.append(f"{clean_stmt} **[{status}]**\n")
+                    md_lines.append("\n")
 
-            elif q.format == QuestionType.TLN:
-                if tln_box_format:
-                    md_lines.append(OPENXML_TLN_TABLE)
+                elif q.format == QuestionType.TLN:
+                    md_lines.append(f"Đáp án: **{q.answer}**\n\n")
 
-            md_lines.append(f"\n**Đáp án:** {q.answer}\n")
-            if q.solution:
-                md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n")
-            
-            sol_img = getattr(q, 'solution_image_path', None)
-            if sol_img and os.path.exists(sol_img):
-                md_lines.append(f"\n![Ảnh lời giải câu {idx}]({sol_img})\n")
+            else: # Lời giải chi tiết
+                md_lines.append(f"**Câu {idx}.** {q.content}\n")
 
-            md_lines.append("\n")
+                if img_local:
+                    md_lines.append(f"\n![Hình ảnh câu {idx}]({img_local})\n")
 
-    full_markdown = "\n".join(md_lines)
-    pypandoc.convert_text(
-        full_markdown, 
-        'docx', 
-        format='markdown', 
-        outputfile=output_path
-    )
+                if q.format == QuestionType.TN and q.options:
+                    md_lines.append("")
+                    for k in ['A', 'B', 'C', 'D']:
+                        if k in q.options:
+                            is_correct = (k == (q.answer or "").strip().upper())
+                            if is_correct:
+                                md_lines.append(f"**<u>{k}. {q.options[k]}</u>**\n")
+                            else:
+                                md_lines.append(f"**{k}.** {q.options[k]}\n")
+
+                elif q.format == QuestionType.DS and q.tf_statements:
+                    md_lines.append("")
+                    if ds_table_format:
+                        md_lines.extend(generate_ds_table(q.tf_statements, show_answers=True))
+                    else:
+                        for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
+                            clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                            md_lines.append(f"{clean_stmt} **[{status}]**\n")
+
+                elif q.format == QuestionType.TLN:
+                    if tln_box_format:
+                        md_lines.append(OPENXML_TLN_TABLE)
+
+                md_lines.append(f"\n**Đáp án:** {q.answer}\n")
+                if q.solution:
+                    md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n")
+                
+                sol_img = getattr(q, 'solution_image_path', None)
+                sol_img_local = resolve_image_path(sol_img, temp_dir)
+                if sol_img_local:
+                    md_lines.append(f"\n![Ảnh lời giải câu {idx}]({sol_img_local})\n")
+
+                md_lines.append("\n")
+
+        full_markdown = "\n".join(md_lines)
+        pypandoc.convert_text(
+            full_markdown, 
+            'docx', 
+            format='markdown', 
+            outputfile=output_path
+        )
 
 
 def export_consolidated_answers_to_word(
@@ -320,59 +374,62 @@ def export_consolidated_solutions_to_word(
     header_info: Optional[dict] = None
 ):
     """Xuất 1 FILE DUY NHẤT chứa ĐÁP ÁN CHI TIẾT gộp chung của tất cả mã đề."""
-    md_lines = []
-    
-    if header_info:
-        info_copy = header_info.copy()
-        info_copy["sub_title"] = "LỜI GIẢI CHI TIẾT TẤT CẢ MÃ ĐỀ"
-        md_lines.append(generate_header_html(info_copy))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        md_lines = []
+        
+        if header_info:
+            info_copy = header_info.copy()
+            info_copy["sub_title"] = "LỜI GIẢI CHI TIẾT TẤT CẢ MÃ ĐỀ"
+            md_lines.append(generate_header_html(info_copy))
 
-    md_lines.append("\n")
+        md_lines.append("\n")
 
-    for e_code, questions in generated_exams.items():
-        md_lines.append(f"**MÃ ĐỀ THI: {e_code}**\n")
-        md_lines.append("---\n\n")
+        for e_code, questions in generated_exams.items():
+            md_lines.append(f"**MÃ ĐỀ THI: {e_code}**\n")
+            md_lines.append("---\n\n")
 
-        for idx, q in enumerate(questions, start=1):
-            md_lines.append(f"**Câu {idx}.** {q.content}\n")
+            for idx, q in enumerate(questions, start=1):
+                img_local = resolve_image_path(q.image_path, temp_dir)
+                md_lines.append(f"**Câu {idx}.** {q.content}\n")
 
-            if q.image_path and os.path.exists(q.image_path):
-                md_lines.append(f"\n![Hình ảnh câu {idx}]({q.image_path})\n")
+                if img_local:
+                    md_lines.append(f"\n![Hình ảnh câu {idx}]({img_local})\n")
 
-            if q.format == QuestionType.TN and q.options:
-                md_lines.append("")
-                for k in ['A', 'B', 'C', 'D']:
-                    if k in q.options:
-                        is_correct = (k == (q.answer or "").strip().upper())
-                        if is_correct:
-                            md_lines.append(f"**<u>{k}. {q.options[k]}</u>**\n")
-                        else:
-                            md_lines.append(f"**{k}.** {q.options[k]}\n")
+                if q.format == QuestionType.TN and q.options:
+                    md_lines.append("")
+                    for k in ['A', 'B', 'C', 'D']:
+                        if k in q.options:
+                            is_correct = (k == (q.answer or "").strip().upper())
+                            if is_correct:
+                                md_lines.append(f"**<u>{k}. {q.options[k]}</u>**\n")
+                            else:
+                                md_lines.append(f"**{k}.** {q.options[k]}\n")
 
-            elif q.format == QuestionType.DS and q.tf_statements:
-                md_lines.append("")
-                if ds_table_format:
-                    md_lines.extend(generate_ds_table(q.tf_statements, show_answers=True))
-                else:
-                    for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
-                        clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
-                        md_lines.append(f"{clean_stmt} **[{status}]**\n")
+                elif q.format == QuestionType.DS and q.tf_statements:
+                    md_lines.append("")
+                    if ds_table_format:
+                        md_lines.extend(generate_ds_table(q.tf_statements, show_answers=True))
+                    else:
+                        for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
+                            clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                            md_lines.append(f"{clean_stmt} **[{status}]**\n")
 
-            elif q.format == QuestionType.TLN:
-                if tln_box_format:
-                    md_lines.append(OPENXML_TLN_TABLE)
+                elif q.format == QuestionType.TLN:
+                    if tln_box_format:
+                        md_lines.append(OPENXML_TLN_TABLE)
 
-            md_lines.append(f"\n**Đáp án:** {q.answer}\n")
-            if q.solution:
-                md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n")
+                md_lines.append(f"\n**Đáp án:** {q.answer}\n")
+                if q.solution:
+                    md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n")
+                
+                sol_img = getattr(q, 'solution_image_path', None)
+                sol_img_local = resolve_image_path(sol_img, temp_dir)
+                if sol_img_local:
+                    md_lines.append(f"\n![Ảnh lời giải câu {idx}]({sol_img_local})\n")
 
-            sol_img = getattr(q, 'solution_image_path', None)
-            if sol_img and os.path.exists(sol_img):
-                md_lines.append(f"\n![Ảnh lời giải câu {idx}]({sol_img})\n")
+                md_lines.append("\n")
 
-            md_lines.append("\n")
+            md_lines.append("\n\n---\n\n")
 
-        md_lines.append("\n\n---\n\n")
-
-    full_markdown = "\n".join(md_lines)
-    pypandoc.convert_text(full_markdown, 'docx', format='markdown', outputfile=output_path)
+        full_markdown = "\n".join(md_lines)
+        pypandoc.convert_text(full_markdown, 'docx', format='markdown', outputfile=output_path)
