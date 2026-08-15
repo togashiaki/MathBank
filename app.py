@@ -272,185 +272,227 @@ def confirm_delete_dialog(q: Question):
         st.rerun()
 
 # -------------------------------------------------------------
-# CSS DESIGN SYSTEM
+# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT + BE & THANH ĐIỀU HƯỚNG DOCK ICON NHỎ
 # -------------------------------------------------------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.cdnfonts.com/css/google-sans');
     
     html, body, [class*="css"], .stApp { 
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
-        color: #1e293b !important; 
-        background-color: #f8fafc !important; 
+        font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
+        color: #2c2825 !important; 
+        background-color: #f7f4ed !important; 
     }
     
-    /* SIDEBAR HIỆN ĐẠI */
+    /* SIDEBAR ICON DOCK SIÊU TỐI GIẢN & CỐ ĐỊNH */
     section[data-testid="stSidebar"] { 
-        background-color: #ffffff !important; 
-        border-right: 1px solid #e2e8f0 !important; 
-        padding-top: 1.5rem;
-        width: 290px !important;
-        min-width: 290px !important;
-        max-width: 290px !important;
+        background-color: #f0ebe1 !important; 
+        border-right: 1px solid #e2dbd0 !important; 
+        padding-top: 1.2rem !important;
+        padding-left: 0.4rem !important;
+        padding-right: 0.4rem !important;
+        width: 76px !important;
+        min-width: 76px !important;
+        max-width: 76px !important;
     }
 
-    /* SIDEBAR NAVIGATION BUTTONS */
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+    /* ẨN NÚT ĐÓNG/MỞ SIDEBAR ĐỂ CỐ ĐỊNH THANH DOCK */
+    [data-testid="stSidebarCollapseButton"], 
+    button[kind="header"] {
+        display: none !important;
     }
-    
+
+    /* THANH DOCK CHỈ HIỂN THỊ ICON */
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 14px !important;
+    }
+
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin-bottom: 4px;
-        cursor: pointer;
-        transition: all 0.2s ease;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        background-color: #ffffff !important;
+        border: 1px solid #e2dbd0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        cursor: pointer !important;
+        transition: all 0.22s ease-in-out !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
-        background-color: #f1f5f9;
-        border-color: #cbd5e1;
+        background-color: #f7ece8 !important;
+        border-color: #b8543f !important;
+        transform: scale(1.06) !important;
     }
 
-    /* NÚT BẤM (BUTTONS) */
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-checked="true"],
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
+        background-color: #b8543f !important;
+        border-color: #a34834 !important;
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.35) !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] input[type="radio"] {
+        display: none !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] div[data-testid="stMarkdownContainer"] p {
+        font-size: 1.35rem !important;
+        margin: 0 !important;
+        line-height: 1 !important;
+    }
+
+    /* TÙY CHỈNH PADDING NỘI DUNG CHÍNH CHO CÂN ĐỐI */
+    .main .block-container {
+        padding-top: 1.8rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        max-width: 100% !important;
+    }
+
+    /* NÚT BẤM (BUTTONS) TÔNG ĐỎ & BE */
     .stButton > button { 
-        font-family: 'Plus Jakarta Sans', sans-serif !important; 
-        border-radius: 12px !important; 
-        border: 1px solid #e2e8f0 !important; 
+        font-family: 'Google Sans', sans-serif !important; 
+        border-radius: 14px !important; 
+        border: 1px solid #d8cfc4 !important; 
         background-color: #ffffff !important; 
-        color: #0f172a !important; 
+        color: #2c2825 !important; 
         font-weight: 600 !important; 
         padding: 10px 18px !important; 
         min-height: 44px !important; 
         cursor: pointer !important; 
         transition: all 0.2s ease !important; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important; 
     }
     .stButton > button:hover { 
-        border-color: #cbd5e1 !important; 
-        color: #0f172a !important; 
-        background-color: #f8fafc !important; 
-        transform: translateY(-1px) !important; 
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important; 
+        border-color: #b8543f !important; 
+        color: #b8543f !important; 
+        background-color: #f7ece8 !important; 
+        transform: translateY(-2px) !important; 
+        box-shadow: 0 6px 16px rgba(184, 84, 63, 0.15) !important; 
     }
     .stButton > button[kind="primary"] { 
-        background-color: #0f172a !important; 
+        background-color: #b8543f !important; 
         color: #ffffff !important; 
-        border: 1px solid #0f172a !important; 
-        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18) !important; 
+        border: 1px solid #a34834 !important; 
+        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.25) !important; 
     }
     .stButton > button[kind="primary"]:hover { 
-        background-color: #1e293b !important; 
+        background-color: #a34834 !important; 
         color: #ffffff !important; 
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25) !important; 
+        box-shadow: 0 8px 20px rgba(184, 84, 63, 0.35) !important; 
     }
 
     /* THẺ CARD CÂU HỎI */
     .question-card { 
         background-color: #ffffff !important; 
-        border: 1px solid #edf2f7 !important; 
+        border: 1px solid #e8e2d8 !important; 
         border-radius: 20px !important; 
-        padding: 24px !important; 
+        padding: 22px !important; 
         margin-bottom: 20px !important; 
-        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.02) !important; 
+        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.04) !important; 
         transition: all 0.2s ease !important;
     }
     .question-card:hover {
-        border-color: #e2e8f0 !important; 
-        box-shadow: 0 14px 30px -4px rgba(15, 23, 42, 0.06) !important; 
+        border-color: #d8cfc4 !important;
+        box-shadow: 0 10px 28px rgba(44, 40, 37, 0.08) !important;
     }
 
-    /* BADGES (TAGS) */
+    /* BADGES (TAGS) TÔNG ĐỎ - XANH RÊU TRUYỀN THỐNG */
     .card-badge { 
-        background-color: #f1f5f9 !important; 
-        color: #334155 !important; 
-        padding: 4px 12px !important; 
-        border-radius: 9999px !important; 
-        font-size: 0.75rem !important; 
+        background-color: #b8543f !important; 
+        color: #ffffff !important; 
+        padding: 5px 12px !important; 
+        border-radius: 999px !important; 
+        font-size: 0.78rem !important; 
         font-weight: 700 !important; 
         font-family: 'JetBrains Mono', monospace !important; 
-        border: 1px solid #e2e8f0 !important; 
     }
     .badge-fmt { 
-        background-color: #ecfdf5 !important; 
-        color: #059669 !important; 
-        padding: 4px 12px !important; 
-        border-radius: 9999px !important; 
-        font-size: 0.75rem !important; 
+        background-color: #5e7a4e !important; 
+        color: #ffffff !important; 
+        padding: 5px 12px !important; 
+        border-radius: 999px !important; 
+        font-size: 0.78rem !important; 
         font-weight: 700 !important; 
         margin-right: 8px !important; 
-        border: 1px solid #a7f3d0 !important; 
     }
-    .filter-container {
-        background-color: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 18px !important;
-        padding: 18px 24px !important;
-        margin-bottom: 22px !important;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03) !important;
+    
+    /* HEADER INFO BAR (KẾT HỢP TIÊU ĐỀ + THỐNG KÊ GÓC PHẢI) */
+    .header-info-bar { 
+        background-color: #ffffff !important; 
+        border: 1px solid #e8e2d8 !important; 
+        border-radius: 20px !important; 
+        padding: 16px 24px !important; 
+        margin-bottom: 20px !important; 
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: space-between !important; 
+        box-shadow: 0 6px 18px rgba(44, 40, 37, 0.03) !important; 
     }
     .stat-badge-group {
         display: flex;
-        gap: 12px;
+        gap: 8px;
         align-items: center;
         flex-wrap: wrap;
     }
     .stat-badge-item {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
-        padding: 6px 14px;
+        background-color: #f7f4ed;
+        border: 1px solid #e2dbd0;
+        padding: 6px 12px;
         border-radius: 10px;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: 600;
-        color: #475569;
+        color: #57524e;
     }
     .stat-badge-item b {
-        color: #0f172a;
-        margin-left: 4px;
+        color: #b8543f;
+        margin-left: 3px;
+        font-family: 'JetBrains Mono', monospace;
     }
+
+    /* KHUNG BỘ LỌC */
+    .filter-container {
+        background-color: #ffffff !important;
+        border: 1px solid #e8e2d8 !important;
+        border-radius: 18px !important;
+        padding: 18px 22px !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 4px 16px rgba(44, 40, 37, 0.03) !important;
+    }
+
     .answer-box { 
-        background-color: #ecfdf5 !important; 
-        border: 1px solid #a7f3d0 !important; 
-        color: #065f46 !important; 
+        background-color: #f7ece8 !important; 
+        border: 1px solid #e8c4b8 !important; 
+        color: #a8412c !important; 
         padding: 8px 16px !important; 
         border-radius: 12px !important; 
         font-weight: 700 !important; 
         display: inline-block !important; 
         margin-top: 12px !important; 
-        font-size: 0.9rem !important; 
-    }
-    .header-info-bar { 
-        background-color: #ffffff !important; 
-        border: 1px solid #edf2f7 !important; 
-        border-radius: 20px !important; 
-        padding: 20px 28px !important; 
-        margin-bottom: 20px !important; 
-        display: flex !important; 
-        align-items: center !important; 
-        justify-content: space-between !important; 
-        box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.04) !important; 
+        font-size: 0.88rem !important;
     }
 
     /* INPUTS & SELECTS */
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { 
         background-color: #ffffff !important; 
-        border-color: #e2e8f0 !important; 
+        border-color: #d8cfc4 !important; 
         border-radius: 12px !important; 
-        transition: all 0.2s ease !important; 
     }
-    div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within { 
-        border-color: #10b981 !important; 
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important; 
+    div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within {
+        border-color: #b8543f !important;
     }
 
     iframe[title*="interactive_math_editor"] { 
         width: 100% !important; 
         border-radius: 16px !important; 
-        border: 1px solid #e2e8f0 !important; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -695,18 +737,14 @@ def show_single_question_edit_dialog(q: Question):
         if not q.options: q.options = {'A': '', 'B': '', 'C': '', 'D': ''}
         opt_col1, opt_col2 = st.columns(2)
         with opt_col1:
-            st.markdown("**Phương án A:**")
             opt_a = interactive_math_editor(key=f"editor_single_opt_{q.code}_A", text=q.options.get('A', ''), height_mode="compact")
             if opt_a is not None: q.options['A'] = opt_a
-            st.markdown("**Phương án B:**")
             opt_b = interactive_math_editor(key=f"editor_single_opt_{q.code}_B", text=q.options.get('B', ''), height_mode="compact")
             if opt_b is not None: q.options['B'] = opt_b
 
         with opt_col2:
-            st.markdown("**Phương án C:**")
             opt_c = interactive_math_editor(key=f"editor_single_opt_{q.code}_C", text=q.options.get('C', ''), height_mode="compact")
             if opt_c is not None: q.options['C'] = opt_c
-            st.markdown("**Phương án D:**")
             opt_d = interactive_math_editor(key=f"editor_single_opt_{q.code}_D", text=q.options.get('D', ''), height_mode="compact")
             if opt_d is not None: q.options['D'] = opt_d
 
@@ -1083,44 +1121,65 @@ def show_import_modal(raw_text: str):
         st.rerun()
 
 # -------------------------------------------------------------
-# 4. THANH ĐIỀU HƯỚNG BÊN TRÁI (SIDEBAR NAVIGATION)
+# 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI
 # -------------------------------------------------------------
 with st.sidebar:
-    st.markdown("""
-    <div style="margin-bottom: 24px;">
-        <span style="font-size: 1.4rem; font-weight: 800; color: #0f172a;">📐 MathBank</span>
-        <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">Ngân hàng câu hỏi & Tạo đề GDPT</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; font-size: 1.5rem; margin-bottom: 1.2rem;'>📐</div>", unsafe_allow_html=True)
     
-    st.markdown("**📂 CHỨC NĂNG CHÍNH**")
-    selected_nav = st.radio(
-        "Menu chức năng",
-        ["📋 Ngân hàng câu hỏi", "🎯 Barem Ma trận & Tạo đề", "📥 Hệ thống nhập liệu"],
+    # 3 Icon duy nhất: Ngân hàng, Ma trận barem, Nhập liệu
+    nav_icon = st.radio(
+        "Menu",
+        ["📋", "🎯", "📥"],
+        index=0,
         label_visibility="collapsed"
     )
-    
-    st.markdown("---")
-    st.caption("Phiên bản hỗ trợ Toán THPT 2018")
 
 # -------------------------------------------------------------
-# 5. NỘI DUNG TỪNG TRANG
+# 5. NỘI DUNG CHÍNH
 # -------------------------------------------------------------
 
 # TRANG 1: NGÂN HÀNG CÂU HỎI
-if selected_nav == "📋 Ngân hàng câu hỏi":
-    # Tiêu đề chính
-    st.markdown("""
+if nav_icon == "📋":
+    # 1. Tính toán trước bộ lọc để hiển thị ngay trên Header Info Bar
+    grade_options = ["Tất cả", "HSA", 12, 11, 10]
+    grade_selected = st.session_state.get("f_grade", "Tất cả")
+    questions_filtered = all_questions if grade_selected == "Tất cả" else [q for q in all_questions if str(q.grade) == str(grade_selected)]
+
+    selected_chapter = st.session_state.get("f_chapter", "Tất cả")
+    if selected_chapter != "Tất cả":
+        questions_filtered = [q for q in questions_filtered if q.chapter == selected_chapter]
+
+    selected_topic = st.session_state.get("f_topic", "Tất cả")
+    if selected_topic != "Tất cả":
+        questions_filtered = [q for q in questions_filtered if q.topic == selected_topic]
+
+    selected_source = st.session_state.get("f_source", "Tất cả")
+    if selected_source != "Tất cả":
+        questions_filtered = [q for q in questions_filtered if q.source == selected_source]
+
+    cnt_tn = sum(1 for q in questions_filtered if q.format == QuestionType.TN)
+    cnt_ds = sum(1 for q in questions_filtered if q.format == QuestionType.DS)
+    cnt_tln = sum(1 for q in questions_filtered if q.format == QuestionType.TLN)
+    cnt_total = len(questions_filtered)
+
+    # 2. HEADER INFO BAR (TIÊU ĐỀ BÊN TRÁI + CÁC Ô THỐNG KÊ GÓC PHẢI NHƯ ẢNH 1 & 2)
+    st.markdown(f"""
     <div class="header-info-bar">
-        <div>
-            <span style="font-size:1.35rem; font-weight:800; color:#0f172a; letter-spacing: -0.02em;">NGÂN HÀNG CÂU HỎI</span>
-            <span style="margin-left:12px; font-size:0.8rem; color:#475569; background-color:#f1f5f9; padding:6px 14px; border-radius:9999px; font-weight:600;">MÔN TOÁN GDPT 2018</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size:1.25rem; font-weight:800; color:#2c2825; letter-spacing: -0.02em;">NGÂN HÀNG CÂU HỎI</span>
+            <span style="font-size:0.8rem; color:#78716c; background-color:#f0ebe1; padding:4px 12px; border-radius:999px; font-weight:600;">MÔN TOÁN GDPT 2018</span>
+        </div>
+        <div class="stat-badge-group">
+            <span class="stat-badge-item">📊 Tổng số câu: <b>{cnt_total}</b></span>
+            <span class="stat-badge-item">Trắc nghiệm: <b>{cnt_tn}</b></span>
+            <span class="stat-badge-item">Đúng / Sai: <b>{cnt_ds}</b></span>
+            <span class="stat-badge-item">Trả lời ngắn: <b>{cnt_tln}</b></span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Thanh tìm kiếm & Nút Chọn tất cả
-    c_search, c_act = st.columns([2.2, 1])
+    # 3. THANH TÌM KIẾM & NÚT CHỌN TẤT CẢ
+    c_search, c_act = st.columns([2.4, 1])
     with c_search:
         search_query = st.text_input("🔍 Tìm kiếm trong nội dung hoặc nguồn đề...", "", label_visibility="collapsed", placeholder="🔍 Nhập từ khóa để tìm kiếm nội dung câu hỏi, mã câu hoặc nguồn đề...")
 
@@ -1129,55 +1188,25 @@ if selected_nav == "📋 Ngân hàng câu hỏi":
         btn_select_all = ca.button("Chọn tất cả", width="stretch")
         btn_clear_all = cb.button("Xóa chọn", width="stretch")
 
-    # BỘ LỌC PHÂN LOẠI & THỐNG KÊ (NẰM TRÊN CÙNG, DƯỚI THANH TÌM KIẾM)
+    # 4. KHUNG BỘ LỌC PHÂN LOẠI & NÚT ĐÁNH LẠI MÃ ID
     with st.container():
         st.markdown('<div class="filter-container">', unsafe_allow_html=True)
-        st.markdown("<b style='font-size: 0.95rem; color: #0f172a;'>📚 Bộ lọc phân loại dữ liệu</b>", unsafe_allow_html=True)
+        st.markdown("<b style='font-size: 0.95rem; color: #2c2825; margin-bottom: 10px; display: inline-block;'>📚 Bộ lọc phân loại câu hỏi</b>", unsafe_allow_html=True)
         
-        f1, f2, f3, f4 = st.columns(4)
+        f1, f2, f3, f4, f5 = st.columns([1.1, 1.1, 1.8, 1.8, 1.4])
         with f1:
-            grade_options = ["Tất cả", "HSA", 12, 11, 10]
-            grade_selected = st.selectbox("Khối lớp:", grade_options, index=0)
-            questions_filtered = all_questions if grade_selected == "Tất cả" else [q for q in all_questions if str(q.grade) == str(grade_selected)]
-
+            g_sel = st.selectbox("Khối lớp:", grade_options, index=0, key="f_grade")
         with f2:
-            chapters = sorted(list(set(q.chapter for q in questions_filtered)))
-            selected_chapter = st.selectbox("Chương:", ["Tất cả"] + chapters, index=0)
-            if selected_chapter != "Tất cả":
-                questions_filtered = [q for q in questions_filtered if q.chapter == selected_chapter]
-
+            chapters = sorted(list(set(q.chapter for q in (all_questions if g_sel == "Tất cả" else [q for q in all_questions if str(q.grade) == str(g_sel)]))))
+            st.selectbox("Chương:", ["Tất cả"] + chapters, index=0, key="f_chapter")
         with f3:
             stored_topics = get_all_stored_topics(questions_filtered)
-            selected_topic = st.selectbox("Dạng bài:", ["Tất cả"] + stored_topics, index=0)
-            if selected_topic != "Tất cả":
-                questions_filtered = [q for q in questions_filtered if q.topic == selected_topic]
-
+            st.selectbox("Dạng bài:", ["Tất cả"] + stored_topics, index=0, key="f_topic")
         with f4:
             stored_sources = get_all_stored_sources(questions_filtered)
-            selected_source = st.selectbox("Nguồn đề:", ["Tất cả"] + stored_sources, index=0)
-            if selected_source != "Tất cả":
-                questions_filtered = [q for q in questions_filtered if q.source == selected_source]
-
-        # Thống kê câu hỏi & Nút đánh lại ID
-        cnt_tn = sum(1 for q in questions_filtered if q.format == QuestionType.TN)
-        cnt_ds = sum(1 for q in questions_filtered if q.format == QuestionType.DS)
-        cnt_tln = sum(1 for q in questions_filtered if q.format == QuestionType.TLN)
-        cnt_total = len(questions_filtered)
-
-        st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-        c_stats, c_reindex = st.columns([3.2, 1.2])
-
-        with c_stats:
-            st.markdown(f"""
-            <div class="stat-badge-group">
-                <span class="stat-badge-item">📊 Tổng số câu: <b>{cnt_total}</b></span>
-                <span class="stat-badge-item">Trắc nghiệm: <b>{cnt_tn}</b></span>
-                <span class="stat-badge-item">Đúng / Sai: <b>{cnt_ds}</b></span>
-                <span class="stat-badge-item">Trả lời ngắn: <b>{cnt_tln}</b></span>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with c_reindex:
+            st.selectbox("Nguồn đề:", ["Tất cả"] + stored_sources, index=0, key="f_source")
+        with f5:
+            st.write("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
             if st.button("🔄 Đánh lại mã ID", width="stretch", help="Tự động chuẩn hóa và đánh lại mã câu hỏi liên tục"):
                 count_reindexed = reindex_all_database_ids()
                 st.success(f"Đã chuẩn hóa {count_reindexed} câu!")
@@ -1257,7 +1286,7 @@ if selected_nav == "📋 Ngân hàng câu hỏi":
             st.markdown("</div>", unsafe_allow_html=True)
 
 # TRANG 2: BAREM MA TRẬN & TẠO ĐỀ
-elif selected_nav == "🎯 Barem Ma trận & Tạo đề":
+elif nav_icon == "🎯":
     st.title("🎯 Barem Ma trận Đề thi GDPT 2018")
     st.caption("Cấu hình số lượng câu theo chủ đề và cấp độ tư duy.")
 
@@ -1470,7 +1499,7 @@ elif selected_nav == "🎯 Barem Ma trận & Tạo đề":
                         st.download_button("📖 TẢI LỜI GIẢI CHI TIẾT TỔNG HỢP (1 File)", f, file_name=os.path.basename(g_files["loi_giai_tong_hop"]), width="stretch", type="primary", key="dl_sol_consolidated")
 
 # TRANG 3: HỆ THỐNG NHẬP LIỆU
-elif selected_nav == "📥 Hệ thống nhập liệu":
+elif nav_icon == "📥":
     st.title("📥 Hệ thống tự động phân loại câu hỏi")
     st.caption("Dán toàn bộ văn bản đề bài vào ô duy nhất dưới đây. Hệ thống tự nhận diện 'Câu hỏi:', 'Đáp án:' và 'Lời giải:'.")
 
