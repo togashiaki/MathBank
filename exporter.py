@@ -1,10 +1,13 @@
 import os
 import re
 import html
+import time
 import shutil
 import tempfile
 import base64
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import pypandoc
 from typing import List, Optional, Dict
 from models import Question, QuestionType
@@ -14,6 +17,18 @@ try:
     pypandoc.get_pandoc_version()
 except OSError:
     pypandoc.download_pandoc()
+
+# Khởi tạo Session với cơ chế tự động thử lại khi gặp lỗi Rate-limit (429, 500, 502, 503, 504)
+_session = requests.Session()
+_retries = Retry(
+    total=4,
+    backoff_factor=0.3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    raise_on_status=False
+)
+_adapter = HTTPAdapter(max_retries=_retries, pool_connections=20, pool_maxsize=20)
+_session.mount("http://", _adapter)
+_session.mount("https://", _adapter)
 
 
 def clean_statement_text(stmt: str) -> str:
@@ -161,10 +176,7 @@ def generate_header_html(header_info: dict) -> str:
 
 
 def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_base: str) -> Optional[str]:
-    """
-    Tải hoặc sao chép ảnh vào workspace tạm thời, trả về TÊN FILE tương đối (VD: 'q_1.png')
-    để Pandoc nhúng trực tiếp mà không bị lỗi đường dẫn URI scheme trên Windows/Linux.
-    """
+    """Tải hoặc sao chép ảnh vào workspace tạm thời, đảm bảo không bị lỗi đường dẫn hoặc chặn mạng."""
     if not img_src or not isinstance(img_src, str):
         return None
     
@@ -172,7 +184,7 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
     if not img_src or img_src.lower() in ["none", "null", ""]:
         return None
 
-    # 1. Nếu là file cục bộ có sẵn
+    # 1. File cục bộ
     if os.path.exists(img_src):
         try:
             ext = os.path.splitext(img_src)[1] or ".png"
@@ -183,13 +195,15 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
         except Exception:
             return None
 
-    # 2. Nếu là chuỗi Base64 (data:image/...)
+    # 2. Base64
     if img_src.startswith("data:image/"):
         try:
             header, encoded = img_src.split(",", 1)
             ext = ".png"
             if "jpeg" in header or "jpg" in header:
                 ext = ".jpg"
+            elif "webp" in header:
+                ext = ".webp"
             data = base64.b64decode(encoded)
             target_filename = f"{filename_base}{ext}"
             target_path = os.path.join(temp_dir, target_filename)
@@ -197,13 +211,12 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
                 f.write(data)
             return target_filename
         except Exception as e:
-            print(f"Lỗi giải mã ảnh Base64: {e}")
+            print(f"Lỗi giải mã Base64: {e}")
             return None
 
-    # 3. Nếu là link URL (ImgBB hoặc Google Drive cũ)
+    # 3. URL Trực tuyến (ImgBB, Google Drive...)
     if img_src.startswith("http://") or img_src.startswith("https://"):
         try:
-            # Chuyển đổi link Google Drive cũ (nếu có) sang direct link
             if "drive.google.com" in img_src:
                 m = re.search(r'(?:/d/|id=)([a-zA-Z0-9_-]+)', img_src)
                 if m:
@@ -211,12 +224,14 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
                     img_src = f"https://lh3.googleusercontent.com/d/{g_id}"
 
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+                "Referer": "https://imgbb.com/"
             }
-            res = requests.get(img_src, headers=headers, timeout=25, allow_redirects=True)
+            
+            res = _session.get(img_src, headers=headers, timeout=20, allow_redirects=True)
 
-            # Xử lý trường hợp URL là trang Viewer HTML (https://ibb.co/xyz)
+            # Xử lý nếu link là trang HTML Viewer của ImgBB
             content_type = res.headers.get("Content-Type", "").lower()
             if "text/html" in content_type:
                 html_text = res.text
@@ -226,7 +241,7 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
                 
                 if og_match:
                     direct_url = og_match.group(1)
-                    res = requests.get(direct_url, headers=headers, timeout=25)
+                    res = _session.get(direct_url, headers=headers, timeout=20)
                     content_type = res.headers.get("Content-Type", "").lower()
 
             if res.status_code == 200 and len(res.content) > 100:
@@ -240,16 +255,39 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
                 target_path = os.path.join(temp_dir, target_filename)
                 with open(target_path, "wb") as f:
                     f.write(res.content)
+                time.sleep(0.04)  # Nghỉ ngắn tránh kích hoạt giới hạn Cloudflare khi tải hàng loạt
                 return target_filename
+            else:
+                print(f"Không thể tải ảnh ({img_src}) - HTTP Status: {res.status_code}")
         except Exception as e:
-            print(f"Lỗi tải ảnh từ URL ({img_src}): {e}")
+            print(f"Lỗi kết nối khi tải ảnh ({img_src}): {e}")
             return None
 
     return None
 
 
+def _resolve_all_inline_images(text: str, temp_dir: str, prefix: str) -> str:
+    """Tải và chuyển đổi toàn bộ ảnh nhúng Markdown ![alt](url) có sẵn trong chuỗi văn bản."""
+    if not text:
+        return ""
+    
+    md_img_pattern = r'!\[(.*?)\]\((https?://[^\s\)]+|data:image/[^\)]+)\)'
+    counter = [0]
+
+    def replace_match(match):
+        alt = match.group(1)
+        src = match.group(2)
+        counter[0] += 1
+        local_filename = _save_image_to_workspace(src, temp_dir, f"{prefix}_inline_{counter[0]}")
+        if local_filename:
+            return f"\n\n![{alt}]({local_filename})\n\n"
+        return match.group(0)
+
+    return re.sub(md_img_pattern, replace_match, text)
+
+
 def _compile_markdown_to_docx(full_markdown: str, temp_dir: str, output_path: str):
-    """Ghi file Markdown trong thư mục tạm và chuyển đổi sang Docx ngay tại workspace."""
+    """Thực thi biên dịch Markdown sang Docx ngay tại workspace cục bộ."""
     input_md_path = os.path.join(temp_dir, "document.md")
     with open(input_md_path, "w", encoding="utf-8") as f:
         f.write(full_markdown)
@@ -257,7 +295,6 @@ def _compile_markdown_to_docx(full_markdown: str, temp_dir: str, output_path: st
     abs_output_path = os.path.abspath(output_path)
     orig_cwd = os.getcwd()
     try:
-        # Chuyển working directory sang temp_dir để Pandoc nhận diện ảnh tương đối 100%
         os.chdir(temp_dir)
         pypandoc.convert_file(
             "document.md",
@@ -291,11 +328,15 @@ def export_questions_to_word(
         md_lines.append("\n")
 
         for idx, q in enumerate(questions, start=1):
-            q_img_file = _save_image_to_workspace(q.image_path, temp_dir, f"q_{idx}")
-            sol_img_file = _save_image_to_workspace(getattr(q, 'solution_image_path', None), temp_dir, f"sol_{idx}")
+            # Xử lý ảnh trong trường dữ liệu riêng và ảnh nhúng inline
+            clean_q_content = _resolve_all_inline_images(q.content, temp_dir, f"q_{idx}")
+            clean_q_sol = _resolve_all_inline_images(q.solution or "", temp_dir, f"sol_{idx}")
+
+            q_img_file = _save_image_to_workspace(q.image_path, temp_dir, f"q_main_{idx}")
+            sol_img_file = _save_image_to_workspace(getattr(q, 'solution_image_path', None), temp_dir, f"sol_main_{idx}")
 
             if mode in ["de_goc", "de_dong_chua"]:
-                md_lines.append(f"**Câu {idx}.** {q.content}\n\n")
+                md_lines.append(f"**Câu {idx}.** {clean_q_content}\n\n")
 
                 if q_img_file:
                     md_lines.append(f"![]({q_img_file})\n\n")
@@ -304,7 +345,8 @@ def export_questions_to_word(
                     md_lines.append("")
                     for k in ['A', 'B', 'C', 'D']:
                         if k in q.options:
-                            md_lines.append(f"**{k}.** {q.options[k]}\n")
+                            opt_text = _resolve_all_inline_images(q.options[k], temp_dir, f"q_{idx}_opt_{k}")
+                            md_lines.append(f"**{k}.** {opt_text}\n")
 
                 elif q.format == QuestionType.DS and q.tf_statements:
                     md_lines.append("")
@@ -313,6 +355,7 @@ def export_questions_to_word(
                     else:
                         for stmt_idx, (stmt, _) in enumerate(q.tf_statements):
                             clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                            clean_stmt = _resolve_all_inline_images(clean_stmt, temp_dir, f"q_{idx}_ds_{stmt_idx}")
                             md_lines.append(f"{clean_stmt}\n")
 
                 elif q.format == QuestionType.TLN:
@@ -342,7 +385,7 @@ def export_questions_to_word(
                     md_lines.append(f"Đáp án: **{q.answer}**\n\n")
 
             else:  # Lời giải chi tiết
-                md_lines.append(f"**Câu {idx}.** {q.content}\n\n")
+                md_lines.append(f"**Câu {idx}.** {clean_q_content}\n\n")
 
                 if q_img_file:
                     md_lines.append(f"![]({q_img_file})\n\n")
@@ -351,11 +394,12 @@ def export_questions_to_word(
                     md_lines.append("")
                     for k in ['A', 'B', 'C', 'D']:
                         if k in q.options:
+                            opt_text = _resolve_all_inline_images(q.options[k], temp_dir, f"q_{idx}_opt_{k}")
                             is_correct = (k == (q.answer or "").strip().upper())
                             if is_correct:
-                                md_lines.append(f"**<u>{k}. {q.options[k]}</u>**\n")
+                                md_lines.append(f"**<u>{k}. {opt_text}</u>**\n")
                             else:
-                                md_lines.append(f"**{k}.** {q.options[k]}\n")
+                                md_lines.append(f"**{k}.** {opt_text}\n")
 
                 elif q.format == QuestionType.DS and q.tf_statements:
                     md_lines.append("")
@@ -364,6 +408,7 @@ def export_questions_to_word(
                     else:
                         for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
                             clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                            clean_stmt = _resolve_all_inline_images(clean_stmt, temp_dir, f"q_{idx}_ds_{stmt_idx}")
                             md_lines.append(f"{clean_stmt} **[{status}]**\n")
 
                 elif q.format == QuestionType.TLN:
@@ -371,8 +416,8 @@ def export_questions_to_word(
                         md_lines.append(OPENXML_TLN_TABLE)
 
                 md_lines.append(f"\n**Đáp án:** {q.answer}\n")
-                if q.solution:
-                    md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n\n")
+                if clean_q_sol:
+                    md_lines.append(f"**Lời giải chi tiết:**\n{clean_q_sol}\n\n")
                 
                 if sol_img_file:
                     md_lines.append(f"![Ảnh lời giải câu {idx}]({sol_img_file})\n\n")
@@ -447,10 +492,13 @@ def export_consolidated_solutions_to_word(
             md_lines.append("---\n\n")
 
             for idx, q in enumerate(questions, start=1):
-                q_img_file = _save_image_to_workspace(q.image_path, temp_dir, f"{e_code}_q_{idx}")
-                sol_img_file = _save_image_to_workspace(getattr(q, 'solution_image_path', None), temp_dir, f"{e_code}_sol_{idx}")
+                clean_q_content = _resolve_all_inline_images(q.content, temp_dir, f"{e_code}_q_{idx}")
+                clean_q_sol = _resolve_all_inline_images(q.solution or "", temp_dir, f"{e_code}_sol_{idx}")
 
-                md_lines.append(f"**Câu {idx}.** {q.content}\n\n")
+                q_img_file = _save_image_to_workspace(q.image_path, temp_dir, f"{e_code}_q_main_{idx}")
+                sol_img_file = _save_image_to_workspace(getattr(q, 'solution_image_path', None), temp_dir, f"{e_code}_sol_main_{idx}")
+
+                md_lines.append(f"**Câu {idx}.** {clean_q_content}\n\n")
 
                 if q_img_file:
                     md_lines.append(f"![]({q_img_file})\n\n")
@@ -459,11 +507,12 @@ def export_consolidated_solutions_to_word(
                     md_lines.append("")
                     for k in ['A', 'B', 'C', 'D']:
                         if k in q.options:
+                            opt_text = _resolve_all_inline_images(q.options[k], temp_dir, f"{e_code}_q_{idx}_opt_{k}")
                             is_correct = (k == (q.answer or "").strip().upper())
                             if is_correct:
-                                md_lines.append(f"**<u>{k}. {q.options[k]}</u>**\n")
+                                md_lines.append(f"**<u>{k}. {opt_text}</u>**\n")
                             else:
-                                md_lines.append(f"**{k}.** {q.options[k]}\n")
+                                md_lines.append(f"**{k}.** {opt_text}\n")
 
                 elif q.format == QuestionType.DS and q.tf_statements:
                     md_lines.append("")
@@ -472,6 +521,7 @@ def export_consolidated_solutions_to_word(
                     else:
                         for stmt_idx, (stmt, status) in enumerate(q.tf_statements):
                             clean_stmt = format_ds_statement_with_label(stmt, stmt_idx)
+                            clean_stmt = _resolve_all_inline_images(clean_stmt, temp_dir, f"{e_code}_q_{idx}_ds_{stmt_idx}")
                             md_lines.append(f"{clean_stmt} **[{status}]**\n")
 
                 elif q.format == QuestionType.TLN:
@@ -479,8 +529,8 @@ def export_consolidated_solutions_to_word(
                         md_lines.append(OPENXML_TLN_TABLE)
 
                 md_lines.append(f"\n**Đáp án:** {q.answer}\n")
-                if q.solution:
-                    md_lines.append(f"**Lời giải chi tiết:**\n{q.solution}\n\n")
+                if clean_q_sol:
+                    md_lines.append(f"**Lời giải chi tiết:**\n{clean_q_sol}\n\n")
                 
                 if sol_img_file:
                     md_lines.append(f"![Ảnh lời giải câu {idx}]({sol_img_file})\n\n")
