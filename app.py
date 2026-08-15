@@ -1128,7 +1128,7 @@ def show_import_modal(raw_text: str):
 # 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI (3 NÚT VUÔNG ICON)
 # -------------------------------------------------------------
 with st.sidebar:
-    st.markdown("<div style='text-align: center; font-size: 1.45rem; margin-bottom: 1.2rem;'>📐</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: left; font-size: 1.45rem; margin-bottom: 1.2rem;'>📚</div>", unsafe_allow_html=True)
     
     # Nút 1: Ngân hàng câu hỏi
     is_active_1 = (st.session_state["current_nav_tab"] == "📋")
