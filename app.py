@@ -17,8 +17,7 @@ from cloud_db import (
     save_questions_to_cloud,
     overwrite_all_questions_in_cloud,
     delete_question_from_cloud,
-    upload_image_to_drive,
-    migrate_imgbb_to_cloudinary
+    upload_image_to_drive
 )
 
 # 1. CẤU HÌNH TRANG STREAMLIT
@@ -357,7 +356,7 @@ st.markdown("""
         color: #2c2825 !important; 
         font-weight: 600 !important; 
         padding: 12px 20px !important; 
-        min-height: 48px !important;
+        min-height: 48px !important; 
         cursor: pointer !important; 
         transition: all 0.22s ease !important; 
         box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important; 
