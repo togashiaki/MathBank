@@ -23,8 +23,9 @@ from cloud_db import (
 # 1. CẤU HÌNH TRANG STREAMLIT
 st.set_page_config(
     page_title="MathBank - Ngân hàng câu hỏi",
-    page_icon="📚",
+    page_icon="📐",
     layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 def sanitize_filename(name: str) -> str:
@@ -70,7 +71,45 @@ def interactive_math_editor(key: str, text: str, height_mode: str = "compact") -
     val = interactive_math_editor_comp(key=key, text=text, height_mode=height_mode, default=text, height=h_val)
     return val if val is not None else text
 
-# 3. KHỞI TẠO DỮ LIỆU & SESSION STATE
+# 3. ĐỌC DANH MỤC PHÂN LOẠI TỪ FILE EXCEL
+@st.cache_data
+def get_taxonomy_data():
+    """Đọc và cache danh mục phân loại chuẩn từ file Excel."""
+    candidates = ["Phân loại.xlsx", "Phân loại_2.xlsx", "Phan_loai.xlsx", "Phan loai.xlsx", "taxonomy.xlsx"]
+    for fname in candidates:
+        fpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), fname)
+        if os.path.exists(fpath):
+            try:
+                df_tax = pd.read_excel(fpath)
+                cols = {str(c).strip().lower(): c for c in df_tax.columns}
+                lop_col = cols.get('lớp', 'Lớp')
+                chuong_col = cols.get('chương', 'Chương')
+                dang_col = cols.get('dạng bài', 'Dạng bài')
+                
+                tax_map = {}
+                all_tax_topics = []
+                
+                for _, row in df_tax.iterrows():
+                    g = str(row[lop_col]).strip()
+                    c_raw = str(row[chuong_col]).strip()
+                    t = str(row[dang_col]).strip()
+                    
+                    m = re.search(r'Chương\s*(\d+)', c_raw, re.IGNORECASE)
+                    chap_num = int(m.group(1)) if m else 1
+                    
+                    key = (g, chap_num)
+                    if key not in tax_map:
+                        tax_map[key] = []
+                    if t and t not in tax_map[key]:
+                        tax_map[key].append(t)
+                    if t and t not in all_tax_topics:
+                        all_tax_topics.append(t)
+                return tax_map, all_tax_topics
+            except Exception as e:
+                print(f"Lỗi đọc file danh mục {fname}: {e}")
+    return {}, []
+
+# 4. KHỞI TẠO DỮ LIỆU & SESSION STATE
 all_questions = load_all_questions_from_cloud()
 
 if "selected_questions" not in st.session_state:
@@ -99,19 +138,26 @@ def get_chapter_topics(questions: list, grade, chapter: int) -> list:
         chap_int = int(chapter)
     except (ValueError, TypeError):
         chap_int = 1
-    base_topics = sorted(list(set(q.topic for q in questions if str(q.grade) == str(grade) and q.chapter == chap_int and q.topic)))
-    extra = [t for (t, g, c) in st.session_state.get("extra_topics_registry", set()) if str(g) == str(grade) and int(c) == chap_int]
+    
+    tax_map, _ = get_taxonomy_data()
+    excel_topics = list(tax_map.get((str(grade).strip(), chap_int), []))
+    
+    db_topics = [q.topic for q in questions if str(q.grade).strip() == str(grade).strip() and q.chapter == chap_int and q.topic]
+    extra = [t for (t, g, c) in st.session_state.get("extra_topics_registry", set()) if str(g).strip() == str(grade).strip() and int(c) == chap_int]
+    
     combined = []
-    for top in base_topics + extra:
+    for top in excel_topics + db_topics + extra:
         if top and top not in combined:
             combined.append(top)
     return combined
 
 def get_all_stored_topics(questions: list) -> list:
-    base = sorted(list(set(q.topic for q in questions if q.topic)))
+    _, all_tax_topics = get_taxonomy_data()
+    db_topics = [q.topic for q in questions if q.topic]
     extra = [t for (t, _, _) in st.session_state.get("extra_topics_registry", set())]
+    
     combined = []
-    for top in base + extra:
+    for top in all_tax_topics + db_topics + extra:
         if top and top not in combined:
             combined.append(top)
     return combined
@@ -816,7 +862,7 @@ def show_import_modal(raw_text: str):
     
     init_grade = st.session_state.get("global_grade_sel", 12)
     init_chap = st.session_state.get("global_chap_inp", 1)
-    init_top = st.session_state.get("global_top_sel", "Dạng 1. Cực trị hàm số")
+    init_top = st.session_state.get("global_top_sel", "Xét tính đơn điệu khi cho công thức hàm số")
     init_src = st.session_state.get("global_src_sel", "Đề thi tốt nghiệp THPT 2026")
     init_lvl = st.session_state.get("global_lvl_sel", 2)
 
@@ -1128,7 +1174,7 @@ def show_import_modal(raw_text: str):
 # 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI (3 NÚT VUÔNG ICON)
 # -------------------------------------------------------------
 with st.sidebar:
-    st.markdown("<div style='text-align: left; font-size: 1.45rem; margin-bottom: 1.2rem;'>📚</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; font-size: 1.45rem; margin-bottom: 1.2rem;'>📐</div>", unsafe_allow_html=True)
     
     # Nút 1: Ngân hàng câu hỏi
     is_active_1 = (st.session_state["current_nav_tab"] == "📋")
@@ -1396,7 +1442,7 @@ elif st.session_state["current_nav_tab"] == "🎯":
 
     # HIỂN THỊ DANH SÁCH MÃ ĐỀ ĐÃ TẠO
     if "generated_exams_dict" in st.session_state and st.session_state["generated_exams_dict"]:
-        st.markdown("### 📥 Danh sách Các Mã Đề Thi Đã Tạo:")
+        st.markdown("### 📥 Danh sách Các Mã Đề Thi ĐÃ TẠO:")
         for e_code, q_list in st.session_state["generated_exams_dict"].items():
             st.info(f"📌 **MÃ ĐỀ THI: {e_code}** ({len(q_list)} câu)")
 
