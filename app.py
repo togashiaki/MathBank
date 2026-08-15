@@ -22,7 +22,7 @@ from cloud_db import (
 
 # 1. CẤU HÌNH TRANG STREAMLIT
 st.set_page_config(
-    page_title="Ngân hàng câu hỏi",
+    page_title="MathBank - Ngân hàng câu hỏi",
     page_icon="📐",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -271,26 +271,30 @@ def confirm_delete_dialog(q: Question):
     if col_no.button("Hủy bỏ", width="stretch"):
         st.rerun()
 
-# CSS ĐỒNG BỘ GOOGLE SANS VÀ CỐ ĐỊNH KÍCH THƯỚC SIDEBAR
+# -------------------------------------------------------------
+# CSS DESIGN SYSTEM THEO PHONG CÁCH LUMINA DASHBOARD (HIỆN ĐẠI, TINH TẾ)
+# -------------------------------------------------------------
 st.markdown("""
 <style>
-    @import url('https://fonts.cdnfonts.com/css/google-sans');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
     html, body, [class*="css"], .stApp { 
-        font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
-        color: #2c2825 !important; 
-        background-color: #f7f4ed !important; 
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important; 
+        color: #1e293b !important; 
+        background-color: #f8fafc !important; 
     }
     
+    /* SIDEBAR HIỆN ĐẠI */
     section[data-testid="stSidebar"] { 
-        background-color: #f0ebe1 !important; 
-        border-right: 1px solid #e2dbd0 !important; 
-        padding-top: 1rem;
-        width: 280px !important;
-        min-width: 280px !important;
-        max-width: 280px !important;
+        background-color: #ffffff !important; 
+        border-right: 1px solid #e2e8f0 !important; 
+        padding-top: 1.5rem;
+        width: 290px !important;
+        min-width: 290px !important;
+        max-width: 290px !important;
     }
 
+    /* THANH TAB VIÊN THUỐC NỔI (PILL NAVIGATION) */
     div[data-testid="stTabs"] {
         display: flex !important;
         flex-direction: column !important;
@@ -304,43 +308,43 @@ st.markdown("""
         display: inline-flex !important; 
         justify-content: center !important; 
         align-items: center !important; 
-        gap: 10px !important; 
+        gap: 8px !important; 
         background-color: #ffffff !important; 
-        padding: 8px 12px !important; 
-        border-radius: 999px !important; 
-        border: 1px solid #e2dbd0 !important; 
+        padding: 6px 8px !important; 
+        border-radius: 9999px !important; 
+        border: 1px solid #e2e8f0 !important; 
         width: fit-content !important; 
-        margin: 0 auto 28px auto !important; 
-        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.08) !important; 
+        margin: 0 auto 32px auto !important; 
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05) !important; 
     }
 
     button[data-baseweb="tab"] { 
-        height: 52px !important; 
-        min-width: 220px !important; 
-        border-radius: 999px !important; 
-        padding: 0px 32px !important; 
-        font-family: 'Google Sans', sans-serif !important;
-        font-size: 1.05rem !important; 
-        font-weight: 700 !important; 
-        color: #57524e !important; 
+        height: 46px !important; 
+        min-width: 200px !important; 
+        border-radius: 9999px !important; 
+        padding: 0px 28px !important; 
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 0.95rem !important; 
+        font-weight: 600 !important; 
+        color: #64748b !important; 
         border: none !important; 
         background-color: transparent !important; 
         display: flex !important; 
         align-items: center !important; 
         justify-content: center !important; 
         cursor: pointer !important; 
-        transition: all 0.22s ease-in-out !important; 
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; 
     }
 
     button[data-baseweb="tab"]:hover {
-        background-color: #f7ece8 !important;
-        color: #b8543f !important;
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
     }
 
     button[data-baseweb="tab"][aria-selected="true"] { 
-        background-color: #b8543f !important; 
+        background-color: #0f172a !important; 
         color: #ffffff !important; 
-        box-shadow: 0 4px 16px rgba(184, 84, 63, 0.35) !important; 
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15) !important; 
     }
     
     div[data-baseweb="tab-highlight-title"], 
@@ -348,115 +352,136 @@ st.markdown("""
         display: none !important; 
     }
 
+    /* NÚT BẤM (BUTTONS) */
     .stButton > button { 
-        font-family: 'Google Sans', sans-serif !important; 
-        border-radius: 16px !important; 
-        border: 1px solid #d8cfc4 !important; 
+        font-family: 'Plus Jakarta Sans', sans-serif !important; 
+        border-radius: 12px !important; 
+        border: 1px solid #e2e8f0 !important; 
         background-color: #ffffff !important; 
-        color: #2c2825 !important; 
+        color: #0f172a !important; 
         font-weight: 600 !important; 
-        padding: 12px 20px !important; 
-        min-height: 48px !important; 
+        padding: 10px 18px !important; 
+        min-height: 44px !important; 
         cursor: pointer !important; 
-        transition: all 0.22s ease !important; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important; 
+        transition: all 0.2s ease !important; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important; 
     }
     .stButton > button:hover { 
-        border-color: #b8543f !important; 
-        color: #b8543f !important; 
-        background-color: #f7ece8 !important; 
-        transform: translateY(-2px) !important; 
-        box-shadow: 0 6px 16px rgba(184, 84, 63, 0.15) !important; 
+        border-color: #cbd5e1 !important; 
+        color: #0f172a !important; 
+        background-color: #f8fafc !important; 
+        transform: translateY(-1px) !important; 
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important; 
     }
     .stButton > button[kind="primary"] { 
-        background-color: #b8543f !important; 
+        background-color: #0f172a !important; 
         color: #ffffff !important; 
-        border: 1px solid #a34834 !important; 
-        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.25) !important; 
+        border: 1px solid #0f172a !important; 
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18) !important; 
     }
     .stButton > button[kind="primary"]:hover { 
-        background-color: #a34834 !important; 
+        background-color: #1e293b !important; 
         color: #ffffff !important; 
-        box-shadow: 0 8px 20px rgba(184, 84, 63, 0.35) !important; 
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25) !important; 
     }
 
+    /* THẺ CARD CÂU HỎI */
     .question-card { 
         background-color: #ffffff !important; 
-        border: 1px solid #e8e2d8 !important; 
+        border: 1px solid #edf2f7 !important; 
         border-radius: 20px !important; 
-        padding: 22px !important; 
+        padding: 24px !important; 
         margin-bottom: 20px !important; 
-        box-shadow: 0 8px 24px rgba(44, 40, 37, 0.04) !important; 
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.02) !important; 
+        transition: all 0.2s ease !important;
     }
+    .question-card:hover {
+        border-color: #e2e8f0 !important;
+        box-shadow: 0 14px 30px -4px rgba(15, 23, 42, 0.06) !important;
+    }
+
+    /* BADGES (TAGS) */
     .card-badge { 
-        background-color: #b8543f !important; 
-        color: #ffffff !important; 
-        padding: 6px 14px !important; 
-        border-radius: 999px !important; 
-        font-size: 0.8rem !important; 
+        background-color: #f1f5f9 !important; 
+        color: #334155 !important; 
+        padding: 4px 12px !important; 
+        border-radius: 9999px !important; 
+        font-size: 0.75rem !important; 
         font-weight: 700 !important; 
         font-family: 'JetBrains Mono', monospace !important; 
+        border: 1px solid #e2e8f0 !important;
     }
     .badge-fmt { 
-        background-color: #5e7a4e !important; 
-        color: #ffffff !important; 
-        padding: 6px 12px !important; 
-        border-radius: 999px !important; 
-        font-size: 0.78rem !important; 
+        background-color: #ecfdf5 !important; 
+        color: #059669 !important; 
+        padding: 4px 12px !important; 
+        border-radius: 9999px !important; 
+        font-size: 0.75rem !important; 
         font-weight: 700 !important; 
         margin-right: 8px !important; 
+        border: 1px solid #a7f3d0 !important;
     }
     .stat-box { 
         background-color: #ffffff !important; 
-        border: 1px solid #e8e2d8 !important; 
+        border: 1px solid #e2e8f0 !important; 
         border-radius: 18px !important; 
-        padding: 18px !important; 
+        padding: 20px !important; 
         margin-top: 18px !important; 
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03) !important;
     }
     .stat-item { 
         display: flex !important; 
         justify-content: space-between !important; 
         align-items: center !important; 
-        padding: 8px 0 !important; 
-        border-bottom: 1px dashed #eae3d8 !important; 
+        padding: 10px 0 !important; 
+        border-bottom: 1px dashed #f1f5f9 !important; 
         font-size: 0.88rem !important; 
+        color: #475569 !important;
     }
     .stat-number { 
         font-weight: 700 !important; 
-        color: #b8543f !important; 
+        color: #0f172a !important; 
         font-family: 'JetBrains Mono', monospace !important; 
     }
     .answer-box { 
-        background-color: #f7ece8 !important; 
-        border: 1px solid #e8c4b8 !important; 
-        color: #a8412c !important; 
+        background-color: #ecfdf5 !important; 
+        border: 1px solid #a7f3d0 !important; 
+        color: #065f46 !important; 
         padding: 8px 16px !important; 
         border-radius: 12px !important; 
         font-weight: 700 !important; 
         display: inline-block !important; 
         margin-top: 12px !important; 
+        font-size: 0.9rem !important;
     }
     .header-info-bar { 
         background-color: #ffffff !important; 
-        border: 1px solid #e8e2d8 !important; 
+        border: 1px solid #edf2f7 !important; 
         border-radius: 20px !important; 
-        padding: 18px 24px !important; 
-        margin-bottom: 22px !important; 
+        padding: 20px 28px !important; 
+        margin-bottom: 24px !important; 
         display: flex !important; 
         align-items: center !important; 
         justify-content: space-between !important; 
-        box-shadow: 0 6px 18px rgba(44, 40, 37, 0.03) !important; 
+        box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.04) !important; 
     }
 
+    /* INPUTS & SELECTS */
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] { 
         background-color: #ffffff !important; 
-        border-color: #d8cfc4 !important; 
+        border-color: #e2e8f0 !important; 
         border-radius: 12px !important; 
+        transition: all 0.2s ease !important;
+    }
+    div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
     }
 
     iframe[title*="interactive_math_editor"] { 
         width: 100% !important; 
         border-radius: 16px !important; 
+        border: 1px solid #e2e8f0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1122,11 +1147,11 @@ with tab1:
 
     st.sidebar.markdown(f"""
     <div class="stat-box">
-        <div style="font-weight:700; color:#2c2825; margin-bottom:8px; border-bottom:1px solid #e2dbd0; padding-bottom:6px;">📊 Thống kê bộ lọc</div>
+        <div style="font-weight:700; color:#0f172a; margin-bottom:8px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">📊 Thống kê bộ lọc</div>
         <div class="stat-item"><span>Trắc nghiệm (TN):</span><span class="stat-number">{cnt_tn}</span></div>
         <div class="stat-item"><span>Đúng / Sai (ĐS):</span><span class="stat-number">{cnt_ds}</span></div>
         <div class="stat-item"><span>Trả lời ngắn (TLN):</span><span class="stat-number">{cnt_tln}</span></div>
-        <div class="stat-item" style="font-weight:700; color:#2c2825; border-top:1px solid #e2dbd0; margin-top:6px; padding-top:8px;"><span>TỔNG SỐ CÂU:</span><span style="color:#5e7a4e; font-size:1.05rem;">{cnt_total}</span></div>
+        <div class="stat-item" style="font-weight:700; color:#0f172a; border-top:1px solid #f1f5f9; margin-top:6px; padding-top:8px;"><span>TỔNG SỐ CÂU:</span><span style="color:#059669; font-size:1.05rem;">{cnt_total}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1140,11 +1165,11 @@ with tab1:
     st.markdown(f"""
     <div class="header-info-bar">
         <div>
-            <span style="font-size:1.25rem; font-weight:800; color:#2c2825; letter-spacing: -0.02em;">NGÂN HÀNG CÂU HỎI </span>
-            <span style="margin-left:12px; font-size:0.85rem; color:#78716c; background-color:#f0ebe1; padding:6px 14px; border-radius:999px; font-weight:600;">MÔN TOÁN GDPT 2018</span>
+            <span style="font-size:1.35rem; font-weight:800; color:#0f172a; letter-spacing: -0.02em;">NGÂN HÀNG CÂU HỎI </span>
+            <span style="margin-left:12px; font-size:0.8rem; color:#475569; background-color:#f1f5f9; padding:6px 14px; border-radius:9999px; font-weight:600;">MÔN TOÁN GDPT 2018</span>
         </div>
         <div>
-            <span style="background-color:#f7ece8; color:#a8412c; border:1px solid #e8c4b8; padding:8px 20px; border-radius:999px; font-weight:700; font-size:0.88rem; box-shadow:0 2px 8px rgba(184,84,63,0.08);">
+            <span style="background-color:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:8px 20px; border-radius:9999px; font-weight:700; font-size:0.88rem; box-shadow:0 2px 8px rgba(16,185,129,0.08);">
                 📌 Số câu hiện có: <b>{cnt_total}</b> câu [TN: {cnt_tn} | ĐS: {cnt_ds} | TLN: {cnt_tln}]
             </span>
         </div>
@@ -1187,7 +1212,7 @@ with tab1:
         with grid_cols[idx % 2]:
             st.markdown(f"""
             <div class="question-card">
-                <div style="margin-bottom:12px;">
+                <div style="margin-bottom:14px;">
                     <span class="badge-fmt">{q.format.value}</span>
                     <span class="card-badge">Câu {idx + 1} | {q.code}</span>
                 </div>
