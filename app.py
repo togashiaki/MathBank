@@ -15,6 +15,7 @@ from exporter import (
 from cloud_db import (
     load_all_questions_from_cloud,
     save_questions_to_cloud,
+    overwrite_all_questions_in_cloud,
     delete_question_from_cloud,
     upload_image_to_drive
 )
@@ -162,7 +163,7 @@ def reindex_all_database_ids() -> int:
                 q.code = new_code
                 updated_questions.append(q)
 
-    save_questions_to_cloud(updated_questions)
+    overwrite_all_questions_in_cloud(updated_questions)
     return len(updated_questions)
 
 # POPUP XUẤT WORD CHO TAB 1
@@ -324,10 +325,10 @@ st.markdown("""
         color: #57524e !important; 
         border: none !important; 
         background-color: transparent !important; 
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        cursor: pointer !important;
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important; 
+        cursor: pointer !important; 
         transition: all 0.22s ease-in-out !important; 
     }
 
@@ -348,7 +349,7 @@ st.markdown("""
     }
 
     .stButton > button { 
-        font-family: 'Google Sans', sans-serif !important;
+        font-family: 'Google Sans', sans-serif !important; 
         border-radius: 16px !important; 
         border: 1px solid #d8cfc4 !important; 
         background-color: #ffffff !important; 
@@ -356,7 +357,7 @@ st.markdown("""
         font-weight: 600 !important; 
         padding: 12px 20px !important; 
         min-height: 48px !important;
-        cursor: pointer !important;
+        cursor: pointer !important; 
         transition: all 0.22s ease !important; 
         box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important; 
     }
@@ -364,7 +365,7 @@ st.markdown("""
         border-color: #b8543f !important; 
         color: #b8543f !important; 
         background-color: #f7ece8 !important; 
-        transform: translateY(-2px) !important;
+        transform: translateY(-2px) !important; 
         box-shadow: 0 6px 16px rgba(184, 84, 63, 0.15) !important; 
     }
     .stButton > button[kind="primary"] { 
@@ -460,16 +461,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# PARSER THÔNG MINH ĐƯỢC TỐI ƯU VÀ SỬA LỖI TÁCH CÂU TLN
-# PARSER THÔNG MINH ĐÃ SỬA LỖI REGEX PATTERN
+# PARSER THÔNG MINH BÓC TÁCH CÂU HỎI
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
     if not raw_text or not raw_text.strip(): 
         return []
     
-    # 1. Chuẩn hóa xuống dòng
     clean_raw = raw_text.replace('\r\n', '\n').replace('\r', '\n').strip()
-    
-    # 2. Tách các câu hỏi bằng regex KHÔNG PHÂN BIỆT HOA THƯỜNG
     pattern = r'\n+(?=\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s])'
     q_blocks = re.split(pattern, clean_raw, flags=re.IGNORECASE)
     parsed_questions = []
@@ -479,7 +476,6 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         if not block: 
             continue
 
-        # Regex tìm vị trí của "Đáp án" và "Lời giải"
         ans_pattern = r'(?:^|\n)\s*(?:đáp\s*án|đáp\s*số|kết\s*quả|ans|answer|da)\s*[:\.]?\s*'
         sol_pattern = r'(?:^|\n)\s*(?:lời\s*giải(?:\s*chi\s*tiết)?|hướng\s*dẫn\s*giải|hdg|lg|solution)\s*[:\.]?\s*'
 
@@ -490,7 +486,6 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         extracted_sol = ""
         main_content_end = len(block)
 
-        # Bóc tách chính xác theo thứ tự xuất hiện của Đáp án & Lời giải
         if ans_match and sol_match:
             if ans_match.start() < sol_match.start():
                 main_content_end = ans_match.start()
@@ -507,17 +502,14 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
             main_content_end = sol_match.start()
             extracted_sol = block[sol_match.end():].strip()
 
-        # Làm sạch chuỗi đáp án & lời giải (bỏ dấu : hoặc - thừa ở đầu)
         extracted_ans = re.sub(r'^[:\.\-\s]+', '', extracted_ans).strip()
         extracted_sol = re.sub(r'^[:\.\-\s]+', '', extracted_sol).strip()
 
-        # Lấy nội dung đề bài chính và bỏ tiêu đề Câu x: (Sử dụng flags=re.IGNORECASE thay vì (?i) sai vị trí)
         clean_content = block[:main_content_end].strip()
         clean_content = re.sub(r'^\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]*', '', clean_content, flags=re.IGNORECASE).strip()
 
         lines = [l.strip() for l in clean_content.split('\n') if l.strip()]
 
-        # Kiểm tra loại câu hỏi
         has_tn = any(re.match(r'^[A-D][\.\)]\s*', l) for l in lines)
         has_ds = any(re.match(r'^[a-d][\.\)\:-]\s*', l, flags=re.IGNORECASE) for l in lines)
 
@@ -578,7 +570,7 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
             topic=default_meta['topic'], 
             format=q_fmt, 
             level=default_meta['level'], 
-            source=default_meta['source'],
+            source=default_meta['source'], 
             content="\n".join(content_lines), 
             options=options, 
             tf_statements=tf_statements, 
@@ -589,7 +581,7 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
 
     return parsed_questions
 
-# CALLBACK XỬ LÝ NHẬP VÀ GÕ ENTER TỰ ĐỘNG THOÁT KHUNG
+# CALLBACKS
 def on_submit_global_top():
     val = st.session_state.get("global_top_inp", "").strip()
     if val:
@@ -804,7 +796,6 @@ def show_import_modal(raw_text: str):
         st.session_state["temp_questions"] = parse_raw_text_to_questions(raw_text, default_meta)
         st.session_state["reset_temp"] = False
         
-        # Tự động gán thông tin chung vào trạng thái widget của tất cả các câu mới phân tích
         for idx in range(len(st.session_state["temp_questions"])):
             st.session_state[f"t3_grade_{idx}"] = init_grade
             st.session_state[f"t3_chap_{idx}"] = int(init_chap)
@@ -894,7 +885,6 @@ def show_import_modal(raw_text: str):
 
     lvl_val = st.selectbox("Mức độ (Chung)", [1, 2, 3], index=1, key="global_lvl_sel")
 
-    # NÚT GÁN THÔNG TIN CHUNG PHÍA TRÊN CHO TẤT CẢ CÁC CÂU
     if st.button("🔄 Gán thông tin chung phía trên cho TẤT CẢ các câu", width="stretch", key="btn_apply_global_meta"):
         if st.session_state.get("custom_top_global", False):
             typed_top = st.session_state.get("global_top_inp", "").strip()
@@ -919,7 +909,6 @@ def show_import_modal(raw_text: str):
             q.level = int(lvl_val)
             q.source = src_val
 
-            # ĐỒNG BỘ TRỰC TIẾP TRẠNG THÁI VÀO SESSION STATE TỪNG CÂU
             st.session_state[f"t3_grade_{idx}"] = g_val
             st.session_state[f"t3_chap_{idx}"] = int(c_val)
             st.session_state[f"t3_lvl_{idx}"] = int(lvl_val)
@@ -949,16 +938,13 @@ def show_import_modal(raw_text: str):
             if uploaded_img:
                 q.image_path = upload_image_to_drive(uploaded_img, f"temp_{idx}.png")
 
-            # --- HÀNG 1: KHỐI LỚP & CHƯƠNG ---
             col_qa, col_qb = st.columns(2)
             g_idx = grade_list.index(q.grade) if q.grade in grade_list else (grade_list.index(int(q.grade)) if str(q.grade).isdigit() and int(q.grade) in grade_list else 1)
             q.grade = col_qa.selectbox(f"Khối lớp (Câu {idx+1}):", grade_list, index=g_idx, key=f"t3_grade_{idx}")
             q.chapter = col_qb.number_input(f"Chương (Câu {idx+1}):", min_value=1, max_value=20, value=int(q.chapter), key=f"t3_chap_{idx}")
 
-            # --- HÀNG 2: DẠNG BÀI & NGUỒN ĐỀ ---
             col_qd, col_qe = st.columns(2)
             
-            # Dạng bài từng câu
             q_chap_topics = get_chapter_topics(all_questions, q.grade, q.chapter)
             key_custom_top_q = f"custom_top_q_{idx}"
             if key_custom_top_q not in st.session_state:
@@ -995,7 +981,6 @@ def show_import_modal(raw_text: str):
                 else:
                     q.topic = sel_t3_top
 
-            # Nguồn đề từng câu
             all_stored_srcs_q = get_all_stored_sources(all_questions)
             key_custom_src_q = f"custom_src_q_{idx}"
             if key_custom_src_q not in st.session_state:
@@ -1032,14 +1017,12 @@ def show_import_modal(raw_text: str):
                 else:
                     q.source = sel_q_src
 
-            # --- HÀNG 3: LOẠI CÂU & MỨC ĐỘ ---
             col_qf1, col_qf2 = st.columns(2)
             q.format = QuestionType(col_qf1.selectbox(f"Loại câu hỏi (Câu {idx+1}):", ["TN", "DS", "TLN"], index=["TN", "DS", "TLN"].index(q.format.value), key=f"t3_fmt_{idx}"))
             q.level = col_qf2.selectbox(f"Mức độ (Câu {idx+1}):", [1, 2, 3], index=q.level-1, key=f"t3_lvl_{idx}")
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # PHẦN ĐÁP ÁN THEO LOẠI
             if q.format == QuestionType.TN:
                 st.markdown("<b>Phương án & Đáp án Trắc nghiệm:</b>", unsafe_allow_html=True)
                 if not q.options: q.options = {'A': '', 'B': '', 'C': '', 'D': ''}
@@ -1342,9 +1325,7 @@ with tab2:
 
         st.divider()
 
-        # KHUNG CẤU HÌNH NGAY DƯỚI CHỖ HIỂN THỊ ĐỀ THI
         st.markdown("### ⚙️ Cấu hình định dạng file Word")
-        total_q_count = sum(len(qs) for qs in st.session_state["generated_exams_dict"].values())
         st.caption(f"Đang chuẩn bị xuất bộ đề gồm **{len(st.session_state['generated_exams_dict'])}** mã đề sang định dạng Word (.docx)")
 
         st.markdown("#### 📋 Cấu hình bảng tiêu đề đề thi (Header 2x2)")
@@ -1378,7 +1359,6 @@ with tab2:
 
         st.divider()
 
-        # NÚT KÍCH HOẠT TẠO FILE
         if st.button("🚀 BẮT ĐẦU TẠO TOÀN BỘ FILE WORD", type="primary", width="stretch", key="btn_t2_generate_all"):
             ds_tbl = (t2_ds_fmt == "Dạng bảng 2 cột (Đúng/Sai)")
             tln_box = (t2_tln_fmt == "Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)")
@@ -1400,7 +1380,6 @@ with tab2:
                 "duration": t2_duration
             }
 
-            # 1. Xuất từng Đề gốc & Đề có dòng chữa bài (Mỗi mã đề là 1 file)
             for e_code, q_list in st.session_state["generated_exams_dict"].items():
                 curr_header = base_header_info.copy()
                 curr_header["sub_title"] = f"Mã đề: {e_code}"
@@ -1413,12 +1392,10 @@ with tab2:
                 export_questions_to_word(q_list, p_chua, mode="de_dong_chua", ds_table_format=ds_tbl, tln_box_format=tln_box, test_code=e_code, header_info=curr_header)
                 generated_files["de_dong_chua"][e_code] = p_chua
 
-            # 2. Xuất 1 file BẢNG ĐÁP ÁN TỔNG HỢP duy nhất
             p_ans_all = os.path.join(export_dir, f"{t_clean} - {s_clean} - Bảng đáp án.docx")
             export_consolidated_answers_to_word(st.session_state["generated_exams_dict"], p_ans_all, header_info=base_header_info)
             generated_files["dap_an_tong_hop"] = p_ans_all
 
-            # 3. Xuất 1 file LỜI GIẢI CHI TIẾT TỔNG HỢP duy nhất
             p_sol_all = os.path.join(export_dir, f"{t_clean} - {s_clean} - Lời giải chi tiết.docx")
             export_consolidated_solutions_to_word(st.session_state["generated_exams_dict"], p_sol_all, ds_table_format=ds_tbl, tln_box_format=tln_box, header_info=base_header_info)
             generated_files["loi_giai_tong_hop"] = p_sol_all
@@ -1426,13 +1403,11 @@ with tab2:
             st.session_state["t2_generated_files"] = generated_files
             st.success("🎉 Đã xuất thành công toàn bộ các file Word! Lựa chọn các phiên bản bên dưới để tải về:")
 
-        # HIỂN THỊ CÁC TÙY CHỌN TẢI XUẤT SAU KHÍ TẠO XONG
         if "t2_generated_files" in st.session_state:
             g_files = st.session_state["t2_generated_files"]
             
             st.markdown("#### 📤 Lựa chọn Tải về:")
 
-            # Option 1: Tải toàn bộ đề thi gốc (Mỗi mã đề 1 file)
             with st.expander("📝 Option 1: Tải toàn bộ Đề thi gốc (riêng lẻ từng mã đề)", expanded=True):
                 cols_goc = st.columns(min(len(g_files["de_goc"]), 4))
                 for idx, (code, filepath) in enumerate(g_files["de_goc"].items()):
@@ -1440,7 +1415,6 @@ with tab2:
                         with open(filepath, "rb") as f:
                             st.download_button(f"📥 Tải Đề gốc Mã {code}", f, file_name=os.path.basename(filepath), width="stretch", key=f"dl_goc_{code}")
 
-            # Option 2: Tải toàn bộ đề có dòng kẻ ngang (Mỗi mã đề 1 file)
             with st.expander("✍️ Option 2: Tải toàn bộ Đề có dòng kẻ ngang (riêng lẻ từng mã đề)", expanded=True):
                 cols_chua = st.columns(min(len(g_files["de_dong_chua"]), 4))
                 for idx, (code, filepath) in enumerate(g_files["de_dong_chua"].items()):
@@ -1448,7 +1422,6 @@ with tab2:
                         with open(filepath, "rb") as f:
                             st.download_button(f"📥 Tải Đề có dòng kẻ Mã {code}", f, file_name=os.path.basename(filepath), width="stretch", key=f"dl_chua_{code}")
 
-            # Option 3 & 4: Tải bảng đáp án & Lời giải chi tiết tổng hợp
             st.markdown("##### 🔑 & 📖 Option 3 & 4: Tải file Tổng hợp ĐÁP ÁN và LỜI GIẢI CHI TIẾT (1 file duy nhất cho tất cả mã đề)")
             col_opt3, col_opt4 = st.columns(2)
 
