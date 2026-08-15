@@ -272,7 +272,7 @@ def confirm_delete_dialog(q: Question):
         st.rerun()
 
 # -------------------------------------------------------------
-# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT + BE & THANH ĐIỀU HƯỚNG DOCK ICON NHỎ
+# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (SIDEBAR DOCK ICON VUÔNG)
 # -------------------------------------------------------------
 st.markdown("""
 <style>
@@ -284,80 +284,106 @@ st.markdown("""
         background-color: #f7f4ed !important; 
     }
     
-    /* SIDEBAR ICON DOCK SIÊU TỐI GIẢN & CỐ ĐỊNH */
+    /* SIDEBAR DOCK ICON VUÔNG CỐ ĐỊNH */
     section[data-testid="stSidebar"] { 
         background-color: #f0ebe1 !important; 
         border-right: 1px solid #e2dbd0 !important; 
         padding-top: 1.2rem !important;
-        padding-left: 0.4rem !important;
-        padding-right: 0.4rem !important;
-        width: 76px !important;
-        min-width: 76px !important;
-        max-width: 76px !important;
+        padding-left: 0.3rem !important;
+        padding-right: 0.3rem !important;
+        width: 72px !important;
+        min-width: 72px !important;
+        max-width: 72px !important;
     }
 
-    /* ẨN NÚT ĐÓNG/MỞ SIDEBAR ĐỂ CỐ ĐỊNH THANH DOCK */
+    /* ẨN NÚT ĐÓNG MỞ SIDEBAR */
     [data-testid="stSidebarCollapseButton"], 
     button[kind="header"] {
         display: none !important;
     }
 
-    /* THANH DOCK CHỈ HIỂN THỊ ICON */
+    /* ẨN TOÀN BỘ LABEL / CHỮ "Menu" TRÊN RADIO */
+    section[data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+    section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* ẨN HOÀN TOÀN CÁC NÚT TRÒN RADIO DOT */
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child,
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-baseweb="radio"] span:first-child,
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] input[type="radio"],
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] svg {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* CONTAINER DOCK ICON */
     section[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
-        gap: 14px !important;
+        gap: 12px !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
 
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] label {
+    /* TỪNG Ô VUÔNG ICON BO GÓC */
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label,
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-baseweb="radio"] {
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        width: 48px !important;
-        height: 48px !important;
+        width: 46px !important;
+        height: 46px !important;
+        min-width: 46px !important;
+        max-width: 46px !important;
         border-radius: 14px !important;
         background-color: #ffffff !important;
         border: 1px solid #e2dbd0 !important;
         margin: 0 !important;
         padding: 0 !important;
         cursor: pointer !important;
-        transition: all 0.22s ease-in-out !important;
+        transition: all 0.2s ease !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
     }
 
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
         background-color: #f7ece8 !important;
         border-color: #b8543f !important;
-        transform: scale(1.06) !important;
+        transform: translateY(-2px) !important;
     }
 
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-checked="true"],
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked),
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-checked="true"] {
         background-color: #b8543f !important;
         border-color: #a34834 !important;
-        box-shadow: 0 4px 14px rgba(184, 84, 63, 0.35) !important;
+        box-shadow: 0 4px 12px rgba(184, 84, 63, 0.3) !important;
     }
 
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] input[type="radio"] {
-        display: none !important;
-    }
-
-    section[data-testid="stSidebar"] div[data-testid="stRadio"] div[data-testid="stMarkdownContainer"] p {
+    section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
         font-size: 1.35rem !important;
         margin: 0 !important;
+        padding: 0 !important;
         line-height: 1 !important;
     }
 
-    /* TÙY CHỈNH PADDING NỘI DUNG CHÍNH CHO CÂN ĐỐI */
+    /* PADDING NỘI DUNG CHÍNH */
     .main .block-container {
-        padding-top: 1.8rem !important;
+        padding-top: 1.5rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
         max-width: 100% !important;
     }
 
-    /* NÚT BẤM (BUTTONS) TÔNG ĐỎ & BE */
+    /* NÚT BẤM (BUTTONS) */
     .stButton > button { 
         font-family: 'Google Sans', sans-serif !important; 
         border-radius: 14px !important; 
@@ -405,7 +431,7 @@ st.markdown("""
         box-shadow: 0 10px 28px rgba(44, 40, 37, 0.08) !important;
     }
 
-    /* BADGES (TAGS) TÔNG ĐỎ - XANH RÊU TRUYỀN THỐNG */
+    /* BADGES (TAGS) */
     .card-badge { 
         background-color: #b8543f !important; 
         color: #ffffff !important; 
@@ -425,13 +451,13 @@ st.markdown("""
         margin-right: 8px !important; 
     }
     
-    /* HEADER INFO BAR (KẾT HỢP TIÊU ĐỀ + THỐNG KÊ GÓC PHẢI) */
+    /* HEADER INFO BAR (TIÊU ĐỀ BÊN TRÁI + THỐNG KÊ GÓC PHẢI) */
     .header-info-bar { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
         border-radius: 20px !important; 
         padding: 16px 24px !important; 
-        margin-bottom: 20px !important; 
+        margin-bottom: 22px !important; 
         display: flex !important; 
         align-items: center !important; 
         justify-content: space-between !important; 
@@ -448,7 +474,7 @@ st.markdown("""
         border: 1px solid #e2dbd0;
         padding: 6px 12px;
         border-radius: 10px;
-        font-size: 0.82rem;
+        font-size: 0.84rem;
         font-weight: 600;
         color: #57524e;
     }
@@ -456,16 +482,6 @@ st.markdown("""
         color: #b8543f;
         margin-left: 3px;
         font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* KHUNG BỘ LỌC */
-    .filter-container {
-        background-color: #ffffff !important;
-        border: 1px solid #e8e2d8 !important;
-        border-radius: 18px !important;
-        padding: 18px 22px !important;
-        margin-bottom: 20px !important;
-        box-shadow: 0 4px 16px rgba(44, 40, 37, 0.03) !important;
     }
 
     .answer-box { 
@@ -1121,15 +1137,15 @@ def show_import_modal(raw_text: str):
         st.rerun()
 
 # -------------------------------------------------------------
-# 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI
+# 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI (3 Ô VUÔNG ICON)
 # -------------------------------------------------------------
 with st.sidebar:
-    st.markdown("<div style='text-align: center; font-size: 1.5rem; margin-bottom: 1.2rem;'>📐</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; font-size: 1.45rem; margin-bottom: 1.2rem;'>📐</div>", unsafe_allow_html=True)
     
-    # 3 Icon duy nhất: Ngân hàng, Ma trận barem, Nhập liệu
+    # 3 Icon vuông duy nhất: Ngân hàng, Ma trận barem, Nhập liệu
     nav_icon = st.radio(
-        "Menu",
-        ["📋", "🎯", "📥"],
+        label="",
+        options=["📋", "🎯", "📥"],
         index=0,
         label_visibility="collapsed"
     )
@@ -1162,7 +1178,7 @@ if nav_icon == "📋":
     cnt_tln = sum(1 for q in questions_filtered if q.format == QuestionType.TLN)
     cnt_total = len(questions_filtered)
 
-    # 2. HEADER INFO BAR (TIÊU ĐỀ BÊN TRÁI + CÁC Ô THỐNG KÊ GÓC PHẢI NHƯ ẢNH 1 & 2)
+    # 2. HEADER INFO BAR (TIÊU ĐỀ BÊN TRÁI + CÁC Ô THỐNG KÊ GÓC PHẢI)
     st.markdown(f"""
     <div class="header-info-bar">
         <div style="display: flex; align-items: center; gap: 12px;">
@@ -1189,31 +1205,27 @@ if nav_icon == "📋":
         btn_clear_all = cb.button("Xóa chọn", width="stretch")
 
     # 4. KHUNG BỘ LỌC PHÂN LOẠI & NÚT ĐÁNH LẠI MÃ ID
-    with st.container():
-        st.markdown('<div class="filter-container">', unsafe_allow_html=True)
-        st.markdown("<b style='font-size: 0.95rem; color: #2c2825; margin-bottom: 10px; display: inline-block;'>📚 Bộ lọc phân loại câu hỏi</b>", unsafe_allow_html=True)
-        
-        f1, f2, f3, f4, f5 = st.columns([1.1, 1.1, 1.8, 1.8, 1.4])
-        with f1:
-            g_sel = st.selectbox("Khối lớp:", grade_options, index=0, key="f_grade")
-        with f2:
-            chapters = sorted(list(set(q.chapter for q in (all_questions if g_sel == "Tất cả" else [q for q in all_questions if str(q.grade) == str(g_sel)]))))
-            st.selectbox("Chương:", ["Tất cả"] + chapters, index=0, key="f_chapter")
-        with f3:
-            stored_topics = get_all_stored_topics(questions_filtered)
-            st.selectbox("Dạng bài:", ["Tất cả"] + stored_topics, index=0, key="f_topic")
-        with f4:
-            stored_sources = get_all_stored_sources(questions_filtered)
-            st.selectbox("Nguồn đề:", ["Tất cả"] + stored_sources, index=0, key="f_source")
-        with f5:
-            st.write("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-            if st.button("🔄 Đánh lại mã ID", width="stretch", help="Tự động chuẩn hóa và đánh lại mã câu hỏi liên tục"):
-                count_reindexed = reindex_all_database_ids()
-                st.success(f"Đã chuẩn hóa {count_reindexed} câu!")
-                time.sleep(1)
-                st.rerun()
-
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<b style='font-size: 0.95rem; color: #2c2825; margin-top: 10px; margin-bottom: 8px; display: inline-block;'>📚 Bộ lọc phân loại câu hỏi</b>", unsafe_allow_html=True)
+    
+    f1, f2, f3, f4, f5 = st.columns([1.1, 1.1, 1.8, 1.8, 1.3])
+    with f1:
+        g_sel = st.selectbox("Khối lớp:", grade_options, index=0, key="f_grade")
+    with f2:
+        chapters = sorted(list(set(q.chapter for q in (all_questions if g_sel == "Tất cả" else [q for q in all_questions if str(q.grade) == str(g_sel)]))))
+        st.selectbox("Chương:", ["Tất cả"] + chapters, index=0, key="f_chapter")
+    with f3:
+        stored_topics = get_all_stored_topics(questions_filtered)
+        st.selectbox("Dạng bài:", ["Tất cả"] + stored_topics, index=0, key="f_topic")
+    with f4:
+        stored_sources = get_all_stored_sources(questions_filtered)
+        st.selectbox("Nguồn đề:", ["Tất cả"] + stored_sources, index=0, key="f_source")
+    with f5:
+        st.write("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("🔄 Đánh lại mã ID", width="stretch", help="Tự động chuẩn hóa và đánh lại mã câu hỏi liên tục"):
+            count_reindexed = reindex_all_database_ids()
+            st.success(f"Đã chuẩn hóa {count_reindexed} câu!")
+            time.sleep(1)
+            st.rerun()
 
     # Lọc câu hỏi theo Search Query
     display_questions = [
@@ -1417,9 +1429,9 @@ elif nav_icon == "🎯":
 
         col1, col2 = st.columns(2)
         with col1:
-            t2_ds_fmt = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0, key="t2_ds_fmt")
+            t2_ds_fmt = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0, key=f"t2_ds_fmt")
         with col2:
-            t2_tln_fmt = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0, key="t2_tln_fmt")
+            t2_tln_fmt = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0, key=f"t2_tln_fmt")
 
         st.divider()
 
