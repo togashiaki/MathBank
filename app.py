@@ -17,7 +17,8 @@ from cloud_db import (
     save_questions_to_cloud,
     overwrite_all_questions_in_cloud,
     delete_question_from_cloud,
-    upload_image_to_drive
+    upload_image_to_drive,
+    migrate_imgbb_to_cloudinary
 )
 
 # 1. CẤU HÌNH TRANG STREAMLIT
@@ -309,7 +310,7 @@ st.markdown("""
         padding: 8px 12px !important; 
         border-radius: 999px !important; 
         border: 1px solid #e2dbd0 !important; 
-        width: fit-content !important;
+        width: fit-content !important; 
         margin: 0 auto 28px auto !important; 
         box-shadow: 0 8px 24px rgba(44, 40, 37, 0.08) !important; 
     }
@@ -1136,7 +1137,6 @@ with tab1:
         st.sidebar.success(f"🎉 Đã đánh lại mã ID liên tục cho {count_reindexed} câu hỏi!")
         time.sleep(1)
         st.rerun()
-from cloud_db import migrate_imgbb_to_cloudinary
 
     if st.sidebar.button("☁️ Chuyển toàn bộ ảnh sang Cloudinary", width="stretch"):
         with st.spinner("Đang tải ảnh từ ImgBB và đẩy sang Cloudinary, vui lòng đợi..."):
@@ -1147,6 +1147,7 @@ from cloud_db import migrate_imgbb_to_cloudinary
                 st.rerun()
             else:
                 st.sidebar.info(msg)
+
     st.markdown(f"""
     <div class="header-info-bar">
         <div>
