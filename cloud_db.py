@@ -7,6 +7,8 @@ import ast
 import requests
 import gspread
 import streamlit as st
+import cloudinary
+import cloudinary.uploader
 from typing import List, Optional
 from google.oauth2.service_account import Credentials
 from models import Question, QuestionType
@@ -49,17 +51,22 @@ def get_sheet():
             ws.append_row(STANDARD_HEADERS)
         return ws
     except Exception as e:
-        st.error(f"Lỗi mở Google Sheet (ID: {st.secrets.get('SPREADSHEET_ID', DEFAULT_SPREADSHEET_ID)}): {e}")
+        st.error(f"Lỗi mở Google Sheet: {e}")
         return None
 
 
-# 2. HÀM TẢI ẢNH LÊN CLOUD (SỬ DỤNG IMGBB API)
+# 2. HÀM TẢI ẢNH LÊN CLOUDINARY
 def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_id: Optional[str] = None) -> Optional[str]:
+    """
+    Tải ảnh trực tiếp lên Cloudinary CDN vĩnh viễn, không lo bị chặn tải.
+    """
     if uploaded_file is None:
         return None
 
     try:
-        api_key = st.secrets.get("IMGBB_API_KEY", "")
+        cloud_name = st.secrets.get("CLOUDINARY_CLOUD_NAME", "")
+        api_key = st.secrets.get("CLOUDINARY_API_KEY", "")
+        api_secret = st.secrets.get("CLOUDINARY_API_SECRET", "")
 
         if hasattr(uploaded_file, "getvalue"):
             file_bytes = uploaded_file.getvalue()
@@ -70,31 +77,46 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
         else:
             return None
 
-        # Nếu có API Key -> Tải trực tiếp lên ImgBB
-        if api_key:
+        # Nếu đã cấu hình Cloudinary
+        if cloud_name and api_key and api_secret:
+            cloudinary.config(
+                cloud_name=cloud_name,
+                api_key=api_key,
+                api_secret=api_secret,
+                secure=True
+            )
+
+            # Đặt public_id nếu có filename (bỏ phần mở rộng)
+            public_id = os.path.splitext(filename)[0] if filename else None
+
+            upload_result = cloudinary.uploader.upload(
+                file_bytes,
+                folder="mathbank_images",
+                public_id=public_id,
+                overwrite=True,
+                resource_type="image"
+            )
+            # Trả về link trực tiếp bảo mật HTTPS
+            return upload_result.get("secure_url") or upload_result.get("url")
+
+        # Dự phòng: Nếu có key ImgBB cũ
+        imgbb_key = st.secrets.get("IMGBB_API_KEY", "")
+        if imgbb_key:
             url = "https://api.imgbb.com/1/upload"
             payload = {
-                "key": api_key,
+                "key": imgbb_key,
                 "image": base64.b64encode(file_bytes).decode("utf-8")
             }
             if filename:
                 payload["name"] = filename
-
             response = requests.post(url, data=payload, timeout=30)
             res_json = response.json()
-
             if response.status_code == 200 and res_json.get("success"):
                 return res_json["data"]["url"]
-            else:
-                err_msg = res_json.get('error', {}).get('message', 'Không xác định')
-                st.error(f"Lỗi từ máy chủ lưu ảnh ImgBB: {err_msg}")
-                # Fallback sang base64 nếu API lỗi
-                base64_str = base64.b64encode(file_bytes).decode("utf-8")
-                return f"data:image/png;base64,{base64_str}"
-        else:
-            # Fallback nếu chưa cài API Key
-            base64_str = base64.b64encode(file_bytes).decode("utf-8")
-            return f"data:image/png;base64,{base64_str}"
+
+        # Dự phòng cuối: Base64
+        base64_str = base64.b64encode(file_bytes).decode("utf-8")
+        return f"data:image/png;base64,{base64_str}"
 
     except Exception as e:
         st.error(f"Lỗi khi upload ảnh lên Cloud: {e}")
@@ -250,7 +272,7 @@ def save_questions_to_cloud(questions: List[Question]):
         st.error(f"Lỗi khi lưu câu hỏi vào Google Sheet: {e}")
 
 
-# 5. HÀM GHI ĐÈ TOÀN BỘ SHEET (DÙNG KHI REINDEX ĐỂ TRÁNH TRÙNG LẶP)
+# 5. HÀM GHI ĐÈ TOÀN BỘ SHEET
 def overwrite_all_questions_in_cloud(questions: List[Question]):
     ws = get_sheet()
     if not ws:
@@ -263,7 +285,7 @@ def overwrite_all_questions_in_cloud(questions: List[Question]):
         ws.clear()
         ws.update(values=rows_data, range_name="A1")
     except Exception as e:
-        st.error(f"Lỗi khi ghi đè cơ sở dữ liệu Google Sheet: {e}")
+        st.error(f"Lỗi khi ghi đè Google Sheet: {e}")
 
 
 # 6. HÀM XÓA CÂU HỎI TRÊN GOOGLE SHEET
@@ -278,4 +300,4 @@ def delete_question_from_cloud(question_code: str):
                 ws.delete_rows(row_idx)
                 break
     except Exception as e:
-        st.error(f"Lỗi khi xóa câu hỏi {question_code} trên Google Sheet: {e}")
+        st.error(f"Lỗi khi xóa câu hỏi {question_code}: {e}")
