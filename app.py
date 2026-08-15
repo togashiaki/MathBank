@@ -275,7 +275,7 @@ def confirm_delete_dialog(q: Question):
         st.rerun()
 
 # -------------------------------------------------------------
-# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (3 NÚT VUÔNG ICON CỐ ĐỊNH Ở DOCK TRÁI)
+# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (3 NÚT VUÔNG ICON CĂN GIỮA TUYỆT ĐỐI)
 # -------------------------------------------------------------
 st.markdown("""
 <style>
@@ -287,51 +287,77 @@ st.markdown("""
         background-color: #f7f4ed !important; 
     }
     
-    /* SIDEBAR DOCK ICON VUÔNG CỐ ĐỊNH */
+    /* SIDEBAR CỐ ĐỊNH NHỎ GỌN */
     section[data-testid="stSidebar"] { 
         background-color: #f0ebe1 !important; 
         border-right: 1px solid #e2dbd0 !important; 
         padding-top: 1.2rem !important;
-        padding-left: 0.3rem !important;
-        padding-right: 0.3rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
         width: 72px !important;
         min-width: 72px !important;
         max-width: 72px !important;
     }
 
-    /* ẨN NÚT ĐÓNG MỞ SIDEBAR */
     [data-testid="stSidebarCollapseButton"], 
     button[kind="header"] {
         display: none !important;
     }
 
-    /* TÙY BIẾN 3 NÚT BẤM VUÔNG ICON Ở SIDEBAR */
-    section[data-testid="stSidebar"] .stButton > button {
+    /* ĐỊNH DẠNG CONTAINER CỦA BUTTON TRONG SIDEBAR */
+    section[data-testid="stSidebar"] div[data-testid="stButton"] {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin: 0 0 12px 0 !important;
+    }
+
+    /* 3 NÚT VUÔNG ICON CHUẨN 48x48 */
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button {
         width: 48px !important;
         height: 48px !important;
-        min-height: 48px !important;
+        min-width: 48px !important;
         max-width: 48px !important;
-        padding: 0 !important;
+        min-height: 48px !important;
+        max-height: 48px !important;
         border-radius: 14px !important;
-        font-size: 1.35rem !important;
+        background-color: #ffffff !important;
+        border: 1px solid #e2dbd0 !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        margin: 0 auto 12px auto !important;
-        background-color: #ffffff !important;
-        border: 1px solid #e2dbd0 !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
         transition: all 0.2s ease !important;
     }
 
-    section[data-testid="stSidebar"] .stButton > button:hover {
+    /* CĂN CHÍNH GIỮA TUYỆT ĐỐI CÁC PHẦN TỬ CON BÊN TRONG NÚT */
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button *,
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button div,
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button p,
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button span {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 1.35rem !important;
+        line-height: 1 !important;
+        text-align: center !important;
+    }
+
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {
         background-color: #f7ece8 !important;
         border-color: #b8543f !important;
         transform: translateY(-2px) !important;
     }
 
     /* NÚT ĐANG ĐƯỢC CHỌN (PRIMARY) */
-    section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button[kind="primary"] {
         background-color: #b8543f !important;
         border-color: #a34834 !important;
         color: #ffffff !important;
@@ -1405,9 +1431,9 @@ elif st.session_state["current_nav_tab"] == "🎯":
 
         col1, col2 = st.columns(2)
         with col1:
-            t2_ds_fmt = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0, key="t2_ds_fmt")
+            t2_ds_fmt = st.radio("Định dạng câu Đúng/Sai:", ["Dạng bảng 2 cột (Đúng/Sai)", "Từng dòng liên tiếp"], index=0, key=f"t2_ds_fmt")
         with col2:
-            t2_tln_fmt = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0, key="t2_tln_fmt")
+            t2_tln_fmt = st.radio("Định dạng ô điền trả lời ngắn:", ["Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)", "Không có ô điền"], index=0, key=f"t2_tln_fmt")
 
         st.divider()
 
