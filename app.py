@@ -25,7 +25,6 @@ st.set_page_config(
     page_title="MathBank - Ngân hàng câu hỏi",
     page_icon="📚",
     layout="wide",
-    initial_sidebar_state="closed"
 )
 
 def sanitize_filename(name: str) -> str:
