@@ -17,6 +17,12 @@ SCOPES = [
 
 DEFAULT_SPREADSHEET_ID = "13Ck1FfpBolHEsWrRU2uQ6zoe9BIk1Wr0vWCta_PtUSs"
 
+STANDARD_HEADERS = [
+    "code", "grade", "chapter", "lesson", "topic", "format", 
+    "level", "source", "content", "options", "tf_statements", 
+    "answer", "solution", "image_path", "solution_image_path"
+]
+
 # 1. KHỞI TẠO XÁC THỰC GOOGLE SHEET
 def get_credentials():
     if "gcp_service_account" in st.secrets:
@@ -33,38 +39,28 @@ def get_sheet():
     creds = get_credentials()
     if not creds:
         return None
-    gc = gspread.authorize(creds)
-    sheet_id = st.secrets.get("SPREADSHEET_ID", DEFAULT_SPREADSHEET_ID)
-
     try:
+        gc = gspread.authorize(creds)
+        sheet_id = st.secrets.get("SPREADSHEET_ID", DEFAULT_SPREADSHEET_ID)
         sh = gc.open_by_key(sheet_id)
         ws = sh.sheet1
         existing_values = ws.get_all_values()
         if not existing_values:
-            ws.append_row([
-                "code", "grade", "chapter", "lesson", "topic", "format", 
-                "level", "source", "content", "options", "tf_statements", 
-                "answer", "solution", "image_path", "solution_image_path"
-            ])
+            ws.append_row(STANDARD_HEADERS)
         return ws
     except Exception as e:
-        st.error(f"Lỗi mở Google Sheet (ID: {sheet_id}): {e}")
+        st.error(f"Lỗi mở Google Sheet (ID: {st.secrets.get('SPREADSHEET_ID', DEFAULT_SPREADSHEET_ID)}): {e}")
         return None
 
 
-# 2. HÀM TẢI ẢNH LÊN CLOUD (SỬ DỤNG IMGBB API MIỄN PHÍ - KHÔNG LO BỊ CHẶN QUOTA)
+# 2. HÀM TẢI ẢNH LÊN CLOUD (SỬ DỤNG IMGBB API)
 def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_id: Optional[str] = None) -> Optional[str]:
     if uploaded_file is None:
         return None
 
     try:
-        # Lấy API Key từ Secrets hoặc dùng key dự phòng
         api_key = st.secrets.get("IMGBB_API_KEY", "")
-        
-        if not api_key:
-            st.warning("⚠️ Chưa cấu hình IMGBB_API_KEY trong st.secrets! Đang tạm thời mã hóa ảnh...")
 
-        # Đọc dữ liệu ảnh thành bytes
         if hasattr(uploaded_file, "getvalue"):
             file_bytes = uploaded_file.getvalue()
         elif isinstance(uploaded_file, bytes):
@@ -90,10 +86,13 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
             if response.status_code == 200 and res_json.get("success"):
                 return res_json["data"]["url"]
             else:
-                st.error(f"Lỗi từ máy chủ lưu ảnh: {res_json.get('error', {}).get('message', 'Không xác định')}")
-                return None
+                err_msg = res_json.get('error', {}).get('message', 'Không xác định')
+                st.error(f"Lỗi từ máy chủ lưu ảnh ImgBB: {err_msg}")
+                # Fallback sang base64 nếu API lỗi
+                base64_str = base64.b64encode(file_bytes).decode("utf-8")
+                return f"data:image/png;base64,{base64_str}"
         else:
-            # Fallback: Trả về base64 data URL trực tiếp nếu chưa kịp tạo key
+            # Fallback nếu chưa cài API Key
             base64_str = base64.b64encode(file_bytes).decode("utf-8")
             return f"data:image/png;base64,{base64_str}"
 
@@ -194,6 +193,27 @@ def load_all_questions_from_cloud() -> List[Question]:
         return []
 
 
+def _build_row_data(q: Question, headers: list) -> list:
+    q_dict = {
+        "code": q.code,
+        "grade": str(q.grade),
+        "chapter": int(q.chapter),
+        "lesson": int(getattr(q, 'lesson', 1)),
+        "topic": q.topic or "",
+        "format": q.format.value if hasattr(q.format, 'value') else str(q.format),
+        "level": int(q.level),
+        "source": q.source or "",
+        "content": q.content or "",
+        "options": json.dumps(q.options, ensure_ascii=False) if q.options else "",
+        "tf_statements": json.dumps(q.tf_statements, ensure_ascii=False) if q.tf_statements else "",
+        "answer": q.answer or "",
+        "solution": q.solution or "",
+        "image_path": q.image_path or "",
+        "solution_image_path": getattr(q, 'solution_image_path', "") or ""
+    }
+    return [q_dict.get(h, "") for h in headers]
+
+
 # 4. HÀM LƯU / CẬP NHẬT CÂU HỎI LÊN GOOGLE SHEET
 def save_questions_to_cloud(questions: List[Question]):
     ws = get_sheet()
@@ -203,48 +223,23 @@ def save_questions_to_cloud(questions: List[Question]):
     try:
         all_values = ws.get_all_values()
         if not all_values:
-            standard_headers = [
-                "code", "grade", "chapter", "lesson", "topic", "format", 
-                "level", "source", "content", "options", "tf_statements", 
-                "answer", "solution", "image_path", "solution_image_path"
-            ]
-            ws.append_row(standard_headers)
-            all_values = [standard_headers]
+            ws.append_row(STANDARD_HEADERS)
+            all_values = [STANDARD_HEADERS]
 
         header_row = [str(h).strip().lower() for h in all_values[0]]
         
-        def build_row_data(q: Question, headers: list) -> list:
-            q_dict = {
-                "code": q.code,
-                "grade": str(q.grade),
-                "chapter": int(q.chapter),
-                "lesson": int(getattr(q, 'lesson', 1)),
-                "topic": q.topic or "",
-                "format": q.format.value if hasattr(q.format, 'value') else str(q.format),
-                "level": int(q.level),
-                "source": q.source or "",
-                "content": q.content or "",
-                "options": json.dumps(q.options, ensure_ascii=False) if q.options else "",
-                "tf_statements": json.dumps(q.tf_statements, ensure_ascii=False) if q.tf_statements else "",
-                "answer": q.answer or "",
-                "solution": q.solution or "",
-                "image_path": q.image_path or "",
-                "solution_image_path": getattr(q, 'solution_image_path', "") or ""
-            }
-            return [q_dict.get(h, "") for h in headers]
-
         code_to_row = {}
         for row_idx, row in enumerate(all_values[1:], start=2):
-            if row and row[0].strip():
-                code_to_row[row[0].strip()] = row_idx
+            if row and len(row) > 0 and str(row[0]).strip():
+                code_to_row[str(row[0]).strip()] = row_idx
 
         rows_to_append = []
         for q in questions:
-            row_data = build_row_data(q, header_row)
+            row_data = _build_row_data(q, header_row)
             if q.code in code_to_row:
                 row_num = code_to_row[q.code]
                 col_end_letter = gspread.utils.rowcol_to_a1(row_num, len(header_row))
-                ws.update(f"A{row_num}:{col_end_letter}", [row_data])
+                ws.update(values=[row_data], range_name=f"A{row_num}:{col_end_letter}")
             else:
                 rows_to_append.append(row_data)
 
@@ -255,7 +250,23 @@ def save_questions_to_cloud(questions: List[Question]):
         st.error(f"Lỗi khi lưu câu hỏi vào Google Sheet: {e}")
 
 
-# 5. HÀM XÓA CÂU HỎI TRÊN GOOGLE SHEET
+# 5. HÀM GHI ĐÈ TOÀN BỘ SHEET (DÙNG KHI REINDEX ĐỂ TRÁNH TRÙNG LẶP)
+def overwrite_all_questions_in_cloud(questions: List[Question]):
+    ws = get_sheet()
+    if not ws:
+        return
+    try:
+        rows_data = [STANDARD_HEADERS]
+        for q in questions:
+            rows_data.append(_build_row_data(q, STANDARD_HEADERS))
+        
+        ws.clear()
+        ws.update(values=rows_data, range_name="A1")
+    except Exception as e:
+        st.error(f"Lỗi khi ghi đè cơ sở dữ liệu Google Sheet: {e}")
+
+
+# 6. HÀM XÓA CÂU HỎI TRÊN GOOGLE SHEET
 def delete_question_from_cloud(question_code: str):
     ws = get_sheet()
     if not ws or not question_code:
