@@ -12,34 +12,31 @@ import pypandoc
 from typing import List, Optional, Dict
 from models import Question, QuestionType
 
-# Tự động đảm bảo pandoc khả dụng
 try:
     pypandoc.get_pandoc_version()
 except OSError:
     pypandoc.download_pandoc()
 
-# Khởi tạo Session với cơ chế tự động thử lại khi gặp lỗi Rate-limit (429, 500, 502, 503, 504)
+# Session có cơ chế tự động thử lại khi mạng chập chờn
 _session = requests.Session()
 _retries = Retry(
-    total=4,
+    total=5,
     backoff_factor=0.3,
     status_forcelist=[429, 500, 502, 503, 504],
     raise_on_status=False
 )
-_adapter = HTTPAdapter(max_retries=_retries, pool_connections=20, pool_maxsize=20)
+_adapter = HTTPAdapter(max_retries=_retries, pool_connections=25, pool_maxsize=25)
 _session.mount("http://", _adapter)
 _session.mount("https://", _adapter)
 
 
 def clean_statement_text(stmt: str) -> str:
-    """Loại bỏ ký tự gạch đầu dòng hoặc dấu chấm tròn dư thừa trong các mệnh đề Đúng/Sai."""
     if not stmt:
         return ""
     return re.sub(r'^\s*[\-\*\•]\s*', '', stmt).strip()
 
 
 def format_ds_statement_with_label(stmt: str, index: int) -> str:
-    """Đảm bảo các mệnh đề luôn có tiền tố nhãn a), b), c), d) chuẩn xác."""
     labels = ['a', 'b', 'c', 'd']
     clean_stmt = clean_statement_text(stmt)
     if not re.match(r'^[a-dA-D][\.\)\:-]', clean_stmt):
@@ -103,7 +100,6 @@ LINE_STRING = "_________________________________________________________________
 
 
 def generate_header_html(header_info: dict) -> str:
-    """Tạo bảng tiêu đề 2x2 định dạng OpenXML chuẩn cho file Word (.docx)."""
     if not header_info:
         return ""
     school_name = html.escape(header_info.get("school_name", "").strip().upper())
@@ -176,7 +172,7 @@ def generate_header_html(header_info: dict) -> str:
 
 
 def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_base: str) -> Optional[str]:
-    """Tải hoặc sao chép ảnh vào workspace tạm thời, đảm bảo không bị lỗi đường dẫn hoặc chặn mạng."""
+    """Tải và lưu ảnh vào workspace tạm thời của Pandoc."""
     if not img_src or not isinstance(img_src, str):
         return None
     
@@ -214,7 +210,7 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
             print(f"Lỗi giải mã Base64: {e}")
             return None
 
-    # 3. URL Trực tuyến (ImgBB, Google Drive...)
+    # 3. URL Trực tuyến (Cloudinary, ImgBB, Google Drive...)
     if img_src.startswith("http://") or img_src.startswith("https://"):
         try:
             if "drive.google.com" in img_src:
@@ -225,13 +221,11 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
 
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-                "Referer": "https://imgbb.com/"
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
             }
             
             res = _session.get(img_src, headers=headers, timeout=20, allow_redirects=True)
 
-            # Xử lý nếu link là trang HTML Viewer của ImgBB
             content_type = res.headers.get("Content-Type", "").lower()
             if "text/html" in content_type:
                 html_text = res.text
@@ -255,10 +249,7 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
                 target_path = os.path.join(temp_dir, target_filename)
                 with open(target_path, "wb") as f:
                     f.write(res.content)
-                time.sleep(0.04)  # Nghỉ ngắn tránh kích hoạt giới hạn Cloudflare khi tải hàng loạt
                 return target_filename
-            else:
-                print(f"Không thể tải ảnh ({img_src}) - HTTP Status: {res.status_code}")
         except Exception as e:
             print(f"Lỗi kết nối khi tải ảnh ({img_src}): {e}")
             return None
@@ -267,7 +258,7 @@ def _save_image_to_workspace(img_src: Optional[str], temp_dir: str, filename_bas
 
 
 def _resolve_all_inline_images(text: str, temp_dir: str, prefix: str) -> str:
-    """Tải và chuyển đổi toàn bộ ảnh nhúng Markdown ![alt](url) có sẵn trong chuỗi văn bản."""
+    """Tải và thay thế các ảnh nhúng inline dạng ![...](url) thành file cục bộ."""
     if not text:
         return ""
     
@@ -287,7 +278,6 @@ def _resolve_all_inline_images(text: str, temp_dir: str, prefix: str) -> str:
 
 
 def _compile_markdown_to_docx(full_markdown: str, temp_dir: str, output_path: str):
-    """Thực thi biên dịch Markdown sang Docx ngay tại workspace cục bộ."""
     input_md_path = os.path.join(temp_dir, "document.md")
     with open(input_md_path, "w", encoding="utf-8") as f:
         f.write(full_markdown)
@@ -316,7 +306,6 @@ def export_questions_to_word(
     test_code: str = "",
     header_info: Optional[dict] = None
 ):
-    """Xuất từng đề riêng lẻ (Đề gốc, Đề có dòng chữa bài, Đáp án, Lời giải)."""
     with tempfile.TemporaryDirectory() as temp_dir:
         md_lines = []
 
@@ -328,7 +317,6 @@ def export_questions_to_word(
         md_lines.append("\n")
 
         for idx, q in enumerate(questions, start=1):
-            # Xử lý ảnh trong trường dữ liệu riêng và ảnh nhúng inline
             clean_q_content = _resolve_all_inline_images(q.content, temp_dir, f"q_{idx}")
             clean_q_sol = _resolve_all_inline_images(q.solution or "", temp_dir, f"sol_{idx}")
 
@@ -384,7 +372,7 @@ def export_questions_to_word(
                 elif q.format == QuestionType.TLN:
                     md_lines.append(f"Đáp án: **{q.answer}**\n\n")
 
-            else:  # Lời giải chi tiết
+            else:
                 md_lines.append(f"**Câu {idx}.** {clean_q_content}\n\n")
 
                 if q_img_file:
@@ -433,7 +421,6 @@ def export_consolidated_answers_to_word(
     output_path: str, 
     header_info: Optional[dict] = None
 ):
-    """Xuất 1 FILE DUY NHẤT chứa BẢNG ĐÁP ÁN tổng hợp của tất cả các mã đề."""
     md_lines = []
     
     if header_info:
@@ -476,7 +463,6 @@ def export_consolidated_solutions_to_word(
     tln_box_format: bool = True,
     header_info: Optional[dict] = None
 ):
-    """Xuất 1 FILE DUY NHẤT chứa ĐÁP ÁN CHI TIẾT gộp chung của tất cả mã đề."""
     with tempfile.TemporaryDirectory() as temp_dir:
         md_lines = []
         
