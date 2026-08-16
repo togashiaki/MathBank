@@ -547,12 +547,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# PARSER THÔNG MINH BÓC TÁCH CÂU HỎI
+# PARSER THÔNG MINH BÓC TÁCH CÂU HỎI (ĐÃ TỰ ĐỘNG LỌC LỜI CHÀO / TIN NHẮN THỪA)
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
     if not raw_text or not raw_text.strip(): 
         return []
     
     clean_raw = raw_text.replace('\r\n', '\n').replace('\r', '\n').strip()
+    
+    # 1. Tự động cắt bỏ mọi lời chào/tin nhắn chat xuất hiện trước "Câu 1", "Bài 1",...
+    first_q_match = re.search(r'(?:^|\n)\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]', clean_raw, flags=re.IGNORECASE)
+    if first_q_match:
+        clean_raw = clean_raw[first_q_match.start():].strip()
+    
     pattern = r'\n+(?=\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s])'
     q_blocks = re.split(pattern, clean_raw, flags=re.IGNORECASE)
     parsed_questions = []
@@ -595,6 +601,8 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         clean_content = re.sub(r'^\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]*', '', clean_content, flags=re.IGNORECASE).strip()
 
         lines = [l.strip() for l in clean_content.split('\n') if l.strip()]
+        if not lines:
+            continue
 
         has_tn = any(re.match(r'^[A-D][\.\)]\s*', l) for l in lines)
         has_ds = any(re.match(r'^[a-d][\.\)\:-]\s*', l, flags=re.IGNORECASE) for l in lines)
@@ -647,6 +655,10 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
         else:
             content_lines = lines
             final_ans = extracted_ans
+
+        # Bỏ qua nếu khối phân tích không có câu hỏi thực sự
+        if not content_lines and not options and not tf_statements:
+            continue
 
         parsed_questions.append(Question(
             code="TEMP_CODE", 
@@ -1586,22 +1598,27 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
     col_editor, col_action = st.columns([5, 1.2])
 
     with col_editor:
-        edited_live_text = interactive_math_editor(key="tab3_main_raw_editor", text=st.session_state["tab3_input_text"], height_mode="large")
+        edited_live_text = interactive_math_editor(
+            key="tab3_main_raw_editor", 
+            text=st.session_state["tab3_input_text"], 
+            height_mode="large"
+        )
+
+    # Ưu tiên lấy trực tiếp văn bản vừa chỉnh sửa từ trình MathLive
+    active_text = edited_live_text if edited_live_text is not None else st.session_state["tab3_input_text"]
 
     with col_action:
         st.write("")
         st.write("")
         btn_analyze = st.button("🔍 PHÂN TÍCH", type="primary", use_container_width=True, key="btn_tab3_analyze")
 
-    if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
-        st.session_state["tab3_input_text"] = edited_live_text
-
     if btn_analyze:
-        if not st.session_state["tab3_input_text"].strip():
+        st.session_state["tab3_input_text"] = active_text
+        if not active_text.strip():
             st.warning("Vui lòng dán văn bản câu hỏi trước khi nhấn phân tích!")
         else:
             st.session_state["reset_temp"] = True
             st.session_state["show_import_modal"] = True
 
-    if st.session_state["show_import_modal"]:
+    if st.session_state.get("show_import_modal", False):
         show_import_modal(st.session_state["tab3_input_text"])
