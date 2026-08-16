@@ -109,6 +109,43 @@ def get_taxonomy_data():
                 print(f"Lỗi đọc file danh mục {fname}: {e}")
     return {}, []
 
+@st.cache_data
+def get_taxonomy_structure():
+    """Đọc cấu trúc phân cấp chi tiết Lớp -> Chương -> Dạng bài phục vụ Mục lục."""
+    candidates = ["Phân loại.xlsx", "Phân loại_2.xlsx", "Phan_loai.xlsx", "Phan loai.xlsx", "taxonomy.xlsx"]
+    for fname in candidates:
+        fpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), fname)
+        if os.path.exists(fpath):
+            try:
+                df_tax = pd.read_excel(fpath)
+                cols = {str(c).strip().lower(): c for c in df_tax.columns}
+                lop_col = cols.get('lớp', 'Lớp')
+                chuong_col = cols.get('chương', 'Chương')
+                dang_col = cols.get('dạng bài', 'Dạng bài')
+                
+                structure = {}
+                for _, row in df_tax.iterrows():
+                    g = str(row[lop_col]).strip()
+                    c_raw = str(row[chuong_col]).strip()
+                    t = str(row[dang_col]).strip()
+                    
+                    m = re.search(r'Chương\s*(\d+)', c_raw, re.IGNORECASE)
+                    chap_num = int(m.group(1)) if m else 1
+                    
+                    if g not in structure:
+                        structure[g] = {}
+                    if chap_num not in structure[g]:
+                        structure[g][chap_num] = {
+                            'title': c_raw,
+                            'topics': []
+                        }
+                    if t and t not in structure[g][chap_num]['topics']:
+                        structure[g][chap_num]['topics'].append(t)
+                return structure
+            except Exception as e:
+                print(f"Lỗi đọc cấu trúc {fname}: {e}")
+    return {}
+
 # 4. KHỞI TẠO DỮ LIỆU & SESSION STATE
 all_questions = load_all_questions_from_cloud()
 
@@ -126,6 +163,9 @@ if "extra_sources_registry" not in st.session_state:
 
 if "current_nav_tab" not in st.session_state:
     st.session_state["current_nav_tab"] = "📋"
+
+if "toc_selected_grade" not in st.session_state:
+    st.session_state["toc_selected_grade"] = "12"
 
 def get_export_dir() -> str:
     today_str = datetime.now().strftime("%d-%m-%Y")
@@ -320,7 +360,7 @@ def confirm_delete_dialog(q: Question):
         st.rerun()
 
 # -------------------------------------------------------------
-# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (3 NÚT VUÔNG ICON CĂN GIỮA TUYỆT ĐỐI)
+# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (4 NÚT VUÔNG ICON CĂN GIỮA TUYỆT ĐỐI)
 # -------------------------------------------------------------
 st.markdown("""
 <style>
@@ -358,7 +398,7 @@ st.markdown("""
         margin: 0 0 12px 0 !important;
     }
 
-    /* 3 NÚT VUÔNG ICON CHUẨN 48x48 */
+    /* 4 NÚT VUÔNG ICON CHUẨN 48x48 */
     section[data-testid="stSidebar"] div[data-testid="stButton"] > button {
         width: 48px !important;
         height: 48px !important;
@@ -485,7 +525,7 @@ st.markdown("""
         margin-right: 8px !important; 
     }
     
-    /* HEADER INFO BAR (TIÊU ĐỀ BÊN TRÁI + THỐNG KÊ GÓC PHẢI) */
+    /* HEADER INFO BAR */
     .header-info-bar { 
         background-color: #ffffff !important; 
         border: 1px solid #e8e2d8 !important; 
@@ -544,17 +584,87 @@ st.markdown("""
         width: 100% !important; 
         border-radius: 16px !important; 
     }
+
+    /* CSS RIÊNG CHO TAB 4: MỤC LỤC & SƠ ĐỒ DẠNG BÀI */
+    .toc-container-card {
+        background-color: #ffffff !important;
+        border: 1px solid #e8e2d8 !important;
+        border-radius: 18px !important;
+        padding: 20px 24px !important;
+        margin-bottom: 18px !important;
+        box-shadow: 0 4px 14px rgba(44, 40, 37, 0.03) !important;
+    }
+    .toc-chap-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        border-bottom: 1.5px solid #b8543f !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 16px !important;
+    }
+    .toc-chap-title {
+        font-size: 1.02rem !important;
+        font-weight: 700 !important;
+        color: #b8543f !important;
+        letter-spacing: -0.01em !important;
+    }
+    .toc-chap-badge {
+        font-size: 0.82rem !important;
+        font-weight: 700 !important;
+        background-color: #f7ece8 !important;
+        color: #b8543f !important;
+        padding: 4px 12px !important;
+        border-radius: 999px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    .toc-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+        column-gap: 32px !important;
+        row-gap: 10px !important;
+    }
+    .toc-item-row {
+        display: flex !important;
+        align-items: baseline !important;
+        justify-content: space-between !important;
+        font-size: 0.86rem !important;
+        color: #2c2825 !important;
+        padding: 2px 0 !important;
+    }
+    .toc-item-name {
+        flex-shrink: 1 !important;
+        font-weight: 500 !important;
+        line-height: 1.35 !important;
+    }
+    .toc-item-dots {
+        flex-grow: 1 !important;
+        border-bottom: 1px dotted #d8cfc4 !important;
+        margin: 0 8px !important;
+        min-width: 16px !important;
+        height: 1px !important;
+    }
+    .toc-item-count {
+        flex-shrink: 0 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 700 !important;
+        font-size: 0.88rem !important;
+        color: #b8543f !important;
+        min-width: 24px !important;
+        text-align: right !important;
+    }
+    .toc-item-count.zero {
+        color: #a8a29e !important;
+        font-weight: 400 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# PARSER THÔNG MINH BÓC TÁCH CÂU HỎI (ĐÃ TỰ ĐỘNG LỌC LỜI CHÀO / TIN NHẮN THỪA)
+# PARSER THÔNG MINH BÓC TÁCH CÂU HỎI
 def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Question]:
     if not raw_text or not raw_text.strip(): 
         return []
     
     clean_raw = raw_text.replace('\r\n', '\n').replace('\r', '\n').strip()
-    
-    # 1. Tự động cắt bỏ mọi lời chào/tin nhắn chat xuất hiện trước "Câu 1", "Bài 1",...
     first_q_match = re.search(r'(?:^|\n)\s*(?:câu|bài|question)\s*(?:hỏi|\d+)?\s*[\.:\)\-\s]', clean_raw, flags=re.IGNORECASE)
     if first_q_match:
         clean_raw = clean_raw[first_q_match.start():].strip()
@@ -656,7 +766,6 @@ def parse_raw_text_to_questions(raw_text: str, default_meta: dict) -> list[Quest
             content_lines = lines
             final_ans = extracted_ans
 
-        # Bỏ qua nếu khối phân tích không có câu hỏi thực sự
         if not content_lines and not options and not tf_statements:
             continue
 
@@ -1183,7 +1292,7 @@ def show_import_modal(raw_text: str):
         st.rerun()
 
 # -------------------------------------------------------------
-# 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI (3 NÚT VUÔNG ICON)
+# 4. THANH ĐIỀU HƯỚNG DOCK ICON CỐ ĐỊNH Ở MÉP TRÁI (4 NÚT VUÔNG ICON)
 # -------------------------------------------------------------
 with st.sidebar:
     st.markdown("<div style='text-align: center; font-size: 1.45rem; margin-bottom: 1.2rem;'>📐</div>", unsafe_allow_html=True)
@@ -1209,13 +1318,19 @@ with st.sidebar:
             st.session_state["current_nav_tab"] = "📥"
             st.rerun()
 
+    # Nút 4: Mục lục & Sơ đồ phân loại dạng bài
+    is_active_4 = (st.session_state["current_nav_tab"] == "📚")
+    if st.button("📚", key="nav_btn_4", type="primary" if is_active_4 else "secondary", help="Mục lục & Sơ đồ dạng bài"):
+        if not is_active_4:
+            st.session_state["current_nav_tab"] = "📚"
+            st.rerun()
+
 # -------------------------------------------------------------
 # 5. NỘI DUNG CHÍNH
 # -------------------------------------------------------------
 
 # TRANG 1: NGÂN HÀNG CÂU HỎI
 if st.session_state["current_nav_tab"] == "📋":
-    # 1. Tính toán trước bộ lọc để hiển thị ngay trên Header Info Bar
     grade_options = ["Tất cả", "HSA", 12, 11, 10]
     grade_selected = st.session_state.get("f_grade", "Tất cả")
     questions_filtered = all_questions if grade_selected == "Tất cả" else [q for q in all_questions if str(q.grade) == str(grade_selected)]
@@ -1237,7 +1352,6 @@ if st.session_state["current_nav_tab"] == "📋":
     cnt_tln = sum(1 for q in questions_filtered if q.format == QuestionType.TLN)
     cnt_total = len(questions_filtered)
 
-    # 2. HEADER INFO BAR (TIÊU ĐỀ BÊN TRÁI + CÁC Ô THỐNG KÊ GÓC PHẢI)
     st.markdown(f"""
     <div class="header-info-bar">
         <div style="display: flex; align-items: center; gap: 12px;">
@@ -1253,7 +1367,6 @@ if st.session_state["current_nav_tab"] == "📋":
     </div>
     """, unsafe_allow_html=True)
 
-    # 3. THANH TÌM KIẾM & NÚT CHỌN TẤT CẢ
     c_search, c_act = st.columns([2.4, 1])
     with c_search:
         search_query = st.text_input("🔍 Tìm kiếm trong nội dung hoặc nguồn đề...", "", label_visibility="collapsed", placeholder="🔍 Nhập từ khóa để tìm kiếm nội dung câu hỏi, mã câu hoặc nguồn đề...")
@@ -1263,7 +1376,6 @@ if st.session_state["current_nav_tab"] == "📋":
         btn_select_all = ca.button("Chọn tất cả", width="stretch")
         btn_clear_all = cb.button("Xóa chọn", width="stretch")
 
-    # 4. KHUNG BỘ LỌC PHÂN LOẠI & NÚT ĐÁNH LẠI MÃ ID
     st.markdown("<b style='font-size: 0.95rem; color: #2c2825; margin-top: 10px; margin-bottom: 8px; display: inline-block;'>📚 Bộ lọc phân loại câu hỏi</b>", unsafe_allow_html=True)
     
     f1, f2, f3, f4, f5 = st.columns([1.1, 1.1, 1.8, 1.8, 1.3])
@@ -1286,7 +1398,6 @@ if st.session_state["current_nav_tab"] == "📋":
             time.sleep(1)
             st.rerun()
 
-    # Lọc câu hỏi theo Search Query
     display_questions = [
         q for q in questions_filtered
         if search_query.lower() in q.content.lower() or search_query.lower() in (q.source or "").lower() or search_query.lower() in q.code.lower()
@@ -1304,7 +1415,6 @@ if st.session_state["current_nav_tab"] == "📋":
             st.session_state["selected_questions"].discard(q.code)
         st.rerun()
 
-    # Nút Xuất Word
     st.markdown("##### 📄 Tải file Word câu hỏi đã chọn:")
     selected_objs = [q for q in all_questions if q.code in st.session_state["selected_questions"]]
 
@@ -1316,7 +1426,6 @@ if st.session_state["current_nav_tab"] == "📋":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Hiển thị danh sách câu hỏi
     grid_cols = st.columns(2)
     for idx, q in enumerate(display_questions):
         with grid_cols[idx % 2]:
@@ -1452,7 +1561,6 @@ elif st.session_state["current_nav_tab"] == "🎯":
 
             st.success(f"🎉 Đã trộn ngẫu nhiên thành công **{len(custom_exam_codes)}** mã đề thi!")
 
-    # HIỂN THỊ DANH SÁCH MÃ ĐỀ ĐÃ TẠO
     if "generated_exams_dict" in st.session_state and st.session_state["generated_exams_dict"]:
         st.markdown("### 📥 Danh sách Các Mã Đề Thi ĐÃ TẠO:")
         for e_code, q_list in st.session_state["generated_exams_dict"].items():
@@ -1604,7 +1712,6 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
             height_mode="large"
         )
 
-    # Ưu tiên lấy trực tiếp văn bản vừa chỉnh sửa từ trình MathLive
     active_text = edited_live_text if edited_live_text is not None else st.session_state["tab3_input_text"]
 
     with col_action:
@@ -1622,3 +1729,135 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
 
     if st.session_state.get("show_import_modal", False):
         show_import_modal(st.session_state["tab3_input_text"])
+
+# TRANG 4: MỤC LỤC & SƠ ĐỒ DẠNG BÀI (THEO DÕI SỐ LƯỢNG CÂU HỎI)
+elif st.session_state["current_nav_tab"] == "📚":
+    # 1. Thu thập và tính toán dữ liệu thống kê từ Excel + Google Sheets
+    base_tax_structure = get_taxonomy_structure()
+    
+    full_toc_data = {}
+    grade_totals = {"12": 0, "11": 0, "10": 0, "HSA": 0}
+    
+    for g_key in ["12", "11", "10", "HSA"]:
+        full_toc_data[g_key] = {}
+        if g_key in base_tax_structure:
+            for c_num, c_info in base_tax_structure[g_key].items():
+                full_toc_data[g_key][c_num] = {
+                    'title': c_info['title'],
+                    'topics': {t: 0 for t in c_info['topics']}
+                }
+
+    for q in all_questions:
+        g = str(q.grade).strip()
+        try:
+            c = int(q.chapter)
+        except (ValueError, TypeError):
+            c = 1
+        t = str(q.topic).strip() if q.topic else "Chưa phân dạng"
+
+        if g not in full_toc_data:
+            full_toc_data[g] = {}
+            grade_totals[g] = 0
+
+        grade_totals[g] = grade_totals.get(g, 0) + 1
+
+        if c not in full_toc_data[g]:
+            full_toc_data[g][c] = {
+                'title': f"Chương {c}",
+                'topics': {}
+            }
+
+        if t not in full_toc_data[g][c]['topics']:
+            full_toc_data[g][c]['topics'][t] = 0
+
+        full_toc_data[g][c]['topics'][t] += 1
+
+    # 2. Bố cục 2 cột (Cột trái: Mục lục tìm kiếm & chọn Khối lớp; Cột phải: Chi tiết các chương & dạng bài)
+    col_toc_nav, col_toc_content = st.columns([1, 2.8])
+
+    with col_toc_nav:
+        st.markdown("<div style='font-size: 1.75rem; font-weight: 800; color: #2c2825; margin-bottom: 14px;'>Mục lục</div>", unsafe_allow_html=True)
+        toc_search = st.text_input("Tìm kiếm dạng bài...", "", key="toc_search_input", placeholder="🔍 cực trị, tiệm cận, xác suất...")
+
+        st.markdown("<div style='margin-top: 16px; margin-bottom: 8px; font-weight: 700; color: #78716c; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;'>Khối lớp</div>", unsafe_allow_html=True)
+        
+        grade_labels = {
+            "12": "Toán 12",
+            "11": "Toán 11",
+            "10": "Toán 10",
+            "HSA": "HSA / ĐGNL"
+        }
+
+        active_grade = st.session_state.get("toc_selected_grade", "12")
+        for g_code in ["12", "11", "10", "HSA"]:
+            g_count = grade_totals.get(g_code, 0)
+            is_cur_g = (active_grade == g_code)
+            
+            btn_text = f"{grade_labels.get(g_code, g_code)}   ({g_count} câu)"
+            if st.button(btn_text, key=f"btn_toc_grade_{g_code}", type="primary" if is_cur_g else "secondary", width="stretch"):
+                st.session_state["toc_selected_grade"] = g_code
+                st.rerun()
+
+    with col_toc_content:
+        cur_grade = st.session_state.get("toc_selected_grade", "12")
+        grade_display = grade_labels.get(cur_grade, f"Toán {cur_grade}")
+        cur_grade_total = grade_totals.get(cur_grade, 0)
+
+        st.markdown(f"""
+        <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #b8543f; padding-bottom: 8px; margin-bottom: 20px;">
+            <span style="font-size: 1.5rem; font-weight: 800; color: #2c2825;">{grade_display}</span>
+            <span style="font-size: 0.95rem; font-weight: 700; color: #78716c;">Tổng cộng: <b style="color: #b8543f; font-family: 'JetBrains Mono', monospace;">{cur_grade_total}</b> câu</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        grade_chapters = full_toc_data.get(cur_grade, {})
+        search_kw = toc_search.strip().lower()
+
+        rendered_chapters_count = 0
+        sorted_chaps = sorted(grade_chapters.keys(), key=lambda x: int(x) if str(x).isdigit() else 99)
+
+        for c_idx in sorted_chaps:
+            c_data = grade_chapters[c_idx]
+            c_title = c_data['title']
+            all_c_topics = c_data['topics']
+
+            # Lọc theo từ khóa tìm kiếm
+            if search_kw:
+                filtered_topics = {t: cnt for t, cnt in all_c_topics.items() if search_kw in t.lower() or search_kw in c_title.lower()}
+            else:
+                filtered_topics = all_c_topics
+
+            if not filtered_topics and search_kw:
+                continue
+
+            rendered_chapters_count += 1
+            chap_total_qs = sum(all_c_topics.values())
+
+            # Render Thẻ Card cho từng Chương
+            st.markdown(f"""
+            <div class="toc-container-card">
+                <div class="toc-chap-header">
+                    <span class="toc-chap-title">{c_title}</span>
+                    <span class="toc-chap-badge">{chap_total_qs} câu</span>
+                </div>
+                <div class="toc-grid">
+            """, unsafe_allow_html=True)
+
+            topic_items_html = ""
+            for top_name, top_cnt in filtered_topics.items():
+                zero_cls = " zero" if top_cnt == 0 else ""
+                topic_items_html += f"""
+                <div class="toc-item-row">
+                    <span class="toc-item-name">{top_name}</span>
+                    <div class="toc-item-dots"></div>
+                    <span class="toc-item-count{zero_cls}">{top_cnt}</span>
+                </div>
+                """
+
+            st.markdown(topic_items_html + "</div></div>", unsafe_allow_html=True)
+
+        if rendered_chapters_count == 0:
+            if search_kw:
+                st.info(f"Không tìm thấy dạng bài nào khớp với từ khóa **'{toc_search}'** trong {grade_display}.")
+            else:
+                st.info(f"Chưa có dữ liệu phân loại hoặc câu hỏi cho khối {grade_display}.")
