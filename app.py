@@ -1591,7 +1591,7 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
     with col_action:
         st.write("")
         st.write("")
-        btn_analyze = st.button("🔍 PHÂN TÍCH &\n TỰ ĐỘNG PHÂN LOẠI", type="primary", use_container_width=True, key="btn_tab3_analyze")
+        btn_analyze = st.button("🔍 PHÂN TÍCH", type="primary", use_container_width=True, key="btn_tab3_analyze")
 
     if edited_live_text is not None and edited_live_text != st.session_state["tab3_input_text"]:
         st.session_state["tab3_input_text"] = edited_live_text
