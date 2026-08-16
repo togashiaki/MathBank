@@ -360,7 +360,7 @@ def confirm_delete_dialog(q: Question):
         st.rerun()
 
 # -------------------------------------------------------------
-# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (4 NÚT VUÔNG ICON CĂN GIỮA TUYỆT ĐỐI)
+# CSS DESIGN SYSTEM: TÔNG MÀU ĐỎ ĐẤT & BE (ACCORDION THU GỌN MỤC LỤC)
 # -------------------------------------------------------------
 st.markdown("""
 <style>
@@ -585,28 +585,57 @@ st.markdown("""
         border-radius: 16px !important; 
     }
 
-    /* CSS RIÊNG CHO TAB 4: MỤC LỤC & SƠ ĐỒ DẠNG BÀI */
-    .toc-container-card {
+    /* CSS CHO TAB 4: ACCORDION CHƯƠNG THU GỌN VÀ MỞ RỘNG */
+    details.toc-details-card {
         background-color: #ffffff !important;
         border: 1px solid #e8e2d8 !important;
         border-radius: 18px !important;
-        padding: 20px 24px !important;
-        margin-bottom: 18px !important;
-        box-shadow: 0 4px 14px rgba(44, 40, 37, 0.03) !important;
+        margin-bottom: 14px !important;
+        box-shadow: 0 3px 10px rgba(44, 40, 37, 0.02) !important;
+        overflow: hidden !important;
+        transition: all 0.2s ease !important;
     }
-    .toc-chap-header {
+    details.toc-details-card[open] {
+        border-color: #d8cfc4 !important;
+        box-shadow: 0 6px 18px rgba(44, 40, 37, 0.05) !important;
+    }
+    summary.toc-summary {
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
-        border-bottom: 1.5px solid #b8543f !important;
-        padding-bottom: 8px !important;
-        margin-bottom: 16px !important;
+        padding: 16px 22px !important;
+        cursor: pointer !important;
+        user-select: none !important;
+        background-color: #ffffff !important;
+        list-style: none !important;
+        transition: background-color 0.2s ease !important;
+    }
+    summary.toc-summary::-webkit-details-marker {
+        display: none !important;
+    }
+    summary.toc-summary:hover {
+        background-color: #faf6ef !important;
+    }
+    details.toc-details-card[open] summary.toc-summary {
+        border-bottom: 1.5px solid #f0ebe1 !important;
+        background-color: #fcf9f4 !important;
     }
     .toc-chap-title {
         font-size: 1.02rem !important;
         font-weight: 700 !important;
         color: #b8543f !important;
-        letter-spacing: -0.01em !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+    .toc-chevron {
+        display: inline-block !important;
+        font-size: 0.8rem !important;
+        color: #b8543f !important;
+        transition: transform 0.2s ease !important;
+    }
+    details.toc-details-card[open] .toc-chevron {
+        transform: rotate(90deg) !important;
     }
     .toc-chap-badge {
         font-size: 0.82rem !important;
@@ -616,6 +645,9 @@ st.markdown("""
         padding: 4px 12px !important;
         border-radius: 999px !important;
         font-family: 'JetBrains Mono', monospace !important;
+    }
+    .toc-content-body {
+        padding: 18px 22px 22px 22px !important;
     }
     .toc-grid {
         display: grid !important;
@@ -1730,7 +1762,7 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
     if st.session_state.get("show_import_modal", False):
         show_import_modal(st.session_state["tab3_input_text"])
 
-# TRANG 4: MỤC LỤC & SƠ ĐỒ DẠNG BÀI (THEO DÕI SỐ LƯỢNG CÂU HỎI)
+# TRANG 4: MỤC LỤC & SƠ ĐỒ DẠNG BÀI (THEO DÕI SỐ LƯỢNG CÂU HỎI - ACCORDION THU GỌN)
 elif st.session_state["current_nav_tab"] == "📚":
     # 1. Thu thập và tính toán dữ liệu thống kê từ Excel + Google Sheets
     base_tax_structure = get_taxonomy_structure()
@@ -1772,7 +1804,7 @@ elif st.session_state["current_nav_tab"] == "📚":
 
         full_toc_data[g][c]['topics'][t] += 1
 
-    # 2. Bố cục 2 cột (Cột trái: Mục lục tìm kiếm & chọn Khối lớp; Cột phải: Chi tiết các chương & dạng bài)
+    # 2. Bố cục 2 cột (Cột trái: Mục lục & chọn Khối lớp; Cột phải: Chi tiết các chương thu gọn)
     col_toc_nav, col_toc_content = st.columns([1, 2.8])
 
     with col_toc_nav:
@@ -1824,8 +1856,10 @@ elif st.session_state["current_nav_tab"] == "📚":
             # Lọc theo từ khóa tìm kiếm
             if search_kw:
                 filtered_topics = {t: cnt for t, cnt in all_c_topics.items() if search_kw in t.lower() or search_kw in c_title.lower()}
+                is_open_attr = "open"  # Tự động mở chương khi đang tìm kiếm
             else:
                 filtered_topics = all_c_topics
+                is_open_attr = ""      # Mặc định thu gọn khi không tìm kiếm
 
             if not filtered_topics and search_kw:
                 continue
@@ -1833,20 +1867,23 @@ elif st.session_state["current_nav_tab"] == "📚":
             rendered_chapters_count += 1
             chap_total_qs = sum(all_c_topics.values())
 
-            # Render Thẻ Card cho từng Chương
-            st.markdown(f"""
-            <div class="toc-container-card">
-                <div class="toc-chap-header">
-                    <span class="toc-chap-title">{c_title}</span>
+            # Render Thẻ Accordion (Thu gọn / Mở rộng)
+            chapter_html = f"""
+            <details class="toc-details-card" {is_open_attr}>
+                <summary class="toc-summary">
+                    <span class="toc-chap-title">
+                        <span class="toc-chevron">▶</span>
+                        {c_title}
+                    </span>
                     <span class="toc-chap-badge">{chap_total_qs} câu</span>
-                </div>
-                <div class="toc-grid">
-            """, unsafe_allow_html=True)
+                </summary>
+                <div class="toc-content-body">
+                    <div class="toc-grid">
+            """
 
-            topic_items_html = ""
             for top_name, top_cnt in filtered_topics.items():
                 zero_cls = " zero" if top_cnt == 0 else ""
-                topic_items_html += f"""
+                chapter_html += f"""
                 <div class="toc-item-row">
                     <span class="toc-item-name">{top_name}</span>
                     <div class="toc-item-dots"></div>
@@ -1854,7 +1891,13 @@ elif st.session_state["current_nav_tab"] == "📚":
                 </div>
                 """
 
-            st.markdown(topic_items_html + "</div></div>", unsafe_allow_html=True)
+            chapter_html += """
+                    </div>
+                </div>
+            </details>
+            """
+
+            st.markdown(chapter_html, unsafe_allow_html=True)
 
         if rendered_chapters_count == 0:
             if search_kw:
