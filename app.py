@@ -1634,7 +1634,7 @@ elif st.session_state["current_nav_tab"] == "🎯":
 
         st.divider()
 
-        if st.button("🚀 BẮT ĐẦU TẠO TOÀN BỘ FILE WORD", type="primary", width="stretch", key="btn_t2_generate_all"):
+        if st.button("🚀 BẮT ĐẦU TẠO TOÀN BỘ FILE WORD", type="primary", width="stretch", key=btn_t2_generate_all := "btn_t2_generate_all"):
             ds_tbl = (t2_ds_fmt == "Dạng bảng 2 cột (Đúng/Sai)")
             tln_box = (t2_tln_fmt == "Có ô điền (5 ô 0.8cm x 0.8cm sát lề phải)")
             export_dir = get_export_dir()
@@ -1764,7 +1764,6 @@ Lời giải: Dựa vào bảng xét dấu đạo hàm ta kết luận được 
 
 # TRANG 4: MỤC LỤC & SƠ ĐỒ DẠNG BÀI (THEO DÕI SỐ LƯỢNG CÂU HỎI - ACCORDION THU GỌN)
 elif st.session_state["current_nav_tab"] == "📚":
-    # 1. Thu thập và tính toán dữ liệu thống kê từ Excel + Google Sheets
     base_tax_structure = get_taxonomy_structure()
     
     full_toc_data = {}
@@ -1804,7 +1803,6 @@ elif st.session_state["current_nav_tab"] == "📚":
 
         full_toc_data[g][c]['topics'][t] += 1
 
-    # 2. Bố cục 2 cột (Cột trái: Mục lục & chọn Khối lớp; Cột phải: Chi tiết các chương thu gọn)
     col_toc_nav, col_toc_content = st.columns([1, 2.8])
 
     with col_toc_nav:
@@ -1835,12 +1833,13 @@ elif st.session_state["current_nav_tab"] == "📚":
         grade_display = grade_labels.get(cur_grade, f"Toán {cur_grade}")
         cur_grade_total = grade_totals.get(cur_grade, 0)
 
-        st.markdown(f"""
-        <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #b8543f; padding-bottom: 8px; margin-bottom: 20px;">
-            <span style="font-size: 1.5rem; font-weight: 800; color: #2c2825;">{grade_display}</span>
-            <span style="font-size: 0.95rem; font-weight: 700; color: #78716c;">Tổng cộng: <b style="color: #b8543f; font-family: 'JetBrains Mono', monospace;">{cur_grade_total}</b> câu</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #b8543f; padding-bottom: 8px; margin-bottom: 20px;">'
+            f'<span style="font-size: 1.5rem; font-weight: 800; color: #2c2825;">{grade_display}</span>'
+            f'<span style="font-size: 0.95rem; font-weight: 700; color: #78716c;">Tổng cộng: <b style="color: #b8543f; font-family: \'JetBrains Mono\', monospace;">{cur_grade_total}</b> câu</span>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
         grade_chapters = full_toc_data.get(cur_grade, {})
         search_kw = toc_search.strip().lower()
@@ -1853,13 +1852,12 @@ elif st.session_state["current_nav_tab"] == "📚":
             c_title = c_data['title']
             all_c_topics = c_data['topics']
 
-            # Lọc theo từ khóa tìm kiếm
             if search_kw:
                 filtered_topics = {t: cnt for t, cnt in all_c_topics.items() if search_kw in t.lower() or search_kw in c_title.lower()}
-                is_open_attr = "open"  # Tự động mở chương khi đang tìm kiếm
+                is_open_attr = "open"
             else:
                 filtered_topics = all_c_topics
-                is_open_attr = ""      # Mặc định thu gọn khi không tìm kiếm
+                is_open_attr = ""
 
             if not filtered_topics and search_kw:
                 continue
@@ -1867,35 +1865,29 @@ elif st.session_state["current_nav_tab"] == "📚":
             rendered_chapters_count += 1
             chap_total_qs = sum(all_c_topics.values())
 
-            # Render Thẻ Accordion (Thu gọn / Mở rộng)
-            chapter_html = f"""
-            <details class="toc-details-card" {is_open_attr}>
-                <summary class="toc-summary">
-                    <span class="toc-chap-title">
-                        <span class="toc-chevron">▶</span>
-                        {c_title}
-                    </span>
-                    <span class="toc-chap-badge">{chap_total_qs} câu</span>
-                </summary>
-                <div class="toc-content-body">
-                    <div class="toc-grid">
-            """
-
+            topic_rows = []
             for top_name, top_cnt in filtered_topics.items():
                 zero_cls = " zero" if top_cnt == 0 else ""
-                chapter_html += f"""
-                <div class="toc-item-row">
-                    <span class="toc-item-name">{top_name}</span>
-                    <div class="toc-item-dots"></div>
-                    <span class="toc-item-count{zero_cls}">{top_cnt}</span>
-                </div>
-                """
+                topic_rows.append(
+                    f'<div class="toc-item-row">'
+                    f'<span class="toc-item-name">{top_name}</span>'
+                    f'<div class="toc-item-dots"></div>'
+                    f'<span class="toc-item-count{zero_cls}">{top_cnt}</span>'
+                    f'</div>'
+                )
+            rows_html = "".join(topic_rows)
 
-            chapter_html += """
-                    </div>
-                </div>
-            </details>
-            """
+            chapter_html = (
+                f'<details class="toc-details-card" {is_open_attr}>'
+                f'<summary class="toc-summary">'
+                f'<span class="toc-chap-title"><span class="toc-chevron">▶</span>{c_title}</span>'
+                f'<span class="toc-chap-badge">{chap_total_qs} câu</span>'
+                f'</summary>'
+                f'<div class="toc-content-body">'
+                f'<div class="toc-grid">{rows_html}</div>'
+                f'</div>'
+                f'</details>'
+            )
 
             st.markdown(chapter_html, unsafe_allow_html=True)
 
