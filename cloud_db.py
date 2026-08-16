@@ -86,7 +86,6 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
                 secure=True
             )
 
-            # Đặt public_id nếu có filename (bỏ phần mở rộng)
             public_id = os.path.splitext(filename)[0] if filename else None
 
             upload_result = cloudinary.uploader.upload(
@@ -96,7 +95,6 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
                 overwrite=True,
                 resource_type="image"
             )
-            # Trả về link trực tiếp bảo mật HTTPS
             return upload_result.get("secure_url") or upload_result.get("url")
 
         # Dự phòng: Nếu có key ImgBB cũ
@@ -123,7 +121,8 @@ def upload_image_to_drive(uploaded_file, filename: Optional[str] = None, folder_
         return None
 
 
-# 3. HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEET
+# 3. HÀM ĐỌC DỮ LIỆU TỪ GOOGLE SHEET (ĐÃ TỐI ƯU CACHE TĂNG TỐC)
+@st.cache_data(ttl=600, show_spinner=False)
 def load_all_questions_from_cloud() -> List[Question]:
     ws = get_sheet()
     if not ws:
@@ -268,6 +267,9 @@ def save_questions_to_cloud(questions: List[Question]):
         if rows_to_append:
             ws.append_rows(rows_to_append)
 
+        # Xóa cache để lượt đọc tiếp theo lấy dữ liệu mới nhất
+        st.cache_data.clear()
+
     except Exception as e:
         st.error(f"Lỗi khi lưu câu hỏi vào Google Sheet: {e}")
 
@@ -284,6 +286,9 @@ def overwrite_all_questions_in_cloud(questions: List[Question]):
         
         ws.clear()
         ws.update(values=rows_data, range_name="A1")
+
+        # Xóa cache sau khi ghi đè
+        st.cache_data.clear()
     except Exception as e:
         st.error(f"Lỗi khi ghi đè Google Sheet: {e}")
 
@@ -299,6 +304,8 @@ def delete_question_from_cloud(question_code: str):
             if row and row[0].strip() == question_code.strip():
                 ws.delete_rows(row_idx)
                 break
+
+        # Xóa cache sau khi xóa câu hỏi
+        st.cache_data.clear()
     except Exception as e:
         st.error(f"Lỗi khi xóa câu hỏi {question_code}: {e}")
-
